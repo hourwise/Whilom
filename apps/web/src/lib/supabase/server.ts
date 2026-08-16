@@ -1,17 +1,18 @@
 import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
-import type { Database } from '@whilom/database';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
+
+type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
 /**
  * Server Supabase client for Server Components, Route Handlers and Server
  * Actions. Uses the anon key + the user's session cookie, so RLS still applies.
- * For privileged work use a dedicated service-role client kept off the client
- * bundle entirely (spec §38).
+ *
+ * Untyped for now — see client.ts. Add the `<Database>` generic after db:types.
  */
 export async function createClient() {
   const cookieStore = await cookies();
 
-  return createServerClient<Database>(
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -19,14 +20,13 @@ export async function createClient() {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: CookieToSet[]) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options),
             );
           } catch {
-            // `setAll` called from a Server Component — safe to ignore when
-            // middleware is responsible for refreshing sessions.
+            // Called from a Server Component — middleware refreshes the session.
           }
         },
       },

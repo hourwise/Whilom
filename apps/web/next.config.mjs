@@ -8,9 +8,6 @@ const nextConfig = {
     '@whilom/validation',
     '@whilom/search',
   ],
-  experimental: {
-    typedRoutes: true,
-  },
 };
 
 export default nextConfig;

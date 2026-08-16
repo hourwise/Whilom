@@ -193,7 +193,7 @@ export const DesignationType = {
 } as const;
 export type DesignationType = (typeof DesignationType)[keyof typeof DesignationType];
 
-/** Listed-building grade (England/Wales I/II*/II; Scotland A/B/C). */
+/** Listed-building grade (England and Wales: I, II*, II; Scotland: A, B, C). */
 export const DesignationGrade = {
   I: 'I',
   IIStar: 'II*',

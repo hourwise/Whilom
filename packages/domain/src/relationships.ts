@@ -76,6 +76,7 @@ export const PREDICATE_SCHEMAS: readonly PredicateSchema[] = [
   { predicate: RelationshipPredicate.BuriedAt, subjectTypes: ['person'], objectTypes: ['place'], label: 'is buried at', inverseLabel: 'burial place of' },
   { predicate: RelationshipPredicate.ParticipatedIn, subjectTypes: ['person'], objectTypes: ['event'], label: 'participated in', inverseLabel: 'involved' },
   { predicate: RelationshipPredicate.BuiltBy, subjectTypes: ['place'], objectTypes: ['person'], label: 'was built by', inverseLabel: 'built' },
+  { predicate: RelationshipPredicate.OwnedBy, subjectTypes: ['place'], objectTypes: ['person'], label: 'was owned by', inverseLabel: 'owned' },
   { predicate: RelationshipPredicate.SiteOf, subjectTypes: ['place'], objectTypes: ['event'], label: 'is the site of', inverseLabel: 'took place at' },
   { predicate: RelationshipPredicate.RelatedTo, subjectTypes: ['place'], objectTypes: ['place'], label: 'is related to' },
   { predicate: RelationshipPredicate.Contains, subjectTypes: ['place'], objectTypes: ['object'], label: 'contains', inverseLabel: 'is located at' },

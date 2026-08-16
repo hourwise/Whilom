@@ -84,11 +84,27 @@ pnpm mobile                # Expo dev server
 
 ## Status
 
-Phase 1 scaffold with the **full database schema** in place (see
-[`docs/SCHEMA.md`](docs/SCHEMA.md)). The apps render placeholder screens that
-import the shared domain to prove end-to-end wiring. Next up: **Phase 2 — Data
-MVP** (first source connectors, duplicate matcher, review tool) and **Phase 3 —
-Website MVP**.
+- **Foundation + schema** — full database schema in place (see
+  [`docs/SCHEMA.md`](docs/SCHEMA.md)): 16 migrations, 46 tables, all with RLS.
+- **Phase 3 — Website MVP** (`apps/web`) — built and building green: discovery
+  with search + filters, place / person / trail pages, email+password auth,
+  account dashboard, and wishlist / visit / review / correction actions. Plain
+  neutral styling (`globals.css`) pending a design direction. Discovery is
+  list-based for now — an interactive map is the next add.
+- `apps/mobile` is still the placeholder scaffold (Phase 6).
+
+Next candidates: an interactive map on discovery, **Phase 2 — Data MVP** (source
+connectors + duplicate matcher to populate real places), or a basic admin /
+moderation UI.
+
+### Running the web app
+
+```bash
+supabase start && supabase db reset          # DB + seed (needs Docker)
+cp apps/web/.env.local.example apps/web/.env.local   # fill from `supabase start`
+pnpm db:types                                # optional: typed queries
+pnpm web                                     # http://localhost:3000
+```
 
 ## Branding note
 

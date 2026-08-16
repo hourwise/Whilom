@@ -1,9 +1,13 @@
 import { createBrowserClient } from '@supabase/ssr';
-import type { Database } from '@whilom/database';
 
-/** Browser Supabase client for Client Components. Anon key only (RLS enforced). */
+/**
+ * Browser Supabase client for Client Components. Anon key only (RLS enforced).
+ *
+ * Untyped for now: run `pnpm db:types` once the local Supabase stack is up, then
+ * add the `<Database>` generic here and in `server.ts` for typed queries.
+ */
 export function createClient() {
-  return createBrowserClient<Database>(
+  return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );

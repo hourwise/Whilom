@@ -1,27 +1,45 @@
-import { PlaceType } from '@whilom/domain';
+import Link from 'next/link';
+import { searchPlaces } from '@/lib/data';
+import { PlaceCard } from '@/components/PlaceCard';
 
-/**
- * Placeholder home page. Phase 3 replaces this with the discovery experience:
- * interactive heritage map, search, filters (spec §9, §45).
- *
- * It imports from `@whilom/domain` purely to prove the shared-package wiring
- * works end-to-end in the web build.
- */
-export default function HomePage() {
-  const featuredTypes = [PlaceType.Castle, PlaceType.Abbey, PlaceType.RomanVilla];
+export default async function HomePage() {
+  let featured = [] as Awaited<ReturnType<typeof searchPlaces>>;
+  try {
+    featured = (await searchPlaces({})).slice(0, 6);
+  } catch {
+    // Supabase not configured yet — show the page without featured places.
+  }
 
   return (
-    <main style={{ maxWidth: 720, margin: '4rem auto', padding: '0 1.5rem', fontFamily: 'system-ui, sans-serif' }}>
-      <h1 style={{ marginBottom: '0.25rem' }}>Whilom</h1>
-      <p style={{ marginTop: 0, fontStyle: 'italic', color: '#555' }}>History, where it happened.</p>
-      <p>
-        Places connected to people, stories, objects and journeys. This is the
-        Phase 1 foundation scaffold — the discovery map and place pages arrive in
-        Phase 3.
-      </p>
-      <p style={{ color: '#666' }}>
-        Shared domain wired in ({featuredTypes.join(', ')}).
-      </p>
-    </main>
+    <div className="stack">
+      <section>
+        <h1 style={{ marginBottom: '0.25rem' }}>Discover UK heritage</h1>
+        <p className="muted" style={{ marginTop: 0, fontSize: '1.1rem' }}>
+          History, where it happened. Places connected to people, stories, objects and journeys.
+        </p>
+        <p>
+          <Link className="btn" href="/discover">
+            Explore places
+          </Link>
+        </p>
+      </section>
+
+      {featured.length > 0 && (
+        <section className="section">
+          <h2>Featured places</h2>
+          <div className="grid">
+            {featured.map((p) => (
+              <PlaceCard key={p.id} place={p} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {featured.length === 0 && (
+        <p className="muted">
+          No places to show yet. Start the Supabase stack and load the seed to populate discovery.
+        </p>
+      )}
+    </div>
   );
 }

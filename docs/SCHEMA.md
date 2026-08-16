@@ -24,6 +24,7 @@ never the app code.
 | `0013_badges.sql` | badges, user_badges |
 | `0014_contributions_moderation.sql` | contributions, corrections, reports, moderation_items, moderation_actions |
 | `0015_import.sql` | import_sources, import_runs, import_raw, import_candidates, import_conflicts |
+| `0016_views.sql` | `places_geo` view (exposes lng/lat; `security_invoker`) |
 
 ## Key design decisions
 
