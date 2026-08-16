@@ -1,7 +1,7 @@
-import type { PlaceSearchInput } from '@heritage/validation';
+import type { PlaceSearchInput } from '@whilom/validation';
 
 /**
- * @heritage/search
+ * @whilom/search
  *
  * Translates validated search input (spec §37) into the arguments for the
  * `search_places` Postgres RPC. Keeping this here means web and mobile issue

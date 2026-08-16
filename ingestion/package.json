@@ -1,5 +1,5 @@
 {
-  "name": "@heritage/ingestion",
+  "name": "@whilom/ingestion",
   "version": "0.0.0",
   "private": true,
   "description": "Governed data-ingestion pipeline: source adapters, normalise, validate, match/dedupe, enrich, review, publish (spec §35). SERVER-ONLY.",
@@ -11,9 +11,9 @@
     "clean": "rimraf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {
-    "@heritage/database": "workspace:*",
-    "@heritage/domain": "workspace:*",
-    "@heritage/validation": "workspace:*"
+    "@whilom/database": "workspace:*",
+    "@whilom/domain": "workspace:*",
+    "@whilom/validation": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.6.2",

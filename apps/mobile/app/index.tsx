@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { PlaceType } from '@heritage/domain';
+import { PlaceType } from '@whilom/domain';
 
 /**
  * Placeholder "Near Me" entry screen (spec §28). Phase 6 replaces this with the
@@ -9,7 +9,7 @@ import { PlaceType } from '@heritage/domain';
 export default function NearMeScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Heritage Companion</Text>
+      <Text style={styles.title}>Whilom</Text>
       <Text style={styles.body}>
         Phase 1 scaffold. Nearby discovery, visits and trails arrive in Phase 6.
       </Text>

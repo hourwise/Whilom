@@ -3,11 +3,11 @@ import type { ReactNode } from 'react';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Heritage Platform',
-    template: '%s · Heritage Platform',
+    default: 'Whilom',
+    template: '%s · Whilom',
   },
   description:
-    'Discover UK heritage: places connected to people, stories, objects and journeys.',
+    'Whilom — History, where it happened. Discover UK heritage: places connected to people, stories, objects and journeys.',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

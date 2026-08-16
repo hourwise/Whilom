@@ -1,5 +1,5 @@
 {
-  "name": "heritage-platform",
+  "name": "whilom",
   "version": "0.0.0",
   "private": true,
   "description": "UK heritage discovery, research and travel platform — web + mobile companion on a shared Supabase backend.",
@@ -15,8 +15,8 @@
     "test": "turbo run test",
     "clean": "turbo run clean && rimraf node_modules",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
-    "web": "turbo run dev --filter=@heritage/web",
-    "mobile": "turbo run dev --filter=@heritage/mobile",
+    "web": "turbo run dev --filter=@whilom/web",
+    "mobile": "turbo run dev --filter=@whilom/mobile",
     "db:types": "supabase gen types typescript --local > packages/database/src/generated/database.types.ts"
   },
   "devDependencies": {

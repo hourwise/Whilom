@@ -1,5 +1,5 @@
 // Metro configured for the monorepo: watch the workspace root so shared
-// `@heritage/*` packages resolve, and let Metro resolve hoisted deps.
+// `@whilom/*` packages resolve, and let Metro resolve hoisted deps.
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
 

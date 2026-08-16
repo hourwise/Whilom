@@ -1,8 +1,8 @@
 {
-  "name": "@heritage/mobile",
+  "name": "@whilom/mobile",
   "version": "0.0.0",
   "private": true,
-  "description": "Heritage Mobile Companion — location-aware discovery while travelling (spec Part B).",
+  "description": "Whilom Mobile — location-aware heritage discovery while travelling (spec Part B).",
   "main": "expo-router/entry",
   "scripts": {
     "dev": "expo start",
@@ -13,10 +13,10 @@
     "clean": "rimraf .expo .turbo *.tsbuildinfo"
   },
   "dependencies": {
-    "@heritage/database": "workspace:*",
-    "@heritage/domain": "workspace:*",
-    "@heritage/search": "workspace:*",
-    "@heritage/validation": "workspace:*",
+    "@whilom/database": "workspace:*",
+    "@whilom/domain": "workspace:*",
+    "@whilom/search": "workspace:*",
+    "@whilom/validation": "workspace:*",
     "@supabase/supabase-js": "^2.45.4",
     "expo": "~52.0.0",
     "expo-constants": "~17.0.0",

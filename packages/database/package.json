@@ -1,5 +1,5 @@
 {
-  "name": "@heritage/database",
+  "name": "@whilom/database",
   "version": "0.0.0",
   "private": true,
   "description": "Shared database contracts: generated Supabase types + typed client factories. No app owns the schema.",
@@ -16,7 +16,7 @@
     "clean": "rimraf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {
-    "@heritage/domain": "workspace:*",
+    "@whilom/domain": "workspace:*",
     "@supabase/supabase-js": "^2.45.4"
   },
   "devDependencies": {

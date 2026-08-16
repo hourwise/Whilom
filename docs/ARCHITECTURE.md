@@ -21,11 +21,11 @@ connects both (spec §54).
 ## Package graph
 
 ```
-@heritage/domain      (no deps)
+@whilom/domain      (no deps)
       ▲
-      ├── @heritage/validation   (+ zod)
-      ├── @heritage/database     (+ @supabase/supabase-js, generated types)
-      └── @heritage/search       (+ validation)
+      ├── @whilom/validation   (+ zod)
+      ├── @whilom/database     (+ @supabase/supabase-js, generated types)
+      └── @whilom/search       (+ validation)
                  ▲
    ┌─────────────┼───────────────┐
 apps/web     apps/mobile      ingestion

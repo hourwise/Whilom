@@ -3,10 +3,10 @@ const nextConfig = {
   reactStrictMode: true,
   // Compile shared workspace packages from source (they ship raw TS).
   transpilePackages: [
-    '@heritage/domain',
-    '@heritage/database',
-    '@heritage/validation',
-    '@heritage/search',
+    '@whilom/domain',
+    '@whilom/database',
+    '@whilom/validation',
+    '@whilom/search',
   ],
   experimental: {
     typedRoutes: true,

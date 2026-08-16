@@ -1,5 +1,5 @@
 # Supabase local development config. `supabase start` reads this.
-project_id = "heritage-platform"
+project_id = "whilom"
 
 [api]
 enabled = true
@@ -20,7 +20,7 @@ port = 54323
 [auth]
 enabled = true
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000", "heritage://"]
+additional_redirect_urls = ["http://localhost:3000", "whilom://"]
 jwt_expiry = 3600
 enable_signup = true
 

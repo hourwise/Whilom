@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "Heritage Platform base",
+  "display": "Whilom base",
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022"],
@@ -22,10 +22,10 @@
     "declarationMap": true,
     "sourceMap": true,
     "paths": {
-      "@heritage/domain": ["./packages/domain/src/index.ts"],
-      "@heritage/database": ["./packages/database/src/index.ts"],
-      "@heritage/validation": ["./packages/validation/src/index.ts"],
-      "@heritage/search": ["./packages/search/src/index.ts"]
+      "@whilom/domain": ["./packages/domain/src/index.ts"],
+      "@whilom/database": ["./packages/database/src/index.ts"],
+      "@whilom/validation": ["./packages/validation/src/index.ts"],
+      "@whilom/search": ["./packages/search/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "dist", ".next", ".expo"]

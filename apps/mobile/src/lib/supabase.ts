@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Database } from '@heritage/database';
+import type { Database } from '@whilom/database';
 
 /**
  * Mobile Supabase client. Anon key only (EXPO_PUBLIC_*), RLS enforced.

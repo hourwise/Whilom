@@ -1,33 +1,41 @@
-# Heritage Platform
+# Whilom
+
+**History, where it happened.**
 
 A UK heritage discovery, research and travel platform: an in-depth **web
 knowledge platform** and a location-aware **mobile companion**, sharing one
-Supabase backend and one heritage graph.
+Supabase backend and one heritage graph. The same account and the same history
+follow a user from desktop research to standing at the actual site.
 
 > Places connected to people, stories, objects and journeys. The website
 > provides the depth; the mobile app provides the real-world experience.
 
 This repository is the **Phase 1 — Shared Foundation** scaffold. It wires the
 monorepo, the shared TypeScript packages (with the real domain model), both app
-skeletons and the initial database + ingestion contracts. Feature phases build
-on top; see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+skeletons and the full database + ingestion contracts. Feature phases build on
+top; see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and
+[`docs/SCHEMA.md`](docs/SCHEMA.md).
 
 ## Layout
 
 ```
-apps/
-  web/        Next.js 15 — deep discovery, research, journey planning (Part A)
-  mobile/     Expo / React Native — location-aware companion (Part B)
-packages/
-  domain/     Entity kinds, relationship predicates, controlled vocabularies (zero deps)
-  database/   Generated Supabase types + typed client factories (owns the DB contract)
-  validation/ Zod schemas for API/forms/community/ingestion boundaries
-  search/     Shared search query construction → search_places RPC
-  config/     Shared tsconfig
-supabase/     migrations · functions · tests · seed
-ingestion/    Modular source adapters + governed pipeline (server-only)
-docs/         Architecture & design notes
+whilom/
+  apps/
+    web/        Next.js 15 — deep discovery, research, journey planning (Part A)
+    mobile/     Expo / React Native — location-aware companion (Part B)
+  packages/
+    domain/     Entity kinds, relationship predicates, controlled vocabularies (zero deps)
+    database/   Generated Supabase types + typed client factories (owns the DB contract)
+    validation/ Zod schemas for API/forms/community/ingestion boundaries
+    search/     Shared search query construction → search_places RPC
+    config/     Shared tsconfig
+  supabase/     migrations · functions · tests · seed
+  ingestion/    Modular source adapters + governed pipeline (server-only)
+  docs/         Architecture, schema & design notes
 ```
+
+Internally the two clients are referred to as **Whilom Web** and **Whilom
+Mobile**; publicly both are simply **Whilom**.
 
 ## Prerequisites
 
@@ -76,6 +84,14 @@ pnpm mobile                # Expo dev server
 
 ## Status
 
-Phase 1 scaffold. The apps render placeholder screens that import the shared
-domain to prove end-to-end wiring. Next up: **Phase 2 — Data MVP** (first source
-connectors, duplicate matcher, review tool) and **Phase 3 — Website MVP**.
+Phase 1 scaffold with the **full database schema** in place (see
+[`docs/SCHEMA.md`](docs/SCHEMA.md)). The apps render placeholder screens that
+import the shared domain to prove end-to-end wiring. Next up: **Phase 2 — Data
+MVP** (first source connectors, duplicate matcher, review tool) and **Phase 3 —
+Website MVP**.
+
+## Branding note
+
+The name is a working brand. Before any paid branding, app-store listings,
+domains or marketing, run a formal UKIPO / Companies House / app-store / domain
+clearance pass — sensible housekeeping, not a blocker for development.

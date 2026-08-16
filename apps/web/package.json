@@ -1,8 +1,8 @@
 {
-  "name": "@heritage/web",
+  "name": "@whilom/web",
   "version": "0.0.0",
   "private": true,
-  "description": "Heritage Web Platform — deep discovery, research and journey planning (spec Part A).",
+  "description": "Whilom Web — deep heritage discovery, research and journey planning (spec Part A).",
   "type": "module",
   "scripts": {
     "dev": "next dev --port 3000",
@@ -13,10 +13,10 @@
     "clean": "rimraf .next .turbo *.tsbuildinfo"
   },
   "dependencies": {
-    "@heritage/database": "workspace:*",
-    "@heritage/domain": "workspace:*",
-    "@heritage/search": "workspace:*",
-    "@heritage/validation": "workspace:*",
+    "@whilom/database": "workspace:*",
+    "@whilom/domain": "workspace:*",
+    "@whilom/search": "workspace:*",
+    "@whilom/validation": "workspace:*",
     "@supabase/ssr": "^0.5.1",
     "@supabase/supabase-js": "^2.45.4",
     "next": "^15.0.0",

@@ -1,5 +1,5 @@
 {
-  "name": "@heritage/search",
+  "name": "@whilom/search",
   "version": "0.0.0",
   "private": true,
   "description": "Search query construction shared by web + mobile. PostGIS/text now; room for semantic search later (spec §37).",
@@ -16,8 +16,8 @@
     "clean": "rimraf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {
-    "@heritage/domain": "workspace:*",
-    "@heritage/validation": "workspace:*"
+    "@whilom/domain": "workspace:*",
+    "@whilom/validation": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.6.2",

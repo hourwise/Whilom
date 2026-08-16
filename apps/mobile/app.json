@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Heritage Companion",
-    "slug": "heritage-companion",
-    "scheme": "heritage",
+    "name": "Whilom",
+    "slug": "whilom",
+    "scheme": "whilom",
     "version": "0.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -13,10 +13,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "uk.heritage.companion"
+      "bundleIdentifier": "uk.whilom.app"
     },
     "android": {
-      "package": "uk.heritage.companion"
+      "package": "uk.whilom.app"
     }
   }
 }

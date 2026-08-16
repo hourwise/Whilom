@@ -5,7 +5,7 @@ import {
   HistoricalPeriod,
   PlaceType,
   RouteType,
-} from '@heritage/domain';
+} from '@whilom/domain';
 
 /** Turn a domain `const` object into a Zod enum of its values. */
 const enumValues = <T extends Record<string, string>>(obj: T) =>

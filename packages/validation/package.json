@@ -1,5 +1,5 @@
 {
-  "name": "@heritage/validation",
+  "name": "@whilom/validation",
   "version": "0.0.0",
   "private": true,
   "description": "Zod schemas for API boundaries, forms, community submissions and ingestion normalisation.",
@@ -16,7 +16,7 @@
     "clean": "rimraf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {
-    "@heritage/domain": "workspace:*",
+    "@whilom/domain": "workspace:*",
     "zod": "^3.23.8"
   },
   "devDependencies": {

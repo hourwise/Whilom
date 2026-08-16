@@ -1,5 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr';
-import type { Database } from '@heritage/database';
+import type { Database } from '@whilom/database';
 
 /** Browser Supabase client for Client Components. Anon key only (RLS enforced). */
 export function createClient() {

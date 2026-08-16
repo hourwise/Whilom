@@ -1,4 +1,4 @@
-import type { PlaceType } from '@heritage/domain';
+import type { PlaceType } from '@whilom/domain';
 
 /**
  * Source adapter contract (spec §35, §36).

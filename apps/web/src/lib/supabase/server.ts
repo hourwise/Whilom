@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import type { Database } from '@heritage/database';
+import type { Database } from '@whilom/database';
 
 /**
  * Server Supabase client for Server Components, Route Handlers and Server

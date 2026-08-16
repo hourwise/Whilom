@@ -1,5 +1,5 @@
 {
-  "name": "@heritage/domain",
+  "name": "@whilom/domain",
   "version": "0.0.0",
   "private": true,
   "description": "Historical entity definitions, enums and shared domain types. No runtime dependencies.",
