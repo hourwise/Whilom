@@ -1,0 +1,16 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@heritage/domain": ["../../packages/domain/src/index.ts"],
+      "@heritage/database": ["../../packages/database/src/index.ts"],
+      "@heritage/validation": ["../../packages/validation/src/index.ts"],
+      "@heritage/search": ["../../packages/search/src/index.ts"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  "exclude": ["node_modules"]
+}

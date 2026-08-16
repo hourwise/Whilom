@@ -1,0 +1,23 @@
+{
+  "name": "@heritage/ingestion",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Governed data-ingestion pipeline: source adapters, normalise, validate, match/dedupe, enrich, review, publish (spec §35). SERVER-ONLY.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "clean": "rimraf dist .turbo *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@heritage/database": "workspace:*",
+    "@heritage/domain": "workspace:*",
+    "@heritage/validation": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.1",
+    "rimraf": "^6.0.1"
+  }
+}

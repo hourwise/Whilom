@@ -1,0 +1,2 @@
+# Normalisation transforms (spec §35): source vocab → domain enums, coordinate
+# reprojection, name cleaning, designation/grade parsing.

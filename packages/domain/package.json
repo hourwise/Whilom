@@ -1,0 +1,24 @@
+{
+  "name": "@heritage/domain",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Historical entity definitions, enums and shared domain types. No runtime dependencies.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "clean": "rimraf dist .turbo *.tsbuildinfo"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.1",
+    "rimraf": "^6.0.1"
+  }
+}

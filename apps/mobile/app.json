@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Heritage Companion",
+    "slug": "heritage-companion",
+    "scheme": "heritage",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "uk.heritage.companion"
+    },
+    "android": {
+      "package": "uk.heritage.companion"
+    }
+  }
+}

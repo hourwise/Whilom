@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Heritage base (re-export of root base)",
+  "extends": "../../../tsconfig.base.json"
+}

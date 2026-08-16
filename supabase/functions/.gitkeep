@@ -1,0 +1,2 @@
+# Supabase Edge Functions live here (privileged server operations, spec §38).
+# Example: award-badge, moderate-submission, run-import — added in later phases.

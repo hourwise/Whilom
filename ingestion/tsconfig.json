@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist",
+    "types": ["node"]
+  },
+  "include": ["sources/**/*.ts", "transforms/**/*.ts", "matching/**/*.ts", "enrichment/**/*.ts", "pipeline/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+}

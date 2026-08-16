@@ -1,0 +1,35 @@
+{
+  "name": "@heritage/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Heritage Web Platform — deep discovery, research and journey planning (spec Part A).",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf .next .turbo *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@heritage/database": "workspace:*",
+    "@heritage/domain": "workspace:*",
+    "@heritage/search": "workspace:*",
+    "@heritage/validation": "workspace:*",
+    "@supabase/ssr": "^0.5.1",
+    "@supabase/supabase-js": "^2.45.4",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.5",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.11.0",
+    "eslint-config-next": "^15.0.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.6.2"
+  }
+}

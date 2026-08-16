@@ -1,0 +1,15 @@
+{
+  "extends": "../../packages/config/tsconfig/next.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@heritage/domain": ["../../packages/domain/src/index.ts"],
+      "@heritage/database": ["../../packages/database/src/index.ts"],
+      "@heritage/validation": ["../../packages/validation/src/index.ts"],
+      "@heritage/search": ["../../packages/search/src/index.ts"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

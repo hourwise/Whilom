@@ -1,0 +1,2 @@
+# Duplicate resolution (spec §36): match on identifiers, coordinates, name,
+# alt-names, designation, postcode, type. Ambiguous matches → review queue.
