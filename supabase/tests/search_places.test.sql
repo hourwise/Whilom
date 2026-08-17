@@ -2,6 +2,9 @@
 -- Assumes seed data loaded.
 
 begin;
+-- pgTAP lives only inside this transaction: created here and rolled back with
+-- everything else, so the test framework never reaches a real deployment.
+create extension if not exists pgtap;
 select plan(3);
 
 -- Text search finds the abbey.
