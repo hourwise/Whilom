@@ -32,6 +32,14 @@ connects both (spec §54).
   conflict row itself, and its role gate is one of three layers rather than the
   protection.
 
+- **Media rights are a backend invariant.** An imported image is publishable
+  only when Whilom can generate valid attribution for that exact file from
+  stored data. The rights gate lives in `publish_media_candidate()`, which
+  re-assesses at publication; the UI explains rights state and has no override.
+- **Imported media is not community media.** External open media (governed by
+  the source's licence) and user-uploaded photographs (governed by the
+  uploader's declaration) keep separate legal models and are not merged.
+
 ## Internal tooling
 
 `/admin/imports` is the import review workbench: editorial staff only, and

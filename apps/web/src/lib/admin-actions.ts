@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireEditor } from '@/lib/admin';
 import { failAction, formText, logMutationFailure, succeedAction } from '@/lib/action-result';
 import { isConflictResolution, isReviewDecision } from '@/lib/review';
+import { isMediaDecision } from '@/lib/media';
 
 /**
  * Review workbench mutations.
@@ -79,6 +80,69 @@ export async function resolveConflict(formData: FormData) {
 
   revalidatePath(candidatePath(candidateId));
   succeedAction(candidatePath(candidateId), 'conflict_resolved');
+}
+
+/**
+ * Record a media review decision, optionally correcting the subject.
+ *
+ * Note what is NOT a parameter: creator and licence. A reviewer may say what an
+ * image shows; they may not invent who made it or under what terms.
+ */
+export async function reviewMedia(formData: FormData) {
+  await requireEditor();
+
+  const candidateId = formText(formData, 'candidate_id');
+  const decision = formText(formData, 'decision');
+  const entityId = formText(formData, 'entity_id');
+  const note = formText(formData, 'note');
+
+  if (!candidateId) failAction('/admin/imports/media', 'invalid_input', ['candidate_id']);
+  if (!isMediaDecision(decision)) {
+    failAction('/admin/imports/media', 'invalid_input', ['decision']);
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('review_media_candidate', {
+    p_candidate_id: candidateId,
+    p_decision: decision,
+    p_entity_id: entityId ?? undefined,
+    p_note: note ?? undefined,
+  });
+
+  if (error) {
+    logMutationFailure('review_media_candidate', error);
+    failAction('/admin/imports/media', 'save_failed');
+  }
+
+  revalidatePath('/admin/imports/media');
+  succeedAction('/admin/imports/media', 'media_reviewed');
+}
+
+/**
+ * Publish imported media. The rights gate lives in the database: this call
+ * fails if the file is not rights-ready, and that failure is reported as a
+ * failure. There is no bypass parameter because there is no bypass.
+ */
+export async function publishMedia(formData: FormData) {
+  await requireEditor();
+
+  const candidateId = formText(formData, 'candidate_id');
+  const note = formText(formData, 'note');
+  if (!candidateId) failAction('/admin/imports/media', 'invalid_input', ['candidate_id']);
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('publish_media_candidate', {
+    p_candidate_id: candidateId,
+    p_note: note ?? undefined,
+  });
+
+  if (error) {
+    logMutationFailure('publish_media_candidate', error);
+    failAction('/admin/imports/media', 'save_failed');
+  }
+
+  revalidatePath('/admin/imports/media');
+  succeedAction('/admin/imports/media', 'media_published');
 }
 
 /**
