@@ -58,16 +58,26 @@ export const PlaceType = {
    */
   Building: 'building',
   /**
-   * A built work with no more specific classification: bridges, walls, gates,
-   * gate piers, railings, boundary markers, culverts, steps, street furniture,
-   * engineering works. Commemorative works stay `Monument`.
+   * A **constructed** work with no more specific classification: bridges,
+   * walls, gates, gate piers, railings, boundary markers, culverts, steps,
+   * street furniture, engineering works. Commemorative works stay `Monument`.
    *
-   * Also the deliberate catch-all. Every designated heritage record is a built
-   * work of some kind, so this is always a true statement — which is why an
-   * unclassifiable record lands here rather than being forced into a category
-   * that claims more than is known.
+   * NOT a universal heritage fallback. Much designated heritage is not a built
+   * work at all — battlefields, designed landscapes, protected wrecks,
+   * earthworks, demolished sites — and calling those "structures" would be
+   * false. Use `Unknown` when nothing is known, and the designation-specific
+   * type when the designation itself implies one.
    */
   Structure: 'structure',
+  /**
+   * Genuinely not known.
+   *
+   * Reserved for records where neither the name nor the designation implies
+   * what the place is. It exists so ingestion can say "we do not know" instead
+   * of asserting a category — an honest gap a reviewer or a second source can
+   * close later.
+   */
+  Unknown: 'unknown',
 } as const;
 export type PlaceType = (typeof PlaceType)[keyof typeof PlaceType];
 

@@ -3,10 +3,12 @@ import type { EnrichmentSource } from '../enrichment/enrichment-source';
 import { ENRICHMENT_COORDINATE_TOLERANCE_METERS } from '../enrichment/enrichment-source';
 import { applyEnrichment } from '../enrichment/wikidata';
 import { matchCandidate } from '../matching/matcher';
-import type { SourceAdapter } from '../sources/source-adapter';
-import { normaliseNhleRecord } from '../transforms/normalise-nhle';
+import { ComparisonOutcome, compareSources } from '../matching/compare';
+import type { SourceComparison } from '../matching/compare';
+import type { RawPlaceRecord, SourceAdapter } from '../sources/source-adapter';
+import type { NormaliseResult } from '../transforms/normalise-nhle';
 import { distanceMeters } from '../transforms/osgb';
-import { GENERIC_FALLBACK_RULE } from '../transforms/place-type';
+import { isFallbackClassification } from '../transforms/place-type';
 import type {
   CanonicalPlaceRef,
   MatchDecision,
@@ -34,9 +36,20 @@ import { MatchOutcome } from './candidate';
  * reports exactly what it would have published and what it would have queued.
  */
 
+/**
+ * One source in a run. The normaliser travels with the adapter, so adding a
+ * source is a matter of supplying a pair — there is no per-source branching
+ * anywhere in the runner.
+ */
+export interface SourceSpec {
+  adapter: SourceAdapter;
+  normalise: (raw: RawPlaceRecord, importRunId: string) => NormaliseResult;
+}
+
 export interface RunOptions {
   importRunId: string;
-  adapter: SourceAdapter;
+  /** Sources are processed in order, so the first to describe a place wins it. */
+  sources: readonly SourceSpec[];
   /** Canonical places already in the database. Empty for a first run. */
   existingPlaces?: readonly CanonicalPlaceRef[];
   /** Identifier/structured enrichment, applied before matching. */
@@ -50,11 +63,17 @@ export interface DecidedCandidate {
   decision: MatchDecision;
   /** True when the match was against a candidate created earlier in this run. */
   withinRun: boolean;
+  /**
+   * Field-level comparison against the record this matched, when it matched.
+   * Absent for a new canonical record — there is nothing to compare against.
+   */
+  comparison?: SourceComparison;
 }
 
 export interface RunReport {
   importRunId: string;
-  sourceId: string;
+  /** Every source that contributed, in the order they ran. */
+  sourceIds: string[];
   startedAt: string;
   finishedAt: string;
   runtimeMs: number;
@@ -72,13 +91,26 @@ export interface RunReport {
   /** Total field-level disagreements raised. */
   conflicts: number;
   /**
-   * Candidates that got the generic `structure` classification because their
-   * name yielded no specific type. A real classification, not a placeholder,
-   * but still the honest measure of how much NHLE we cannot type precisely.
+   * Candidates typed by a fallback rather than by evidence in the name —
+   * either what the designation implies, or `unknown` where it implies
+   * nothing. The honest measure of how much of a source we cannot type.
    */
   genericallyTyped: number;
+  /** Cross-source comparison outcomes, for matched records only. */
+  comparisons: Record<ComparisonOutcome, number>;
   rejections: RejectedRecord[];
   decided: DecidedCandidate[];
+}
+
+function emptyComparisons(): Record<ComparisonOutcome, number> {
+  return {
+    [ComparisonOutcome.Agreement]: 0,
+    [ComparisonOutcome.Complementary]: 0,
+    [ComparisonOutcome.Conflict]: 0,
+    [ComparisonOutcome.Ambiguous]: 0,
+    [ComparisonOutcome.NoMatch]: 0,
+    [ComparisonOutcome.Invalid]: 0,
+  };
 }
 
 function emptyOutcomes(): Record<MatchOutcome, number> {
@@ -111,12 +143,12 @@ export function candidateAsCanonical(candidate: PlaceCandidate, id: string): Can
 }
 
 export async function runIngestion(options: RunOptions): Promise<RunReport> {
-  const { importRunId, adapter, enrichmentSource, maxRecords } = options;
+  const { importRunId, sources, enrichmentSource, maxRecords } = options;
   const startedAt = new Date();
 
   const report: RunReport = {
     importRunId,
-    sourceId: adapter.id,
+    sourceIds: sources.map((s) => s.adapter.id),
     startedAt: startedAt.toISOString(),
     finishedAt: startedAt.toISOString(),
     runtimeMs: 0,
@@ -128,6 +160,7 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
     duplicatesWithinRun: 0,
     conflicts: 0,
     genericallyTyped: 0,
+    comparisons: emptyComparisons(),
     rejections: [],
     decided: [],
   };
@@ -137,14 +170,18 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
   // describing one abbey would both be filed as new.
   const existing: CanonicalPlaceRef[] = [...(options.existingPlaces ?? [])];
   const preexistingIds = new Set(existing.map((p) => p.id));
+  // The candidate behind each record created in this run, so a later source
+  // describing the same place can be compared field by field against it.
+  const candidateById = new Map<string, PlaceCandidate>();
   let createdInRun = 0;
 
-  for await (const raw of adapter.fetch()) {
+  for (const source of sources) {
+   for await (const raw of source.adapter.fetch()) {
     if (maxRecords !== undefined && report.sourceRows >= maxRecords) break;
     report.sourceRows += 1;
 
     // --- NORMALISE ----------------------------------------------------------
-    const normalised = normaliseNhleRecord(raw, importRunId);
+    const normalised = source.normalise(raw, importRunId);
     if (!normalised.ok) {
       report.rejected += 1;
       report.rejections.push(normalised.rejected);
@@ -167,7 +204,7 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
 
     report.valid += 1;
     let candidate = normalised.candidate;
-    if (candidate.placeTypeRule === GENERIC_FALLBACK_RULE) report.genericallyTyped += 1;
+    if (isFallbackClassification(candidate.placeTypeRule)) report.genericallyTyped += 1;
 
     // --- IDENTIFIER RESOLUTION (see note above) -----------------------------
     if (enrichmentSource) {
@@ -204,10 +241,31 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
     // that would let one uncertain decision propagate through the whole run.
     if (decision.outcome === MatchOutcome.NewCanonical) {
       createdInRun += 1;
-      existing.push(candidateAsCanonical(candidate, `run:${importRunId}:${createdInRun}`));
+      const id = `run:${importRunId}:${createdInRun}`;
+      existing.push(candidateAsCanonical(candidate, id));
+      candidateById.set(id, candidate);
+      report.comparisons[ComparisonOutcome.NoMatch] += 1;
     }
 
-    report.decided.push({ candidate, decision, withinRun });
+    // --- CROSS-SOURCE COMPARISON -------------------------------------------
+    // Only meaningful once we believe two records describe one place. Identity
+    // and agreement are separate questions: deciding they are the same site
+    // says nothing about whether the sources agree about it.
+    let comparison: SourceComparison | undefined;
+    if (decision.matchedPlaceId) {
+      const counterpart = candidateById.get(decision.matchedPlaceId);
+      if (counterpart) {
+        comparison = compareSources(counterpart, candidate);
+        report.comparisons[comparison.outcome] += 1;
+        report.conflicts += comparison.conflicts.length;
+      }
+    }
+    if (decision.outcome === MatchOutcome.MatchReview && !comparison) {
+      report.comparisons[ComparisonOutcome.Ambiguous] += 1;
+    }
+
+    report.decided.push({ candidate, decision, withinRun, ...(comparison ? { comparison } : {}) });
+   }
   }
 
   const finishedAt = new Date();

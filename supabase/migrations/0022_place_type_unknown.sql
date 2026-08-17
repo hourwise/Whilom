@@ -1,0 +1,34 @@
+-- 0022_place_type_unknown.sql
+-- Stop calling non-constructed heritage a "structure".
+--
+-- 0019 introduced `structure` and the ingestion layer then used it as the
+-- universal fallback for any record whose name yielded no specific type. The
+-- justification given was "every designated record is a built work". That is
+-- simply not true, and the fallback fired across every NHLE layer:
+--
+--   protected wrecks          a wrecked vessel is not a built work on that spot
+--   scheduled monuments       frequently earthworks, barrows, cropmarks
+--   world heritage sites      Saltaire is a model village; Studley Royal is a
+--                             designed landscape — neither is a "structure"
+--   lost/demolished sites     nothing is standing at all
+--   designed landscapes       parks and gardens are grown, not built
+--
+-- Two corrections, both small:
+--
+--   1. `unknown` is added, so a source that genuinely does not say what
+--      something is can record exactly that rather than being forced into a
+--      category that asserts more than is known. The review queue exists to
+--      resolve these, and a second source frequently supplies the answer —
+--      Wikidata types Saltaire as a model village where NHLE says nothing.
+--
+--   2. `structure` keeps the meaning it should have had from the start: a
+--      CONSTRUCTED work with no more specific classification. It is a fallback
+--      only within the listed-building sense, never a universal one.
+--
+-- The type-inference fallback is now designation-aware (see
+-- ingestion/transforms/place-type.ts): a scheduled monument defaults to
+-- `archaeological_site`, a registered park to `historic_landscape`, a
+-- battlefield to `battlefield`, a protected wreck to `archaeological_site`, a
+-- listed building to `structure`, and anything else to `unknown`.
+
+alter type public.place_type add value if not exists 'unknown';

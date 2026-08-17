@@ -4,6 +4,7 @@ import { WikidataEnrichmentSource } from '../enrichment/wikidata';
 import { MatchOutcome } from '../pipeline/candidate';
 import { runIngestion } from '../pipeline/run';
 import { HistoricEnglandNhleAdapter } from '../sources/historic-england/nhle-adapter';
+import { normaliseNhleRecord } from '../transforms/normalise-nhle';
 
 /**
  * The bounded Yorkshire proof of concept, end to end:
@@ -24,7 +25,12 @@ const WIKIDATA_FIXTURE = fileURLToPath(
 function run() {
   return runIngestion({
     importRunId: 'poc-yorkshire',
-    adapter: new HistoricEnglandNhleAdapter({ kind: 'file', path: NHLE_FIXTURE }),
+    sources: [
+      {
+        adapter: new HistoricEnglandNhleAdapter({ kind: 'file', path: NHLE_FIXTURE }),
+        normalise: normaliseNhleRecord,
+      },
+    ],
     enrichmentSource: new WikidataEnrichmentSource(WIKIDATA_FIXTURE),
   });
 }
@@ -121,7 +127,7 @@ describe('Yorkshire POC run', () => {
     console.log(
       [
         '',
-        `Yorkshire POC run (${report.importRunId}) — source ${report.sourceId}`,
+        `Yorkshire POC run (${report.importRunId}) — source ${report.sourceIds.join(" + ")}`,
         `  source rows          ${report.sourceRows}`,
         `  valid                ${report.valid}`,
         `  rejected             ${report.rejected}`,
