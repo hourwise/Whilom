@@ -265,8 +265,8 @@ begin
   end if;
 
   if c.source_file_id is null or c.source_page_url is null or c.media_url is null then
-    if c.media_url is null then v_missing := v_missing || 'media_url'; end if;
-    if c.source_page_url is null then v_missing := v_missing || 'source_page_url'; end if;
+    if c.media_url is null then v_missing := v_missing || 'media_url'::text; end if;
+    if c.source_page_url is null then v_missing := v_missing || 'source_page_url'::text; end if;
     update public.import_media_candidates
        set rights_state = 'media_invalid', missing_rights_fields = v_missing
      where id = p_candidate_id;
@@ -283,18 +283,18 @@ begin
   v_attribution := public.build_media_attribution(c.creator, c.licence, v_source_name, c.source_title);
 
   if c.licence = 'UNKNOWN' then
-    v_missing := v_missing || 'licence';
+    v_missing := v_missing || 'licence'::text;
     v_state := 'media_rights_incomplete';
   elsif not v_terms.is_reusable then
     v_state := 'media_licence_unsupported';
   elsif v_terms.requires_attribution and (c.creator is null or btrim(c.creator) = '') then
-    v_missing := v_missing || 'creator';
+    v_missing := v_missing || 'creator'::text;
     v_state := 'media_creator_unknown';
   elsif v_attribution is null then
-    v_missing := v_missing || 'attribution';
+    v_missing := v_missing || 'attribution'::text;
     v_state := 'media_rights_incomplete';
   elsif c.retrieved_at is null then
-    v_missing := v_missing || 'retrieved_at';
+    v_missing := v_missing || 'retrieved_at'::text;
     v_state := 'media_rights_incomplete';
   elsif c.entity_id is null or c.association_outcome <> 'media_match_confident' then
     -- Rights are fine; we are simply not sure enough what it shows.
