@@ -2,6 +2,10 @@
 -- Assumes seed data loaded.
 
 begin;
+-- supabase test db already provides pgTAP; this keeps the file runnable on
+-- its own via psql. It is never created by a migration, so the test framework
+-- cannot reach a real deployment.
+create extension if not exists pgtap;
 select plan(3);
 
 -- Text search finds the abbey.

@@ -21,11 +21,13 @@ describe('buildSearchArgs', () => {
     expect(args.visitable_only).toBe(false);
   });
 
-  it('nulls out absent geographic filters', () => {
+  it('omits absent geographic filters rather than sending nulls', () => {
+    // Every search_places parameter has a SQL default, so an absent filter is
+    // left out. The generated Args type declares them optional, not nullable.
     const args = buildSearchArgs(placeSearchSchema.parse({ text: 'abbey' }));
-    expect(args.center_lng).toBeNull();
-    expect(args.radius_m).toBeNull();
-    expect(args.bbox_sw_lng).toBeNull();
-    expect(args.place_types).toBeNull();
+    expect(args.center_lng).toBeUndefined();
+    expect(args.radius_m).toBeUndefined();
+    expect(args.bbox_sw_lng).toBeUndefined();
+    expect(args.place_types).toBeUndefined();
   });
 });

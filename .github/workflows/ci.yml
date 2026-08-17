@@ -10,7 +10,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # Application: install, typecheck, unit tests, build. Deliberately has no
+  # database dependency — the web build must not need a live Supabase.
+  # ---------------------------------------------------------------------------
   build:
+    name: app
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,5 +47,96 @@ jobs:
           EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
           EXPO_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key
 
-  # NOTE: `pnpm lint` is intentionally not run yet — the apps (Next.js / Expo)
-  # don't have ESLint configs. Add app lint configs, then reinstate a lint step.
+  # ---------------------------------------------------------------------------
+  # Database: build Whilom's schema from nothing on an ephemeral, throwaway
+  # Postgres, prove the migrations replay, run the pgTAP/RLS suite, and hold the
+  # generated type contract to the schema.
+  #
+  # Everything here is local to the runner and destroyed with it. No hosted
+  # Supabase project is involved and the job requires no secrets — that is what
+  # lets it run on forks and on a developer machine without Docker.
+  # ---------------------------------------------------------------------------
+  database:
+    name: database
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Record CLI version
+        run: supabase --version
+
+      # Studio, image proxy, edge runtime and the log pipeline contribute
+      # nothing to migration or pgTAP verification, so they are excluded. The
+      # auth service is kept: the schema has foreign keys into `auth.users` and
+      # the RLS tests depend on a real `auth.uid()`.
+      - name: Start ephemeral Supabase stack
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector
+
+      # `supabase start` applies migrations, but this is the explicit proof:
+      # drop everything and rebuild the database from the committed migrations
+      # plus seed alone. If a migration cannot replay from zero, this fails.
+      - name: Replay all migrations from an empty database
+        run: supabase db reset
+
+      - name: Show applied migrations
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 \
+            -c "select version, name from supabase_migrations.schema_migrations order by version;"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+      # pgTAP is created by each test inside its own rolled-back transaction,
+      # so it is never installed by a migration. This only checks it is
+      # available to be created, and fails early with a clear message if not.
+      - name: Check pgTAP is available
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -t \
+            -c "select 1 from pg_available_extensions where name = 'pgtap';" | grep -q 1
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+      - name: Run database tests (pgTAP)
+        run: supabase test db
+
+      - name: Generate types from the ephemeral schema
+        run: |
+          mkdir -p "$RUNNER_TEMP/dbtypes"
+          supabase gen types typescript --local > "$RUNNER_TEMP/dbtypes/database.types.ts"
+          wc -l "$RUNNER_TEMP/dbtypes/database.types.ts"
+
+      # Uploaded before the drift check so the artifact exists even when the
+      # check fails — that is how the committed file gets refreshed.
+      - name: Upload generated types
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-database-types
+          path: ${{ runner.temp }}/dbtypes/database.types.ts
+          if-no-files-found: warn
+
+      # The contract: schema -> generated types -> committed file. Changing a
+      # migration without regenerating the committed types fails here. The
+      # generated candidate stays in a temp directory so CI never mutates the
+      # working tree.
+      - name: Verify committed types match the schema
+        run: |
+          if ! diff -u packages/database/src/generated/database.types.ts \
+                     "$RUNNER_TEMP/dbtypes/database.types.ts"; then
+            echo ""
+            echo "::error::Generated database types are out of date."
+            echo "The committed packages/database/src/generated/database.types.ts does not"
+            echo "match what the migrations actually produce. Regenerate it with:"
+            echo "  supabase db reset && pnpm db:types"
+            echo "or download the 'generated-database-types' artifact from this run."
+            exit 1
+          fi
+          echo "Committed database types match the schema."
+
+      - name: Stop stack
+        if: always()
+        run: supabase stop --no-backup || true

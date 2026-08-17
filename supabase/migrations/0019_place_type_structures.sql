@@ -1,0 +1,39 @@
+-- 0019_place_type_structures.sql
+-- Give ordinary listed heritage an honest classification.
+--
+-- The Yorkshire POC could not type records like "Numbers 12 And 14 And Attached
+-- Railings" or "Station House", because `place_type` jumped straight from
+-- specific monument categories to nothing at all. Those records fell back to
+-- `monument` with zero confidence — a placeholder pretending to be a fact. The
+-- great majority of the ~380,000 NHLE listed-building entries are exactly this
+-- kind of record, so the gap is not an edge case; it is most of the dataset.
+--
+-- Two values are added rather than one, because the distinction is real and is
+-- something a visitor filters on:
+--
+--   building   an occupiable roofed building with no more specific type —
+--              houses, farmhouses, cottages, terraces, barns, schools, inns,
+--              stables, warehouses, agricultural buildings.
+--
+--   structure  a built work with no more specific classification — bridges,
+--              walls, gates, gate piers, railings, boundary markers, culverts,
+--              steps, street furniture, engineering works. This is also the
+--              deliberate catch-all: every NHLE entry is by definition a
+--              designated built work, so `structure` is a true statement about
+--              a record whose name yields nothing, where the previous fallback
+--              of `monument` asserted something commemorative that was usually
+--              false.
+--
+-- Deliberately NOT covered by these: anything with an existing specific type.
+-- A church stays `church`, a castle stays `castle`, an abbey stays `abbey`.
+-- Commemorative works (crosses, memorials, obelisks, milestones) stay
+-- `monument`. Detailed subtype belongs in `place_categories`/`place_tags`,
+-- which need no migration to extend — `place_type` is meant to stay broad and
+-- stable, and is the wrong place to encode "18th-century tithe barn".
+--
+-- These are ADD VALUE statements only. Postgres refuses to use a new enum value
+-- in the same transaction that adds it, so nothing here may reference them; the
+-- columns and backfills that do live in 0020.
+
+alter type public.place_type add value if not exists 'building';
+alter type public.place_type add value if not exists 'structure';

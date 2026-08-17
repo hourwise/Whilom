@@ -45,13 +45,26 @@ the data genuinely demanded it.
 
 Current status: the Historic England / NHLE adapter, normaliser and matcher
 exist and run over an official-schema Yorkshire sample (see
-[INGESTION.md](INGESTION.md)); persistence and the second-source conflict cases
-remain unproven. See "Real-data proof" in INGESTION.md for the standing gaps.
+[INGESTION.md](INGESTION.md)). The **real-data path is proven** end to end short
+of publication, and the schema it publishes into is now itself proven — RLS,
+constraints and generated types all execute in CI.
+
+Still outstanding for 0B: **real cross-source conflict behaviour**, which cannot
+be demonstrated with one source. Wikidata is currently used for identifiers
+only and agreed with NHLE everywhere it was consulted, so no genuine
+disagreement has ever been exercised. Imagery rights and place↔person
+relationships also remain unproven end to end. See "Real-data proof" in INGESTION.md for the standing gaps.
 
 ## Phase 1 — Shared foundation ✅
 
 Monorepo (pnpm + Turborepo), shared TypeScript packages with the real domain
 model, both app skeletons, Supabase project config, CI, and the test framework.
+
+Now includes **database CI**: every pull request builds the schema from nothing
+on ephemeral GitHub-hosted Postgres, replays all 21 migrations, runs the pgTAP
+suite (61 assertions, including the RLS visibility contract), regenerates the
+Supabase types and fails on drift. Local Docker is optional for developers, not
+required for CI correctness. There is no hosted Supabase environment.
 
 ## Phase 2 — Data MVP 🟡
 

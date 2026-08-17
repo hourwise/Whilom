@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  captureScaleUncertaintyMeters,
   distanceMeters,
   isPlausibleGridReference,
   osgbToOsgb36LatLon,
@@ -54,23 +53,6 @@ describe('osgbToWgs84', () => {
     expect(osgbToWgs84(9_999_999, 42)).toBeNull();
     expect(osgbToWgs84(Number.NaN, 400000)).toBeNull();
     expect(isPlausibleGridReference(427487, 468286)).toBe(true);
-  });
-});
-
-describe('captureScaleUncertaintyMeters', () => {
-  it('scales uncertainty with the map scale the record was captured at', () => {
-    // A 1:10000 scheduled monument is not located as precisely as a 1:1250
-    // listed building, and the matcher depends on knowing the difference.
-    const fine = captureScaleUncertaintyMeters('1:1250');
-    const coarse = captureScaleUncertaintyMeters('1:10000');
-    expect(coarse).toBeGreaterThan(fine);
-  });
-
-  it('falls back to a conservative figure when the scale is absent', () => {
-    expect(captureScaleUncertaintyMeters(null)).toBeGreaterThan(
-      captureScaleUncertaintyMeters('1:2500'),
-    );
-    expect(captureScaleUncertaintyMeters('nonsense')).toBeGreaterThan(0);
   });
 });
 

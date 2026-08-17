@@ -1,3 +1,4 @@
+import type { Database } from '@whilom/database';
 import type { PlaceSearchInput } from '@whilom/validation';
 
 /**
@@ -11,22 +12,19 @@ import type { PlaceSearchInput } from '@whilom/validation';
  * the same `SearchStrategy` interface without touching callers.
  */
 
-export interface SearchPlacesRpcArgs {
-  q: string | null;
-  center_lng: number | null;
-  center_lat: number | null;
-  radius_m: number | null;
-  bbox_sw_lng: number | null;
-  bbox_sw_lat: number | null;
-  bbox_ne_lng: number | null;
-  bbox_ne_lat: number | null;
-  place_types: string[] | null;
-  periods: string[] | null;
-  cost: string | null;
-  visitable_only: boolean;
-  max_rows: number;
-  row_offset: number;
-}
+/**
+ * Taken straight from the generated schema rather than restated here, so the
+ * SQL function signature has exactly one owner. If a migration changes
+ * `search_places`, CI regenerates the types and this stops compiling — which is
+ * the whole point of the drift gate.
+ *
+ * Note the arguments are optional, not nullable: every parameter of the RPC has
+ * a SQL default, so an absent filter is omitted rather than sent as NULL.
+ */
+export type SearchPlacesRpcArgs = Database['public']['Functions']['search_places']['Args'];
+
+/** One row of the `search_places` result, as the database actually returns it. */
+export type SearchPlacesRow = Database['public']['Functions']['search_places']['Returns'][number];
 
 export interface SearchStrategy {
   buildArgs(input: PlaceSearchInput): SearchPlacesRpcArgs;
@@ -36,17 +34,17 @@ export interface SearchStrategy {
 export const postgisTextStrategy: SearchStrategy = {
   buildArgs(input) {
     return {
-      q: input.text ?? null,
-      center_lng: input.center?.lng ?? null,
-      center_lat: input.center?.lat ?? null,
-      radius_m: input.radiusMeters ?? null,
-      bbox_sw_lng: input.bbox?.sw.lng ?? null,
-      bbox_sw_lat: input.bbox?.sw.lat ?? null,
-      bbox_ne_lng: input.bbox?.ne.lng ?? null,
-      bbox_ne_lat: input.bbox?.ne.lat ?? null,
-      place_types: input.types ?? null,
-      periods: input.periods ?? null,
-      cost: input.cost ?? null,
+      q: input.text,
+      center_lng: input.center?.lng,
+      center_lat: input.center?.lat,
+      radius_m: input.radiusMeters,
+      bbox_sw_lng: input.bbox?.sw.lng,
+      bbox_sw_lat: input.bbox?.sw.lat,
+      bbox_ne_lng: input.bbox?.ne.lng,
+      bbox_ne_lat: input.bbox?.ne.lat,
+      place_types: input.types,
+      periods: input.periods,
+      cost: input.cost,
       visitable_only: input.visitableOnly ?? false,
       max_rows: input.limit,
       row_offset: input.offset,

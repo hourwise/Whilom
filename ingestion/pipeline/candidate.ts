@@ -1,4 +1,10 @@
-import type { DesignationGrade, DesignationType, LngLat, PlaceType } from '@whilom/domain';
+import type {
+  DesignationGrade,
+  DesignationType,
+  LngLat,
+  LocationMethod,
+  PlaceType,
+} from '@whilom/domain';
 import type { RawProvenance } from '../sources/source-adapter';
 
 /**
@@ -25,6 +31,27 @@ export interface ExternalId {
   value: string;
 }
 
+/**
+ * The coordinate exactly as the source published it, plus how it was converted.
+ *
+ * Retained so a conversion can be re-run or audited without re-fetching, and so
+ * a later, better transformation (OSTN15) is distinguishable from this one.
+ * Persisted onto `source_records`, not onto `places` — the canonical row holds
+ * Whilom's current best estimate; this holds what one source claimed.
+ */
+export interface SourcePosition {
+  /** e.g. 'EPSG:27700'. */
+  crs: string;
+  /** Original values in the source CRS, e.g. { easting, northing }. */
+  coordinates: Record<string, number>;
+  /** Transformation identifier and version, e.g. 'osgb36-to-wgs84/helmert-7param@0.1.0'. */
+  conversion: string;
+  /** Precision the source itself asserted, if any. Not Whilom's estimate. */
+  sourcePrecisionMeters?: number;
+  /** Why the accuracy figure is what it is, in words. */
+  accuracyBasis: string;
+}
+
 export interface CandidateDesignation {
   designation: DesignationType;
   grade?: DesignationGrade;
@@ -46,17 +73,26 @@ export interface PlaceCandidate {
    * evidence that two records are different places.
    */
   placeTypeConfidence: number;
+  /** Which mapping rule fired, so a classification decision stays auditable. */
+  placeTypeRule: string;
   /** The source's own vocabulary term, retained so mapping stays auditable. */
   rawType?: string;
   /** Non-fatal normalisation problems, carried forward for review triage. */
   warnings: string[];
   location: LngLat;
+  /** How this coordinate was arrived at. */
+  locationMethod: LocationMethod;
   /**
-   * Positional uncertainty in metres. Derived from the source's capture scale
-   * plus reprojection residual — the matcher must not treat a 1:10000 record as
-   * if it located a building to the metre.
+   * Radius in metres within which the real feature is expected to lie.
+   *
+   * Derived from what the coordinate *is* — a published point, or the centroid
+   * of an area — never from how precisely it was converted. The matcher depends
+   * on the difference: a centroid of a 33-hectare precinct and a 1:1250 survey
+   * point are not the same kind of claim.
    */
-  locationUncertaintyMeters: number;
+  locationAccuracyMeters: number;
+  /** What the source published, before Whilom touched it. */
+  sourcePosition?: SourcePosition;
   designations: CandidateDesignation[];
   externalIds: ExternalId[];
   town?: string;
@@ -134,6 +170,8 @@ export interface CanonicalPlaceRef {
   altNames: string[];
   placeType: PlaceType;
   location: LngLat;
+  /** Known positional uncertainty of the canonical row, when recorded. */
+  locationAccuracyMeters?: number;
   externalIds: ExternalId[];
   designationReferences: string[];
   postcode?: string;

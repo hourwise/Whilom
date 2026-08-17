@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { matchCandidate } from '../matching/matcher';
 import { isGenericName, nameSimilarity } from '../matching/name';
 import { MatchOutcome } from '../pipeline/candidate';
+import { THRESHOLDS } from '../matching/matcher';
 import type { CanonicalPlaceRef, PlaceCandidate } from '../pipeline/candidate';
 import type { PlaceType } from '@whilom/domain';
 
@@ -23,7 +24,9 @@ function candidate(over: Partial<PlaceCandidate> & { name: string; location: { l
     altNames: [],
     placeType: 'castle' as PlaceType,
     placeTypeConfidence: 0.85,
-    locationUncertaintyMeters: 10,
+    placeTypeRule: 'castle',
+    locationMethod: 'source_coordinate',
+    locationAccuracyMeters: 10,
     designations: [],
     externalIds: [],
     warnings: [],
@@ -318,6 +321,165 @@ describe('matchCandidate', () => {
     );
     expect(decision.outcome).toBe(MatchOutcome.NewCanonical);
     expect(decision.confidence).toBe(0);
+  });
+
+  it('lets two precise sources demand a tight distance', () => {
+    // Both claim ~10 m accuracy and sit 120 m apart. With precise coordinates
+    // that gap is real disagreement, so this must not auto-match.
+    const decision = matchCandidate(
+      candidate({
+        name: 'Precise Priory',
+        location: { lng: -1.5, lat: 54.0 },
+        placeType: 'priory' as PlaceType,
+        locationAccuracyMeters: 10,
+        externalIds: [{ scheme: 'nhle', value: '5000001' }],
+      }),
+      [
+        existing({
+          id: 'place-precise',
+          name: 'Precise Priory',
+          location: { lng: -1.5, lat: 54.00108 }, // ~120m north
+          placeType: 'priory' as PlaceType,
+          locationAccuracyMeters: 10,
+          externalIds: [{ scheme: 'nhle', value: '5000002' }],
+        }),
+      ],
+    );
+    expect(decision.outcome).not.toBe(MatchOutcome.MatchConfident);
+  });
+
+  it('accepts the same gap when one source is a coarse polygon centroid', () => {
+    // Identical 120 m gap, but one record is the centroid of a 30 ha precinct.
+    // Now the gap is inside what the source itself can resolve.
+    const decision = matchCandidate(
+      candidate({
+        name: 'Precise Priory',
+        location: { lng: -1.5, lat: 54.0 },
+        placeType: 'priory' as PlaceType,
+        locationMethod: 'geometry_centroid',
+        locationAccuracyMeters: 309,
+        externalIds: [{ scheme: 'nhle', value: '5000001' }],
+      }),
+      [
+        existing({
+          id: 'place-precise',
+          name: 'Precise Priory',
+          location: { lng: -1.5, lat: 54.00108 },
+          placeType: 'priory' as PlaceType,
+          locationAccuracyMeters: 10,
+          externalIds: [{ scheme: 'nhle', value: '5000002' }],
+        }),
+      ],
+    );
+    expect(decision.outcome).toBe(MatchOutcome.MatchConfident);
+  });
+
+  it('never lets imprecision alone buy an automatic match', () => {
+    // A 5 km-accuracy record 900 m from a namesake. Uncertainty must make the
+    // matcher more cautious, not more permissive: past the ceiling a human
+    // decides however vague the coordinates are.
+    const decision = matchCandidate(
+      candidate({
+        name: 'Vague Grange',
+        location: { lng: -1.5, lat: 54.0 },
+        placeType: 'building' as PlaceType,
+        locationMethod: 'approximate',
+        locationAccuracyMeters: 5000,
+        externalIds: [{ scheme: 'nhle', value: '5000003' }],
+      }),
+      [
+        existing({
+          id: 'place-vague',
+          name: 'Vague Grange',
+          location: { lng: -1.5, lat: 54.0081 }, // ~900m
+          placeType: 'building' as PlaceType,
+          locationAccuracyMeters: 5000,
+          externalIds: [{ scheme: 'nhle', value: '5000004' }],
+        }),
+      ],
+    );
+    expect(decision.outcome).not.toBe(MatchOutcome.MatchConfident);
+    expect(THRESHOLDS.positionAgreementCeilingMeters).toBeLessThan(5000);
+  });
+
+  it('does not absorb a listed building into the World Heritage Site containing it', () => {
+    // Real case from the Yorkshire sample: Saltaire (WHS 1000099) is 1,628 ha,
+    // giving its centroid a ~2.3 km equivalent radius, and Saltaire Mills
+    // (1133523) sits 382 m away. Containment is not identity.
+    const decision = matchCandidate(
+      candidate({
+        name: 'Saltaire',
+        location: { lng: -1.79026, lat: 53.83717 },
+        placeType: 'structure' as PlaceType,
+        placeTypeConfidence: 0.25,
+        placeTypeRule: 'generic-structure',
+        locationMethod: 'geometry_centroid',
+        locationAccuracyMeters: 2276,
+        externalIds: [{ scheme: 'nhle', value: '1000099' }],
+      }),
+      [
+        existing({
+          id: 'place-saltaire-mills',
+          name: 'Saltaire Mills - Main Block Including Sheds',
+          location: { lng: -1.78748, lat: 53.8384 },
+          placeType: 'industrial_site' as PlaceType,
+          locationAccuracyMeters: 6,
+          externalIds: [{ scheme: 'nhle', value: '1133523' }],
+        }),
+      ],
+    );
+    expect(decision.outcome).toBe(MatchOutcome.MatchReview);
+  });
+
+  it('keeps the type veto working even when both records are imprecise', () => {
+    const decision = matchCandidate(
+      candidate({
+        name: 'Overlapping Site',
+        location: { lng: -1.5, lat: 54.0 },
+        placeType: 'church' as PlaceType,
+        placeTypeConfidence: 0.9,
+        locationAccuracyMeters: 400,
+        externalIds: [{ scheme: 'nhle', value: '5000005' }],
+      }),
+      [
+        existing({
+          id: 'place-overlap',
+          name: 'Overlapping Site',
+          location: { lng: -1.5, lat: 54.0 },
+          placeType: 'railway_site' as PlaceType,
+          locationAccuracyMeters: 400,
+          externalIds: [{ scheme: 'nhle', value: '5000006' }],
+        }),
+      ],
+    );
+    expect(decision.conflicts.some((c) => c.field === 'place_type')).toBe(true);
+    expect(decision.outcome).not.toBe(MatchOutcome.MatchConfident);
+  });
+
+  it('does not treat a generic structure classification as evidence of difference', () => {
+    // An untypeable NHLE entry is classified `structure`. That must not argue
+    // it is a different place from a record typed more specifically.
+    const decision = matchCandidate(
+      candidate({
+        name: 'Kirkgate Toll House',
+        location: { lng: -1.5, lat: 54.0 },
+        placeType: 'structure' as PlaceType,
+        placeTypeConfidence: 0.25,
+        placeTypeRule: 'generic-structure',
+        externalIds: [{ scheme: 'nhle', value: '5000007' }],
+      }),
+      [
+        existing({
+          id: 'place-toll',
+          name: 'Kirkgate Toll House',
+          location: { lng: -1.5, lat: 54.0 },
+          placeType: 'building' as PlaceType,
+          externalIds: [{ scheme: 'nhle', value: '5000008' }],
+        }),
+      ],
+    );
+    expect(decision.conflicts.some((c) => c.field === 'place_type')).toBe(false);
+    expect(decision.outcome).toBe(MatchOutcome.MatchConfident);
   });
 
   it('sends a renamed site to review instead of creating a duplicate', () => {

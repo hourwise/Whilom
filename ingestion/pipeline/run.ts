@@ -6,6 +6,7 @@ import { matchCandidate } from '../matching/matcher';
 import type { SourceAdapter } from '../sources/source-adapter';
 import { normaliseNhleRecord } from '../transforms/normalise-nhle';
 import { distanceMeters } from '../transforms/osgb';
+import { GENERIC_FALLBACK_RULE } from '../transforms/place-type';
 import type {
   CanonicalPlaceRef,
   MatchDecision,
@@ -70,8 +71,12 @@ export interface RunReport {
   duplicatesWithinRun: number;
   /** Total field-level disagreements raised. */
   conflicts: number;
-  /** Candidates whose place type could not be inferred at all. */
-  untypedCandidates: number;
+  /**
+   * Candidates that got the generic `structure` classification because their
+   * name yielded no specific type. A real classification, not a placeholder,
+   * but still the honest measure of how much NHLE we cannot type precisely.
+   */
+  genericallyTyped: number;
   rejections: RejectedRecord[];
   decided: DecidedCandidate[];
 }
@@ -94,6 +99,7 @@ export function candidateAsCanonical(candidate: PlaceCandidate, id: string): Can
     altNames: candidate.altNames,
     placeType: candidate.placeType,
     location: candidate.location,
+    locationAccuracyMeters: candidate.locationAccuracyMeters,
     externalIds: candidate.externalIds,
     designationReferences: candidate.designations
       .map((d) => d.reference)
@@ -121,7 +127,7 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
     outcomes: emptyOutcomes(),
     duplicatesWithinRun: 0,
     conflicts: 0,
-    untypedCandidates: 0,
+    genericallyTyped: 0,
     rejections: [],
     decided: [],
   };
@@ -161,7 +167,7 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
 
     report.valid += 1;
     let candidate = normalised.candidate;
-    if (candidate.placeTypeConfidence === 0) report.untypedCandidates += 1;
+    if (candidate.placeTypeRule === GENERIC_FALLBACK_RULE) report.genericallyTyped += 1;
 
     // --- IDENTIFIER RESOLUTION (see note above) -----------------------------
     if (enrichmentSource) {

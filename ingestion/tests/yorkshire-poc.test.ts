@@ -105,8 +105,8 @@ describe('Yorkshire POC run', () => {
     const report = await run();
     // NHLE has no type vocabulary; the count is a real measure of the gap and
     // must be reported rather than hidden behind a default.
-    expect(report.untypedCandidates).toBeGreaterThanOrEqual(0);
-    expect(report.untypedCandidates).toBeLessThan(report.valid);
+    expect(report.genericallyTyped).toBeGreaterThanOrEqual(0);
+    expect(report.genericallyTyped).toBeLessThan(report.valid);
   });
 
   it('summarises the run', async () => {
@@ -126,7 +126,7 @@ describe('Yorkshire POC run', () => {
         `  valid                ${report.valid}`,
         `  rejected             ${report.rejected}`,
         `  enriched             ${report.enriched}`,
-        `  untyped candidates   ${report.untypedCandidates}`,
+        `  generic 'structure'  ${report.genericallyTyped}`,
         `  duplicates in run    ${report.duplicatesWithinRun}`,
         `  field conflicts      ${report.conflicts}`,
         `  outcomes             ${byOutcome}`,
@@ -138,9 +138,9 @@ describe('Yorkshire POC run', () => {
             (d) =>
               `    [${d.decision.outcome}] ${d.candidate.provenance.sourceRecordId} ${d.candidate.name}\n      ${d.decision.rationale}`,
           ),
-        '  untyped:',
+        '  generic structure classification:',
         ...report.decided
-          .filter((d) => d.candidate.placeTypeConfidence === 0)
+          .filter((d) => d.candidate.placeTypeRule === 'generic-structure')
           .map((d) => `    ${d.candidate.provenance.sourceRecordId} ${d.candidate.name}`),
         '',
       ].join('\n'),

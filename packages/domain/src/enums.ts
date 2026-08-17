@@ -50,6 +50,24 @@ export const PlaceType = {
   HistoricLandscape: 'historic_landscape',
   HistoricVillage: 'historic_village',
   LostStructure: 'lost_structure',
+  /**
+   * An occupiable roofed building with no more specific type: houses,
+   * farmhouses, cottages, terraces, barns, schools, inns, stables. Most of the
+   * ~380,000 NHLE listed-building entries land here, and before this existed
+   * they had no honest classification at all.
+   */
+  Building: 'building',
+  /**
+   * A built work with no more specific classification: bridges, walls, gates,
+   * gate piers, railings, boundary markers, culverts, steps, street furniture,
+   * engineering works. Commemorative works stay `Monument`.
+   *
+   * Also the deliberate catch-all. Every designated heritage record is a built
+   * work of some kind, so this is always a true statement — which is why an
+   * unclassifiable record lands here rather than being forced into a category
+   * that claims more than is known.
+   */
+  Structure: 'structure',
 } as const;
 export type PlaceType = (typeof PlaceType)[keyof typeof PlaceType];
 
@@ -286,6 +304,40 @@ export const ReportReason = {
   Other: 'other',
 } as const;
 export type ReportReason = (typeof ReportReason)[keyof typeof ReportReason];
+
+/**
+ * How a stored coordinate was arrived at (spec §34 provenance).
+ *
+ * Paired with an accuracy in metres. The two answer different questions: the
+ * method says what kind of claim the coordinate is, the accuracy says how big
+ * the doubt is. A `geometry_centroid` for a large monastic precinct is a
+ * perfectly good coordinate and also several hundred metres from most of the
+ * things a visitor would actually go to see.
+ *
+ * This is NOT a measure of transformation precision. Converting a British
+ * National Grid reference to WGS84 exactly does not make the input coordinate
+ * describe the real site exactly.
+ */
+export const LocationMethod = {
+  /** Measured on the ground or taken from an authoritative survey. */
+  Surveyed: 'surveyed',
+  /** A point coordinate published by an authoritative source for this feature. */
+  SourceCoordinate: 'source_coordinate',
+  /** Centre of the feature's real extent, as judged by a source or an editor. */
+  FeatureCentroid: 'feature_centroid',
+  /** Centroid of a published geometry; accuracy is governed by feature size. */
+  GeometryCentroid: 'geometry_centroid',
+  AddressGeocoded: 'address_geocoded',
+  /** UK postcode centroids are typically 50-500 m out, and worse rurally. */
+  PostcodeCentroid: 'postcode_centroid',
+  /** Placed by hand by an editor, e.g. from a historic map. */
+  Manual: 'manual',
+  /** Known to be rough because the source said so. */
+  Approximate: 'approximate',
+  /** Provenance genuinely unknown — distinct from "not yet assessed" (null). */
+  Unknown: 'unknown',
+} as const;
+export type LocationMethod = (typeof LocationMethod)[keyof typeof LocationMethod];
 
 /** Type of user-owned list (spec §16 collections). */
 export const WishlistKind = {

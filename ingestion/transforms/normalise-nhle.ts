@@ -7,8 +7,9 @@ import type {
 } from '../pipeline/candidate';
 import type { RawPlaceRecord } from '../sources/source-adapter';
 import { epochToIso } from '../sources/historic-england/nhle-adapter';
-import { captureScaleUncertaintyMeters, osgbToWgs84 } from './osgb';
-import { inferPlaceType } from './place-type';
+import { osgbToWgs84 } from './osgb';
+import { GENERIC_FALLBACK_RULE, inferPlaceType } from './place-type';
+import { OSGB36_CONVERSION_ID, estimatePosition } from './position';
 
 /**
  * NORMALISE for Historic England NHLE records: source vocabulary → domain
@@ -44,27 +45,21 @@ export function normaliseNhleRecord(raw: RawPlaceRecord, importRunId: string): N
   const northing = numeric(attributes['Northing']);
   if (easting === undefined || northing === undefined) {
     reasons.push('missing Easting/Northing');
+    return { ok: false, rejected: { provenance, name: raw.name, reasons } };
   }
 
-  const location =
-    easting !== undefined && northing !== undefined ? osgbToWgs84(easting, northing) : null;
-  if (easting !== undefined && northing !== undefined && location === null) {
+  const location = osgbToWgs84(easting, northing);
+  if (location === null) {
     reasons.push(`grid reference outside Great Britain (E${easting} N${northing})`);
-  }
-
-  if (reasons.length > 0 || !location) {
-    return {
-      ok: false,
-      rejected: { provenance, name: raw.name, reasons: reasons.length ? reasons : ['no location'] },
-    };
+    return { ok: false, rejected: { provenance, name: raw.name, reasons } };
   }
 
   // --- Type -----------------------------------------------------------------
   const layerName = typeof extra.layerName === 'string' ? extra.layerName : undefined;
   const inferred = inferPlaceType(raw.name, layerName);
-  if (inferred.confidence === 0) {
+  if (inferred.rule === GENERIC_FALLBACK_RULE) {
     warnings.push(
-      `place type could not be inferred from the name; defaulted to ${inferred.placeType}`,
+      `no specific type could be inferred from the name; classified generically as ${inferred.placeType}`,
     );
   }
 
@@ -101,15 +96,32 @@ export function normaliseNhleRecord(raw: RawPlaceRecord, importRunId: string): N
     ? attributes['Notes'].trim()
     : undefined;
 
+  // --- Position ------------------------------------------------------------
+  // NHLE's point layers publish a coordinate for the feature; its polygon
+  // layers publish Easting/Northing as a representative point for an area, and
+  // `area_ha` tells us how big that area is. Those are different claims and are
+  // recorded as such — see transforms/position.ts for why the 0.44 mm
+  // conversion precision has nothing to do with either figure.
+  const isAreaFeature = areaHectares !== undefined;
+  const position = estimatePosition({ captureScale, areaHectares, isAreaFeature });
+
   const candidate: PlaceCandidate = {
     provenance,
     name,
     altNames,
     placeType: inferred.placeType,
     placeTypeConfidence: inferred.confidence,
+    placeTypeRule: inferred.rule,
     ...(raw.rawType ? { rawType: raw.rawType } : {}),
     location,
-    locationUncertaintyMeters: captureScaleUncertaintyMeters(captureScale),
+    locationMethod: position.method,
+    locationAccuracyMeters: position.accuracyMeters,
+    sourcePosition: {
+      crs: 'EPSG:27700',
+      coordinates: { easting, northing },
+      conversion: OSGB36_CONVERSION_ID,
+      accuracyBasis: position.basis,
+    },
     designations,
     externalIds: [{ scheme: 'nhle', value: provenance.sourceRecordId }],
     ...(areaHectares !== undefined ? { areaHectares } : {}),

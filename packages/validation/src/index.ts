@@ -4,14 +4,22 @@ import {
   DesignationGrade,
   DesignationType,
   EntityType,
+  LocationMethod,
   HistoricalPeriod,
   PlaceType,
   RouteType,
 } from '@whilom/domain';
 
-/** Turn a domain `const` object into a Zod enum of its values. */
+/**
+ * Turn a domain `const` object into a Zod enum of its values.
+ *
+ * The cast preserves the literal union rather than widening to `string`, so a
+ * parsed `entityType` is `'place' | 'person' | …` and assigns directly to the
+ * generated database enum. Widening here was silently costing type safety at
+ * every call site that fed a parsed value into a Supabase insert.
+ */
 const enumValues = <T extends Record<string, string>>(obj: T) =>
-  z.enum(Object.values(obj) as [string, ...string[]]);
+  z.enum(Object.values(obj) as [T[keyof T], ...T[keyof T][]]);
 
 /** A canonical entity id. */
 export const uuidSchema = z.string().uuid();
@@ -165,6 +173,23 @@ export const candidateDesignationSchema = z.object({
   url: z.string().url().optional(),
 });
 
+export const locationMethodSchema = enumValues(LocationMethod);
+
+/**
+ * The coordinate as published, plus how it was converted.
+ *
+ * `sourcePrecisionMeters` is what the source claimed; it is deliberately
+ * separate from the candidate's own `locationAccuracyMeters`, because a source
+ * asserting one-metre precision does not make it true.
+ */
+export const sourcePositionSchema = z.object({
+  crs: z.string().trim().min(3).max(50),
+  coordinates: z.record(z.string(), z.number()),
+  conversion: z.string().trim().min(1).max(200),
+  sourcePrecisionMeters: z.number().nonnegative().max(50_000).optional(),
+  accuracyBasis: z.string().trim().min(1).max(500),
+});
+
 /** The normalised shape the VALIDATE stage checks, whatever the source. */
 export const placeCandidateSchema = z.object({
   provenance: candidateProvenanceSchema,
@@ -172,9 +197,12 @@ export const placeCandidateSchema = z.object({
   altNames: z.array(z.string().trim().min(1).max(500)).max(20),
   placeType: enumValues(PlaceType),
   placeTypeConfidence: z.number().min(0).max(1),
+  placeTypeRule: z.string().trim().min(1).max(100),
   rawType: z.string().trim().max(200).optional(),
   location: lngLatSchema,
-  locationUncertaintyMeters: z.number().nonnegative().max(50_000),
+  locationMethod: enumValues(LocationMethod),
+  locationAccuracyMeters: z.number().nonnegative().max(50_000),
+  sourcePosition: sourcePositionSchema.optional(),
   designations: z.array(candidateDesignationSchema).max(10),
   externalIds: z.array(externalIdSchema).min(1).max(20),
   town: z.string().trim().max(120).optional(),
