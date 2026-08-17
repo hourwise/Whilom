@@ -40,24 +40,18 @@ select throws_ok(
               extensions.st_setsrid(extensions.st_makepoint(-1.0, 54.0), 4326)::extensions.geography)$$,
   '42501', null, 'an ordinary user cannot insert a canonical place');
 
--- RLS filters rows rather than raising on UPDATE/DELETE, so these assert that
--- nothing was affected. A data-modifying statement has to sit in a CTE; it is
--- not valid inside a plain subquery.
-with attempted as (
-  update public.places set name = 'Renamed'
-   where id = 'aaaaaaaa-0000-0000-0000-000000000001'
-  returning 1
-)
-select is((select count(*) from attempted), 0::bigint,
-  'an ordinary user cannot update a canonical place');
+-- These raise rather than affecting zero rows: `authenticated` holds no
+-- UPDATE/DELETE grant on canonical tables (0021), so the privilege layer stops
+-- the statement before RLS is ever consulted.
+select throws_ok(
+  $$update public.places set name = 'Renamed'
+      where id = 'aaaaaaaa-0000-0000-0000-000000000001'$$,
+  '42501', null, 'an ordinary user cannot update a canonical place');
 
-with attempted as (
-  delete from public.places
-   where id = 'aaaaaaaa-0000-0000-0000-000000000001'
-  returning 1
-)
-select is((select count(*) from attempted), 0::bigint,
-  'an ordinary user cannot delete a canonical place');
+select throws_ok(
+  $$delete from public.places
+      where id = 'aaaaaaaa-0000-0000-0000-000000000001'$$,
+  '42501', null, 'an ordinary user cannot delete a canonical place');
 
 select throws_ok(
   $$insert into public.place_designations (place_id, designation)

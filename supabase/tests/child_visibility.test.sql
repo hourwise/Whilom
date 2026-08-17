@@ -14,7 +14,7 @@ begin;
 -- its own via psql. It is never created by a migration, so the test framework
 -- cannot reach a real deployment.
 create extension if not exists pgtap;
-select plan(23);
+select plan(24);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures. Created as the migration/superuser role, which bypasses RLS.
@@ -68,6 +68,7 @@ insert into public.place_tag_links (place_id, tag_id) values
 -- ---------------------------------------------------------------------------
 -- Anonymous reader
 -- ---------------------------------------------------------------------------
+set local request.jwt.claims = '';
 set local role anon;
 
 select is((select count(*) from public.places where slug = 'approved-castle'),

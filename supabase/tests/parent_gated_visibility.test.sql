@@ -6,6 +6,12 @@
 --   collection_entities           → parent collection must be published AND approved
 --   image_rights                  → parent image approved, OR owned by the caller,
 --                                   OR the caller is a moderator
+--
+-- Note the `set local request.jwt.claims = ''` before each anonymous block.
+-- `set local role anon` alone does NOT make the session anonymous: auth.uid()
+-- reads the JWT claims GUC, which survives the role change, so a previous
+-- block's editor identity leaks in and is_editor() stays true. Three of these
+-- assertions passed spuriously until the claims were cleared explicitly.
 
 begin;
 -- supabase test db already provides pgTAP; this keeps the file runnable on
@@ -76,6 +82,7 @@ insert into public.image_rights (image_id, creator, licence) values
 -- ---------------------------------------------------------------------------
 -- Routes — gated on status alone
 -- ---------------------------------------------------------------------------
+set local request.jwt.claims = '';
 set local role anon;
 
 select is((select count(*) from public.route_stops
@@ -106,6 +113,7 @@ reset role;
 -- ---------------------------------------------------------------------------
 -- Collections — gated on BOTH is_published and status
 -- ---------------------------------------------------------------------------
+set local request.jwt.claims = '';
 set local role anon;
 
 select is((select count(*) from public.collection_entities
@@ -133,6 +141,7 @@ reset role;
 -- ---------------------------------------------------------------------------
 -- Image rights — approved, or owned by the caller, or moderator
 -- ---------------------------------------------------------------------------
+set local request.jwt.claims = '';
 set local role anon;
 select is((select count(*) from public.image_rights
     where image_id = 'ffffffff-0000-0000-0000-000000000001'),
