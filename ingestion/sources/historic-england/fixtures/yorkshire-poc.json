@@ -1,0 +1,529 @@
+{
+  "_source": {
+    "dataset": "National Heritage List for England (NHLE)",
+    "publisher": "Historic England",
+    "service": "https://services-eu1.arcgis.com/ZOdPfBS3aqqDYPUQ/ArcGIS/rest/services/National_Heritage_List_for_England_NHLE_v02_VIEW/FeatureServer",
+    "licence": "OGL-UK-3.0",
+    "attribution": "© Historic England. Contains Ordnance Survey data © Crown copyright and database right. Licensed under the Open Government Licence v3.0.",
+    "copyrightText": "© Crown Copyright 2026. Contains Ordnance Survey data © Crown copyright and database right 2026. Released under OGL.",
+    "spatialReference": "EPSG:27700 (British National Grid)",
+    "retrievedAt": "2026-08-17T13:20:03.317Z",
+    "note": "Unmodified source attributes for a hand-picked Yorkshire subset, captured from the official FeatureServer query API. Selection is documented per record in `_note`; no attribute values were edited."
+  },
+  "layers": [
+    {
+      "layerId": 0,
+      "layerName": "Listed Building points",
+      "features": [
+        {
+          "attributes": {
+            "OBJECTID": 127345,
+            "ListEntry": 1149811,
+            "Name": "FOUNTAINS ABBEY, WITH ANCILLARY BUILDINGS",
+            "Grade": "I",
+            "ListDate": 518832000000,
+            "AmendDate": null,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1149811",
+            "NGR": "SE 27366 68151, SE 27306 68214, SE 27487 68285",
+            "Easting": 427487,
+            "Northing": 468286
+          },
+          "_note": "listed-building representation of scheduled monument 1014395"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 272751,
+            "ListEntry": 1296240,
+            "Name": "WEIR ON RIVER SKELL APPROXIMATELY 10 METRES EAST OF THE INFIRMARY AT FOUNTAINS ABBEY",
+            "Grade": "II",
+            "ListDate": 518832000000,
+            "AmendDate": null,
+            "CaptureScale": "1:1250",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1296240",
+            "NGR": "SE2762868304",
+            "Easting": 427628,
+            "Northing": 468304
+          },
+          "_note": "weir within the Fountains estate: near 1149811 but a distinct structure"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 111225,
+            "ListEntry": 1133523,
+            "Name": "SALTAIRE MILLS - MAIN BLOCK INCLUDING SHEDS",
+            "Grade": "II*",
+            "ListDate": -98150400000,
+            "AmendDate": null,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1133523",
+            "NGR": "SE 14082 38039",
+            "Easting": 414082,
+            "Northing": 438039
+          },
+          "_note": "mill inside the Saltaire WHS 1000099"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 61522,
+            "ListEntry": 1083444,
+            "Name": "BURTON CONSTABLE HALL",
+            "Grade": "I",
+            "ListDate": -562636800000,
+            "AmendDate": null,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1083444",
+            "NGR": "TA 18871 36784",
+            "Easting": 518871,
+            "Northing": 436784
+          },
+          "_note": "country house"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 127485,
+            "ListEntry": 1149951,
+            "Name": "CHURCH OF ST MARY",
+            "Grade": "I",
+            "ListDate": -119923200000,
+            "AmendDate": null,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1149951",
+            "NGR": "SE 38439 56096",
+            "Easting": 438439,
+            "Northing": 456096
+          },
+          "_note": "church; name \"CHURCH OF ST MARY\" is not distinctive"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 128820,
+            "ListEntry": 1151297,
+            "Name": "CHURCH OF ST MARY",
+            "Grade": "I",
+            "ListDate": -303782400000,
+            "AmendDate": null,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1151297",
+            "NGR": "SE 49513 65334",
+            "Easting": 449513,
+            "Northing": 465334
+          },
+          "_note": "church with the identical name ~14km from 1149951"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 109769,
+            "ListEntry": 1132040,
+            "Name": "CHURCHYARD CROSS APPROXIMATELY 3 METRES TO SOUTH OF CHURCH OF SAINT MARY",
+            "Grade": "II",
+            "ListDate": -107222400000,
+            "AmendDate": 515030400000,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1132040",
+            "NGR": "SE2265980653",
+            "Easting": 422659,
+            "Northing": 480653
+          },
+          "_note": "churchyard cross naming its church: shares a name, different thing"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 10311,
+            "ListEntry": 1031829,
+            "Name": "WEIGHTON LOCK",
+            "Grade": "II",
+            "ListDate": 557107200000,
+            "AmendDate": null,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1031829",
+            "NGR": "SE 87439 25637",
+            "Easting": 487439,
+            "Northing": 425637
+          },
+          "_note": "canal heritage"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 9847,
+            "ListEntry": 1031358,
+            "Name": "STATION HOUSE",
+            "Grade": "II",
+            "ListDate": 557107200000,
+            "AmendDate": null,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1031358",
+            "NGR": "SE8274640111",
+            "Easting": 482746,
+            "Northing": 440111
+          },
+          "_note": "railway heritage; obscure"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 369368,
+            "ListEntry": 1393602,
+            "Name": "WW2 PILLBOX AND 2 FIRE POSTS SOUTH OF FORMER ROYAL ORDNANCE FACTORY",
+            "Grade": "II",
+            "ListDate": 1260921600000,
+            "AmendDate": null,
+            "CaptureScale": "1:1250",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1393602",
+            "NGR": "SE 03338 44715, SE 03024 44633, SE 03322 44650",
+            "Easting": 403024,
+            "Northing": 444633
+          },
+          "_note": "WWII defence"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 372954,
+            "ListEntry": 1407624,
+            "Name": "Light Anti-Aircraft gun emplacement for the former Thorp Arch Royal Ordnance Factory",
+            "Grade": "II",
+            "ListDate": 1341829574000,
+            "AmendDate": null,
+            "CaptureScale": "1:1250",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1407624",
+            "NGR": "SE4558546706",
+            "Easting": 445587,
+            "Northing": 446706
+          },
+          "_note": "WWII defence"
+        }
+      ]
+    },
+    {
+      "layerId": 6,
+      "layerName": "Scheduled Monuments",
+      "features": [
+        {
+          "attributes": {
+            "OBJECTID": 12550,
+            "ListEntry": 1014395,
+            "Name": "Fountains Cistercian Abbey; monastic precinct, mill, water management works, agricultural and industrial features and 18th century gardens",
+            "SchedDate": -1732406400000,
+            "AmendDate": 831945600000,
+            "CaptureScale": "1:10000",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1014395",
+            "area_ha": 33.582157414754796,
+            "NGR": "SE 27501 68209",
+            "Easting": 427501,
+            "Northing": 468209
+          },
+          "_note": "abbey; also a listed building and inside a WHS + registered park"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 8787,
+            "ListEntry": 1010627,
+            "Name": "Richmond Castle: eleventh to fourteenth century enclosure castle",
+            "SchedDate": 371433600000,
+            "AmendDate": 700876800000,
+            "CaptureScale": "1:10000",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1010627",
+            "area_ha": 2.2347482528275378,
+            "NGR": "NZ 17161 00710",
+            "Easting": 417161,
+            "Northing": 500710
+          },
+          "_note": "major castle"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 8789,
+            "ListEntry": 1010629,
+            "Name": "Middleham Castle: twelfth century tower, keep, castle and fourteenth century concentric castle.",
+            "SchedDate": 371433600000,
+            "AmendDate": 702777600000,
+            "CaptureScale": "1:10000",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1010629",
+            "area_ha": 0.8701807797361327,
+            "NGR": "SE 12664 87592",
+            "Easting": 412664,
+            "Northing": 487592
+          },
+          "_note": "major castle; name collides with 1002330 48km away"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 608,
+            "ListEntry": 1002330,
+            "Name": "Middleham Castle",
+            "SchedDate": null,
+            "AmendDate": null,
+            "CaptureScale": "1:10000",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1002330",
+            "area_ha": 2.5812197260262284,
+            "NGR": "NZ 32718 31055",
+            "Easting": 432718,
+            "Northing": 531055
+          },
+          "_note": "DIFFERENT site sharing the name \"Middleham Castle\""
+        },
+        {
+          "attributes": {
+            "OBJECTID": 8708,
+            "ListEntry": 1010548,
+            "Name": "Middleham market cross",
+            "SchedDate": -727056000000,
+            "AmendDate": 786758400000,
+            "CaptureScale": "1:10000",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1010548",
+            "area_ha": 0.004781297689443324,
+            "NGR": "SE 12746 87756",
+            "Easting": 412746,
+            "Northing": 487756
+          },
+          "_note": "market cross ~180m from Middleham Castle: close coords, incompatible type"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 2278,
+            "ListEntry": 1004051,
+            "Name": "Site of Malton Castle",
+            "SchedDate": null,
+            "AmendDate": null,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1004051",
+            "area_ha": 2.4470158076680715,
+            "NGR": "SE 78979 71648",
+            "Easting": 478979,
+            "Northing": 471648
+          },
+          "_note": "archaeological-only / lost structure (\"Site of\")"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 1389,
+            "ListEntry": 1003133,
+            "Name": "Aldborough Roman town",
+            "SchedDate": null,
+            "AmendDate": null,
+            "CaptureScale": "1:10000",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1003133",
+            "area_ha": 29.498548976348264,
+            "NGR": "SE 40639 66388, SE 40555 66410, SE 40524 66455, SE 40629 66322, SE 40699 66390, SE 40582 66254, SE 40426 66333, SE 40619 66051, SE 40662 66600",
+            "Easting": 440662,
+            "Northing": 466600
+          },
+          "_note": "Roman town"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 2353,
+            "ListEntry": 1004127,
+            "Name": "Round barrows on Wharram Percy Wold",
+            "SchedDate": null,
+            "AmendDate": null,
+            "CaptureScale": "1:10000",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1004127",
+            "area_ha": 0.13508736905940388,
+            "NGR": "SE 86248 63353, SE 86983 63894, SE 87244 63767",
+            "Easting": 486983,
+            "Northing": 463894
+          },
+          "_note": "prehistoric barrows; name shares \"Wharram Percy\" with 1011377"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 5720,
+            "ListEntry": 1007560,
+            "Name": "Bowl barrow 700m west of Wharram Percy Farm",
+            "SchedDate": -99100800000,
+            "AmendDate": 758937600000,
+            "CaptureScale": "1:10000",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1007560",
+            "area_ha": 0.12643898517267865,
+            "NGR": "SE 83901 63602",
+            "Easting": 483901,
+            "Northing": 463602
+          },
+          "_note": "near-identical barrow name ~2km from 1004127"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 9537,
+            "ListEntry": 1011377,
+            "Name": "Wharram Percy deserted medieval village",
+            "SchedDate": 371433600000,
+            "AmendDate": 750038400000,
+            "CaptureScale": "1:10000",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1011377",
+            "area_ha": 23.346462930013296,
+            "NGR": "SE 85816 64348",
+            "Easting": 485816,
+            "Northing": 464348
+          },
+          "_note": "deserted medieval village"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 3009,
+            "ListEntry": 1004790,
+            "Name": "The former Elsecar New Colliery, including the Elsecar Newcomen Engine",
+            "SchedDate": 106876800000,
+            "AmendDate": 1603191093000,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1004790",
+            "area_ha": 0.09712438619501854,
+            "NGR": "SK3869799939",
+            "Easting": 438691,
+            "Northing": 399945
+          },
+          "_note": "industrial heritage (colliery + engine)"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 3138,
+            "ListEntry": 1004919,
+            "Name": "St Mary's Abbey",
+            "SchedDate": -1726358400000,
+            "AmendDate": 1418895968000,
+            "CaptureScale": "1:1250",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1004919",
+            "area_ha": 3.972730157461162,
+            "NGR": "SE 59917 52086",
+            "Easting": 459917,
+            "Northing": 452086
+          },
+          "_note": "abbey in York; identical coordinates to Museum Gardens 1000117"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 3139,
+            "ListEntry": 1004920,
+            "Name": "St Mary's Abbey precinct walls",
+            "SchedDate": -1726358400000,
+            "AmendDate": 1418895969000,
+            "CaptureScale": "1:1250",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1004920",
+            "area_ha": 0.046105825693519745,
+            "NGR": "SE 59994 52330",
+            "Easting": 459994,
+            "Northing": 452330
+          },
+          "_note": "precinct walls of 1004919: same estate, must not merge"
+        }
+      ]
+    },
+    {
+      "layerId": 7,
+      "layerName": "Parks and Gardens",
+      "features": [
+        {
+          "attributes": {
+            "OBJECTID": 304,
+            "ListEntry": 1000410,
+            "Name": "STUDLEY ROYAL",
+            "Grade": "I",
+            "RegDate": 452995200000,
+            "AmendDate": null,
+            "CaptureScale": "1:10000",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1000410",
+            "area_ha": 318.5783065101811,
+            "NGR": "SE2782269495, SE2760767054",
+            "Easting": 428631,
+            "Northing": 468706
+          },
+          "_note": "registered park covering the Fountains Abbey estate"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 11,
+            "ListEntry": 1000117,
+            "Name": "MUSEUM GARDENS, YORK",
+            "Grade": "II",
+            "RegDate": 452995200000,
+            "AmendDate": null,
+            "CaptureScale": "1:10000",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1000117",
+            "area_ha": 3.8672103930045894,
+            "NGR": "SE 59917 52086",
+            "Easting": 459917,
+            "Northing": 452086
+          },
+          "_note": "registered park at the exact coordinates of abbey 1004919"
+        }
+      ]
+    },
+    {
+      "layerId": 8,
+      "layerName": "Battlefields",
+      "features": [
+        {
+          "attributes": {
+            "OBJECTID": 41,
+            "ListEntry": 1000040,
+            "Name": "Battle of Towton, 1461",
+            "RegDate": 802396800000,
+            "AmendDate": 1496322222000,
+            "CaptureScale": "1:10000",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1000040",
+            "area_ha": 659.2622896347958,
+            "NGR": "SE4785836728",
+            "Easting": 447959,
+            "Northing": 438479
+          },
+          "_note": "registered battlefield"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 36,
+            "ListEntry": 1000035,
+            "Name": "Battle of Stamford Bridge 1066",
+            "RegDate": 802396800000,
+            "AmendDate": null,
+            "CaptureScale": "1:10000",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1000035",
+            "area_ha": 74.98329542391441,
+            "NGR": "SE 72057 55125",
+            "Easting": 472057,
+            "Northing": 455125
+          },
+          "_note": "registered battlefield"
+        }
+      ]
+    },
+    {
+      "layerId": 10,
+      "layerName": "World Heritage Sites",
+      "features": [
+        {
+          "attributes": {
+            "OBJECTID": 7,
+            "ListEntry": 1000094,
+            "Name": "Studley Royal Park including the ruins of Fountains Abbey",
+            "InscrDate": 504921600000,
+            "AmendDate": 1199145600000,
+            "Notes": "Buffer Zone",
+            "CaptureScale": "1:10000",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1000094",
+            "area_ha": 1628.4017866434024,
+            "NGR": "SE2972869325",
+            "Easting": 429728,
+            "Northing": 469886
+          },
+          "_note": "WHS covering Fountains Abbey; source returns this row twice"
+        },
+        {
+          "attributes": {
+            "OBJECTID": 15,
+            "ListEntry": 1000099,
+            "Name": "Saltaire",
+            "InscrDate": 978307200000,
+            "AmendDate": 1262304000000,
+            "Notes": "Buffer Zone",
+            "CaptureScale": "1:10000",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1000099",
+            "area_ha": 1056.3371687267672,
+            "NGR": "SE 14384 38274",
+            "Easting": 414384,
+            "Northing": 438274
+          },
+          "_note": "industrial WHS containing many separately listed buildings"
+        }
+      ]
+    }
+  ]
+}

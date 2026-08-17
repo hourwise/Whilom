@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  candidateProvenanceSchema,
   correctionSchema,
   credentialsSchema,
+  placeCandidateSchema,
   placeSearchSchema,
   reviewSchema,
   slugSchema,
@@ -63,5 +65,68 @@ describe('web mutation schemas', () => {
     expect(slugSchema.parse('fountains-abbey')).toBe('fountains-abbey');
     expect(() => slugSchema.parse('Fountains Abbey')).toThrow();
     expect(() => slugSchema.parse('fountains--abbey')).toThrow();
+  });
+});
+
+describe('ingestion schemas', () => {
+  const provenance = {
+    sourceId: 'historic-england-nhle',
+    sourceRecordId: '1149811',
+    originalUrl: 'https://historicengland.org.uk/listing/the-list/list-entry/1149811',
+    licence: 'OGL-UK-3.0',
+    attribution: 'Contains Historic England information © Historic England.',
+    retrievedAt: '2026-08-17T00:00:00.000Z',
+    importerVersion: '0.1.0',
+    importRunId: 'run-1',
+  };
+
+  it('refuses a record that cannot say where it came from', () => {
+    // This is the enforcement point for "an imported fact is never
+    // indistinguishable from an editorial one".
+    for (const missing of ['sourceId', 'sourceRecordId', 'retrievedAt', 'importerVersion', 'importRunId']) {
+      const partial: Record<string, unknown> = { ...provenance };
+      delete partial[missing];
+      expect(() => candidateProvenanceSchema.parse(partial), `missing ${missing}`).toThrow();
+    }
+  });
+
+  it('requires retrievedAt to be a real timestamp', () => {
+    expect(() => candidateProvenanceSchema.parse({ ...provenance, retrievedAt: '2026-08-17' })).toThrow();
+  });
+
+  it('requires a candidate to carry at least one external identifier', () => {
+    const candidate = {
+      provenance,
+      name: 'Fountains Abbey',
+      altNames: [],
+      placeType: 'abbey',
+      placeTypeConfidence: 0.9,
+      location: { lng: -1.581068, lat: 54.109724 },
+      locationUncertaintyMeters: 6,
+      designations: [],
+      externalIds: [],
+      warnings: [],
+    };
+    expect(() => placeCandidateSchema.parse(candidate)).toThrow();
+    expect(() =>
+      placeCandidateSchema.parse({ ...candidate, externalIds: [{ scheme: 'nhle', value: '1149811' }] }),
+    ).not.toThrow();
+  });
+
+  it('rejects an impossible coordinate', () => {
+    expect(() =>
+      placeCandidateSchema.parse({
+        provenance,
+        name: 'Nowhere',
+        altNames: [],
+        placeType: 'abbey',
+        placeTypeConfidence: 0,
+        location: { lng: 999, lat: 999 },
+        locationUncertaintyMeters: 10,
+        designations: [],
+        externalIds: [{ scheme: 'nhle', value: '1' }],
+        warnings: [],
+      }),
+    ).toThrow();
   });
 });

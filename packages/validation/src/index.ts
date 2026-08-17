@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import {
   AccessCost,
+  DesignationGrade,
+  DesignationType,
   EntityType,
   HistoricalPeriod,
   PlaceType,
@@ -127,3 +129,59 @@ export const relationshipSuggestionSchema = z.object({
 export type RelationshipSuggestionInput = z.infer<typeof relationshipSuggestionSchema>;
 
 export const routeTypeSchema = enumValues(RouteType);
+
+// --- Ingestion (spec §34, §35) ----------------------------------------------
+
+/**
+ * Provenance every imported record must carry. This schema is the enforcement
+ * point for the rule that an imported fact never becomes indistinguishable from
+ * an editorial one: a candidate that cannot say where it came from, when it was
+ * retrieved, under what licence and by which importer run does not validate,
+ * and therefore never reaches matching or publication.
+ */
+export const candidateProvenanceSchema = z.object({
+  sourceId: z.string().trim().min(1).max(100),
+  sourceRecordId: z.string().trim().min(1).max(200),
+  originalUrl: z.string().url().optional(),
+  licence: z.string().trim().min(1).max(100).optional(),
+  attribution: z.string().trim().min(1).max(500).optional(),
+  retrievedAt: z.string().datetime(),
+  sourceUpdatedAt: z.string().datetime().optional(),
+  importerVersion: z.string().trim().min(1).max(50),
+  importRunId: z.string().trim().min(1).max(100),
+});
+export type CandidateProvenanceInput = z.infer<typeof candidateProvenanceSchema>;
+
+export const externalIdSchema = z.object({
+  scheme: z.string().trim().min(1).max(50),
+  value: z.string().trim().min(1).max(200),
+});
+
+export const candidateDesignationSchema = z.object({
+  designation: enumValues(DesignationType),
+  grade: enumValues(DesignationGrade).optional(),
+  reference: z.string().trim().max(100).optional(),
+  firstDesignated: z.string().datetime().optional(),
+  url: z.string().url().optional(),
+});
+
+/** The normalised shape the VALIDATE stage checks, whatever the source. */
+export const placeCandidateSchema = z.object({
+  provenance: candidateProvenanceSchema,
+  name: z.string().trim().min(2).max(500),
+  altNames: z.array(z.string().trim().min(1).max(500)).max(20),
+  placeType: enumValues(PlaceType),
+  placeTypeConfidence: z.number().min(0).max(1),
+  rawType: z.string().trim().max(200).optional(),
+  location: lngLatSchema,
+  locationUncertaintyMeters: z.number().nonnegative().max(50_000),
+  designations: z.array(candidateDesignationSchema).max(10),
+  externalIds: z.array(externalIdSchema).min(1).max(20),
+  town: z.string().trim().max(120).optional(),
+  county: z.string().trim().max(120).optional(),
+  postcode: z.string().trim().max(12).optional(),
+  areaHectares: z.number().nonnegative().max(1_000_000).optional(),
+  sourceNotes: z.string().trim().max(2000).optional(),
+  warnings: z.array(z.string()).max(50),
+});
+export type PlaceCandidateInput = z.infer<typeof placeCandidateSchema>;

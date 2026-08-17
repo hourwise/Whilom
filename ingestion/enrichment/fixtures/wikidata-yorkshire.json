@@ -1,0 +1,334 @@
+{
+  "_source": {
+    "dataset": "Wikidata",
+    "endpoint": "https://query.wikidata.org/sparql",
+    "property": "P1216 (National Heritage List for England number)",
+    "licence": "CC0-1.0",
+    "attribution": "Wikidata contributors, CC0 1.0",
+    "retrievedAt": "2026-08-17T13:29:57.215Z",
+    "note": "Structured identifiers only, keyed by NHLE list entry number. No prose is copied from Wikidata. Commons categories are recorded but images are NOT ingested — see docs/INGESTION.md."
+  },
+  "byNhleId": {
+    "1000035": {
+      "qid": "Q203225",
+      "label": "Battle of Stamford Bridge",
+      "coordinates": {
+        "lng": -0.9125,
+        "lat": 53.9925
+      },
+      "commonsCategory": "Battle of Stamford Bridge"
+    },
+    "1000040": {
+      "qid": "Q634629",
+      "label": "Battle of Towton",
+      "coordinates": {
+        "lng": -1.268333333,
+        "lat": 53.839722222
+      },
+      "commonsCategory": "Battle of Towton"
+    },
+    "1000094": {
+      "qid": "Q16363480",
+      "label": "Studley Royal Park including the Ruins of Fountains Abbey",
+      "coordinates": {
+        "lng": -1.573055556,
+        "lat": 54.11611111
+      },
+      "officialWebsite": "https://www.nationaltrust.org.uk/fountains-abbey-and-studley-royal-water-garden"
+    },
+    "1000099": {
+      "qid": "Q838920",
+      "label": "Saltaire",
+      "coordinates": {
+        "lng": -1.79026,
+        "lat": 53.83717
+      },
+      "officialWebsite": "http://www.saltairevillage.info",
+      "commonsCategory": "Saltaire"
+    },
+    "1000117": {
+      "qid": "Q2883914",
+      "label": "York Museum Gardens",
+      "coordinates": {
+        "lng": -1.08806,
+        "lat": 53.9614
+      },
+      "inceptionYear": 1835,
+      "officialWebsite": "https://www.yorkshiremuseum.org.uk/york-museum-gardens/",
+      "commonsCategory": "York Museum Gardens",
+      "altNames": [
+        "Museum Gardens, York"
+      ]
+    },
+    "1000410": {
+      "qid": "Q259173",
+      "label": "Studley Royal Park",
+      "coordinates": {
+        "lng": -1.573055555,
+        "lat": 54.116111111
+      },
+      "officialWebsite": "https://www.nationaltrust.org.uk/fountains-abbey-and-studley-royal-water-garden",
+      "commonsCategory": "Studley Royal Park",
+      "altNames": [
+        "Studley Royal Park including the ruins of Fountains Abbey"
+      ]
+    },
+    "1002330": {
+      "qid": "Q17647376",
+      "label": "Biship Middleham Castle",
+      "coordinates": {
+        "lng": -1.4939,
+        "lat": 54.6736
+      },
+      "altNames": [
+        "Middleham Castle"
+      ]
+    },
+    "1003133": {
+      "qid": "Q17647743",
+      "label": "Aldborough Roman Town",
+      "coordinates": {
+        "lng": -1.382355,
+        "lat": 54.089871
+      },
+      "officialWebsite": "http://www.english-heritage.org.uk/visit/places/aldborough-roman-site/"
+    },
+    "1004051": {
+      "qid": "Q15244323",
+      "label": "Malton Castle",
+      "coordinates": {
+        "lng": -0.79192,
+        "lat": 54.13469
+      }
+    },
+    "1004127": {
+      "qid": "Q17649624",
+      "label": "Round barrows on Wharram Percy Wold",
+      "coordinates": {
+        "lng": -0.67432,
+        "lat": 54.0621
+      }
+    },
+    "1004790": {
+      "qid": "Q17643277",
+      "label": "Elsecar New Colliery, including the Elsecar Newcomen Engine",
+      "coordinates": {
+        "lng": -1.41808,
+        "lat": 53.4949
+      },
+      "altNames": [
+        "Elsecar Colliery Newcomen engine"
+      ]
+    },
+    "1004919": {
+      "qid": "Q1426965",
+      "label": "St Mary's Abbey, York",
+      "coordinates": {
+        "lng": -1.08796,
+        "lat": 53.9622
+      },
+      "inceptionYear": 1089,
+      "officialWebsite": "http://www.yorkshiremuseum.org.uk/",
+      "commonsCategory": "St Mary's Abbey",
+      "altNames": [
+        "St Mary's Abbey",
+        "St Marys Abbey Remains Church"
+      ]
+    },
+    "1004920": {
+      "qid": "Q17643821",
+      "label": "St Mary's Abbey precinct walls",
+      "coordinates": {
+        "lng": -1.08764,
+        "lat": 53.9629
+      }
+    },
+    "1007560": {
+      "qid": "Q17644281",
+      "label": "Bowl barrow 700m west of Wharram Percy Farm",
+      "coordinates": {
+        "lng": -0.719668,
+        "lat": 54.0616
+      }
+    },
+    "1010548": {
+      "qid": "Q17647485",
+      "label": "Middleham market cross",
+      "coordinates": {
+        "lng": -1.80572,
+        "lat": 54.2853
+      },
+      "commonsCategory": "Middleham Market Cross",
+      "altNames": [
+        "Market Cross"
+      ]
+    },
+    "1010627": {
+      "qid": "Q6645746",
+      "label": "Richmond Castle",
+      "coordinates": {
+        "lng": -1.737511865,
+        "lat": 54.40218548
+      },
+      "inceptionYear": 1071,
+      "officialWebsite": "https://www.english-heritage.org.uk/visit/places/richmond-castle/",
+      "commonsCategory": "Richmond Castle"
+    },
+    "1010629": {
+      "qid": "Q2705370",
+      "label": "Middleham Castle",
+      "coordinates": {
+        "lng": -1.80685,
+        "lat": 54.28404
+      },
+      "inceptionYear": 1190,
+      "officialWebsite": "https://www.english-heritage.org.uk/visit/places/middleham-castle/",
+      "commonsCategory": "Middleham Castle"
+    },
+    "1011377": {
+      "qid": "Q5157863",
+      "label": "Wharram Percy",
+      "coordinates": {
+        "lng": -0.689722222,
+        "lat": 54.0675
+      },
+      "officialWebsite": "https://www.english-heritage.org.uk/visit/places/wharram-percy-deserted-medieval-village/",
+      "commonsCategory": "Wharram Percy",
+      "altNames": [
+        "Wharram Percy deserted medieval village"
+      ]
+    },
+    "1014395": {
+      "qid": "Q540237",
+      "label": "Fountains Abbey",
+      "coordinates": {
+        "lng": -1.58139,
+        "lat": 54.1097
+      },
+      "inceptionYear": 1132,
+      "officialWebsite": "https://www.nationaltrust.org.uk/fountains-abbey-and-studley-royal-water-garden",
+      "commonsCategory": "Fountains Abbey",
+      "altNames": [
+        "Fountains Cistercian Abbey"
+      ]
+    },
+    "1031358": {
+      "qid": "Q26282718",
+      "label": "Station House",
+      "coordinates": {
+        "lng": -0.743659804,
+        "lat": 53.85067231
+      }
+    },
+    "1031829": {
+      "qid": "Q17641563",
+      "label": "Weighton Lock",
+      "coordinates": {
+        "lng": -0.676425809,
+        "lat": 53.71982925
+      },
+      "commonsCategory": "Weighton Lock",
+      "altNames": [
+        "Weighton Lock, Blacktoft"
+      ]
+    },
+    "1083444": {
+      "qid": "Q5000832",
+      "label": "Burton Constable Hall",
+      "coordinates": {
+        "lng": -0.196,
+        "lat": 53.8137
+      },
+      "officialWebsite": "https://www.burtonconstable.com/",
+      "commonsCategory": "Burton Constable Hall",
+      "altNames": [
+        "Burton Constable",
+        "Burton Constable Hall and Grounds"
+      ]
+    },
+    "1132040": {
+      "qid": "Q17674370",
+      "label": "Cross shaft in St Mary's churchyard",
+      "coordinates": {
+        "lng": -1.653985,
+        "lat": 54.221102
+      },
+      "altNames": [
+        "Churchyard Cross approximately 3 metres to south of Church of Saint Mary"
+      ]
+    },
+    "1133523": {
+      "qid": "Q17534765",
+      "label": "Saltaire Mills - Main Block Including Sheds",
+      "coordinates": {
+        "lng": -1.78748,
+        "lat": 53.8384
+      }
+    },
+    "1149811": {
+      "qid": "Q540237",
+      "label": "Fountains Abbey",
+      "coordinates": {
+        "lng": -1.58139,
+        "lat": 54.1097
+      },
+      "inceptionYear": 1132,
+      "officialWebsite": "https://www.nationaltrust.org.uk/fountains-abbey-and-studley-royal-water-garden",
+      "commonsCategory": "Fountains Abbey",
+      "altNames": [
+        "Fountains Cistercian Abbey"
+      ]
+    },
+    "1149951": {
+      "qid": "Q26442825",
+      "label": "St Mary's Church",
+      "coordinates": {
+        "lng": -1.4151,
+        "lat": 53.999476
+      },
+      "commonsCategory": "St Mary's church, Goldsborough, Harrogate",
+      "altNames": [
+        "Church of St Mary, Goldsborough",
+        "St Mary's Church, Goldsborough",
+        "St Mary's Church, Goldsborough, Harrogate"
+      ]
+    },
+    "1151297": {
+      "qid": "Q17538145",
+      "label": "Church of St Mary",
+      "coordinates": {
+        "lng": -1.24468,
+        "lat": 54.0816
+      },
+      "inceptionYear": 1150,
+      "commonsCategory": "St Mary the Virgin's church, Alne, North Yorkshire",
+      "altNames": [
+        "St Mary the Virgin's Church, Alne, North Yorkshire"
+      ]
+    },
+    "1296240": {
+      "qid": "Q26583909",
+      "label": "Weir On River Skell Approximately 10 Metres East Of The Infirmary At Fountains Abbey",
+      "coordinates": {
+        "lng": -1.578891,
+        "lat": 54.109883
+      }
+    },
+    "1393602": {
+      "qid": "Q26672754",
+      "label": "Ww2 Pillbox And 2 Fire Posts South Of Former Royal Ordnance Factory",
+      "coordinates": {
+        "lng": -1.955473,
+        "lat": 53.897861
+      }
+    },
+    "1407624": {
+      "qid": "Q26675947",
+      "label": "Light Anti-Aircraft Gun Emplacement For The Former Thorp Arch Royal Ordnance Factory",
+      "coordinates": {
+        "lng": -1.307467,
+        "lat": 53.914507
+      }
+    }
+  }
+}
