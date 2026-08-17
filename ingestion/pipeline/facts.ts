@@ -1,0 +1,93 @@
+import type { CandidateFact, PlaceCandidate } from './candidate';
+
+/**
+ * Derive the publishable facts a candidate carries.
+ *
+ * This is the single place that maps normalised candidate fields onto the
+ * `fact_predicates` vocabulary, and it replaces the two hard-coded IF blocks
+ * that used to live inside the publish procedure. Adding a fact is a mapping
+ * here plus a row in the registry — never a change to a stored procedure.
+ *
+ * Kept separate from the normalisers on purpose: comparison
+ * (`matching/compare.ts`) works on the typed fields, publication works on this
+ * list, and deriving the list centrally stops the two drifting apart.
+ */
+
+/** Every predicate this build step can emit. Mirrors `public.fact_predicates`. */
+export const PUBLISHABLE_PREDICATES = [
+  'inception_year',
+  'completion_year',
+  'demolished_year',
+  'official_website',
+  'commons_category',
+  'heritage_designation',
+  'designation_reference',
+  'first_designated',
+  'former_name',
+  'historic_use',
+  'area_hectares',
+] as const;
+export type PublishablePredicate = (typeof PUBLISHABLE_PREDICATES)[number];
+
+const REGISTERED = new Set<string>(PUBLISHABLE_PREDICATES);
+
+export function isPublishablePredicate(predicate: string): predicate is PublishablePredicate {
+  return REGISTERED.has(predicate);
+}
+
+export function buildCandidateFacts(candidate: PlaceCandidate): CandidateFact[] {
+  const facts: CandidateFact[] = [];
+
+  const add = (predicate: PublishablePredicate, value: string | number | undefined, sourceValue?: string) => {
+    if (value === undefined || value === null || value === '') return;
+    facts.push({ predicate, value, ...(sourceValue ? { sourceValue } : {}) });
+  };
+
+  add('inception_year', candidate.inceptionYear, candidate.inceptionYear?.toString());
+  add('official_website', candidate.officialWebsite);
+  add('commons_category', candidate.commonsCategory);
+  add('area_hectares', candidate.areaHectares);
+
+  // Designation detail, kept as facts as well as structured rows: the
+  // structured row is what Whilom filters on, the fact is what a given source
+  // actually said, and those are different claims.
+  for (const designation of candidate.designations) {
+    if (designation.reference) {
+      add('designation_reference', designation.reference);
+    }
+    if (designation.firstDesignated) {
+      // Stored as a date; the source's own string is retained alongside.
+      add('first_designated', designation.firstDesignated.slice(0, 10), designation.firstDesignated);
+    }
+  }
+
+  // An alternative name a source publishes is a claim about the place, not just
+  // a matching aid, so it is published too.
+  for (const altName of candidate.altNames) {
+    if (altName && altName !== candidate.name) add('former_name', altName);
+  }
+
+  return dedupe(facts);
+}
+
+/**
+ * Collapse facts that are identical within this one candidate.
+ *
+ * Note this is *within a single source record*. Identical claims from two
+ * different sources are deliberately NOT collapsed anywhere in the pipeline —
+ * cross-source agreement is information, and merging it would erase who
+ * corroborated what.
+ */
+function dedupe(facts: readonly CandidateFact[]): CandidateFact[] {
+  const seen = new Set<string>();
+  const out: CandidateFact[] = [];
+  for (const fact of facts) {
+    // Separator matters: without one, predicate "ab" + value "c" and
+    // predicate "a" + value "bc" would produce the same key.
+    const key = `${fact.predicate} ${JSON.stringify(fact.value)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(fact);
+  }
+  return out;
+}

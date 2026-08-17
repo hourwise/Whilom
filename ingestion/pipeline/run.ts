@@ -9,6 +9,7 @@ import type { RawPlaceRecord, SourceAdapter } from '../sources/source-adapter';
 import type { NormaliseResult } from '../transforms/normalise-nhle';
 import { distanceMeters } from '../transforms/osgb';
 import { isFallbackClassification } from '../transforms/place-type';
+import { buildCandidateFacts } from './facts';
 import type {
   CanonicalPlaceRef,
   MatchDecision,
@@ -203,7 +204,12 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
     }
 
     report.valid += 1;
-    let candidate = normalised.candidate;
+    // Derive the publishable facts once, centrally, so the publish engine
+    // never has to know which source a candidate came from.
+    let candidate: PlaceCandidate = {
+      ...normalised.candidate,
+      facts: buildCandidateFacts(normalised.candidate),
+    };
     if (isFallbackClassification(candidate.placeTypeRule)) report.genericallyTyped += 1;
 
     // --- IDENTIFIER RESOLUTION (see note above) -----------------------------

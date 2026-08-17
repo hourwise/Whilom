@@ -60,9 +60,14 @@ publication → traceable canonical data
 - Every published value traces back to its source record and original external
   record.
 
+Publication is now general rather than hard-coded: candidates carry a `facts`
+array checked against a registry, and imported place↔person relationships are
+materialised into the canonical graph with full provenance. An internal review
+workbench (`/admin/imports`, editor-only) lets a human work the queue.
+
 **This does not mean national scale is proven.** It means the model holds for a
 deliberately adversarial 68-record sample. Still unproven: imagery rights end to
-end, place↔person relationships, and behaviour at volume. See "Real-data proof" in INGESTION.md for the standing gaps.
+end, and behaviour at volume. See "Real-data proof" in INGESTION.md for the standing gaps.
 
 ## Phase 1 — Shared foundation ✅
 

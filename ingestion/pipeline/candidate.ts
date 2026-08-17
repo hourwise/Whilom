@@ -52,6 +52,17 @@ export interface SourcePosition {
   accuracyBasis: string;
 }
 
+/**
+ * One publishable claim. `predicate` must exist in the `fact_predicates`
+ * registry or publication refuses it.
+ */
+export interface CandidateFact {
+  predicate: string;
+  value: string | number | boolean;
+  /** The value exactly as the source expressed it, before typing. */
+  sourceValue?: string;
+}
+
 export interface CandidateDesignation {
   designation: DesignationType;
   grade?: DesignationGrade;
@@ -112,8 +123,22 @@ export interface PlaceCandidate {
   officialWebsite?: string;
   /** Wikimedia Commons category. Recorded as a pointer; no image is ingested. */
   commonsCategory?: string;
-  /** People a source associates with the place, as labels plus optional ids. */
-  relatedPeople?: { label: string; role: string }[];
+  /**
+   * People a source associates with the place.
+   *
+   * `externalId` is the source's own identifier for the person where it has
+   * one. Publication resolves a person through it rather than by name, so two
+   * different people who happen to share a name stay two people.
+   */
+  relatedPeople?: { label: string; role: string; externalId?: string }[];
+  /**
+   * Facts to publish, as predicate/value pairs.
+   *
+   * Deliberately a list rather than named columns: publication iterates it
+   * against the `fact_predicates` registry, so a new fact is a mapping here
+   * plus a registry row — never a change to the publish procedure.
+   */
+  facts?: CandidateFact[];
   /** Free-form source notes, e.g. NHLE "Buffer Zone". */
   sourceNotes?: string;
 }

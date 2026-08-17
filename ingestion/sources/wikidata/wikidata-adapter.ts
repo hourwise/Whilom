@@ -52,6 +52,8 @@ export interface WikidataItem {
   architects?: string[];
   /** P1435 heritage designation labels. */
   heritageDesignations?: string[];
+  /** People the item links to, with the source's own identifier and role. */
+  relatedPeople?: { label: string; role: string; qid?: string }[];
 }
 
 interface WikidataFixture {

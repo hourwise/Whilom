@@ -280,9 +280,55 @@ same entity instead of creating a second one. `resolve_import_conflict()`
 records a decision from a six-value vocabulary **without erasing the original
 disagreement**.
 
-`import_review_queue` is the backend seam for the future moderation UI:
+`import_review_queue` is the backend seam the review workbench reads:
 candidate, source, proposed match, confidence, conflict counts and a computed
 positional comparison.
+
+### What publication writes
+
+Publication is data-driven. A candidate carries a `facts` array of
+predicate/value pairs derived centrally in `ingestion/pipeline/facts.ts`, and
+`publish_import_candidate()` iterates it against the `fact_predicates` registry.
+An unregistered predicate is refused rather than silently dropped. The initial
+vocabulary is `inception_year`, `completion_year`, `demolished_year`,
+`official_website`, `commons_category`, `heritage_designation`,
+`designation_reference`, `first_designated`, `former_name`, `historic_use` and
+`area_hectares`.
+
+Imported relationships are materialised into `entity_relationships` with their
+source, source record and import run. Roles map onto the existing domain
+predicates — `architect`/`creator` → `built_by`, `owner` → `owned_by`, anything
+else → `associated_with` — and the source's own word for the role is kept in the
+note, so mapping to a broader predicate does not lose the nuance. People are
+resolved through the source's own identifier, never by name, so two people who
+share a name stay two people; a newly created person gets a source record of
+their own.
+
+**Both are unique per source, not globally.** Two sources asserting the same
+fact or the same relationship remain two attributable claims. A reimport of the
+same external record collides on that key and updates, so nothing duplicates.
+
+### Publish preview
+
+`preview_import_candidate()` reports exactly what publication would do —
+target entity, facts, relationships, conflicts and any blockers — and writes
+nothing. The review workbench renders this rather than computing its own view,
+so a reviewer never sees an action the engine cannot perform.
+
+## The review workbench
+
+`/admin/imports` and `/admin/imports/[id]`, internal editorial tooling and not
+public UI. Editor, moderator and admin only, enforced at three layers: the page
+calls `requireEditor()` which reads the role from the database, every mutation
+goes through a `SECURITY DEFINER` function that re-checks `is_editor()` in
+Postgres, and RLS governs the underlying tables. Hiding the navigation link is
+not treated as a security measure.
+
+Differences are classified rather than uniformly alarmed: agreement,
+complementary, conflict, positional, ambiguous and missing are distinguished and
+sorted so what needs a decision comes first. Most cross-source data is
+complementary, and styling it like a conflict would waste the attention the
+conflicts deserve.
 
 ## Real-data proof: what is still missing
 

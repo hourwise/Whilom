@@ -9,6 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "clean": "rimraf .next .turbo *.tsbuildinfo"
   },
@@ -30,6 +31,7 @@
     "eslint": "^9.11.0",
     "eslint-config-next": "^15.0.0",
     "rimraf": "^6.0.1",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.1"
   }
 }

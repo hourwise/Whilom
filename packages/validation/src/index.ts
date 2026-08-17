@@ -215,8 +215,26 @@ export const placeCandidateSchema = z.object({
   officialWebsite: z.string().url().max(2000).optional(),
   commonsCategory: z.string().trim().max(300).optional(),
   relatedPeople: z
-    .array(z.object({ label: z.string().trim().min(1).max(200), role: z.string().trim().min(1).max(60) }))
+    .array(
+      z.object({
+        label: z.string().trim().min(1).max(200),
+        role: z.string().trim().min(1).max(60),
+        /** The source's own identifier, so a person resolves by id not name. */
+        externalId: z.string().trim().min(1).max(200).optional(),
+      }),
+    )
     .max(50)
+    .optional(),
+  /** Publishable claims; each predicate must exist in `fact_predicates`. */
+  facts: z
+    .array(
+      z.object({
+        predicate: z.string().trim().min(1).max(100),
+        value: z.union([z.string().max(2000), z.number(), z.boolean()]),
+        sourceValue: z.string().trim().max(2000).optional(),
+      }),
+    )
+    .max(100)
     .optional(),
   warnings: z.array(z.string()).max(50),
 });

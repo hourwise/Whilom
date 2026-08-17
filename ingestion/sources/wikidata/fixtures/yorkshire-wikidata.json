@@ -456,6 +456,13 @@
       "architects": [],
       "heritageDesignations": [
         "World Heritage Site"
+      ],
+      "relatedPeople": [
+        {
+          "label": "Titus Salt",
+          "role": "founder",
+          "qid": "Q7810332"
+        }
       ]
     },
     {
@@ -594,6 +601,13 @@
       "heritageDesignations": [
         "scheduled monument",
         "Grade I listed building"
+      ],
+      "relatedPeople": [
+        {
+          "label": "Alan Rufus",
+          "role": "founder",
+          "qid": "Q2067294"
+        }
       ]
     },
     {
