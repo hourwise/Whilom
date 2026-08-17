@@ -96,7 +96,7 @@ select is(public.assess_media_rights('d0000000-0000-0000-0000-000000000005'),
 select is(
   (select missing_rights_fields from public.import_media_candidates
     where id = 'd0000000-0000-0000-0000-000000000002'),
-  array['creator'], 'the reviewer is told exactly what is missing');
+  array['creator']::text[], 'the reviewer is told exactly what is missing');
 
 -- ---------------------------------------------------------------------------
 -- Authorisation

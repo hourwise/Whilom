@@ -71,11 +71,12 @@ set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","r
 select throws_ok(
   $$select public.resolve_import_conflict('c0000000-0000-0000-0000-000000000001', 'accept_source_value')$$,
   '42501', null, 'an ordinary user cannot move the preferred claim');
-select is(
-  (select count(*) from (
-     update public.facts set is_preferred = true
-      where id = 'f0000000-0000-0000-0000-000000000002' returning 1) u),
-  0::bigint, 'an ordinary user cannot set a preference directly either');
+-- `facts` carries no write grant for `authenticated`, so preference cannot be
+-- set by going around the governed function.
+select throws_ok(
+  $$update public.facts set is_preferred = true
+     where id = 'f0000000-0000-0000-0000-000000000002'$$,
+  '42501', null, 'an ordinary user cannot set a preference directly either');
 reset role;
 
 -- ---------------------------------------------------------------------------
