@@ -624,6 +624,13 @@ export type Database = {
           match_confidence: number | null
           matched_entity_id: string | null
           normalised: Json
+          published_at: string | null
+          published_by: string | null
+          published_entity_id: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_record_id: string | null
           status: Database["public"]["Enums"]["moderation_state"]
         }
         Insert: {
@@ -635,6 +642,13 @@ export type Database = {
           match_confidence?: number | null
           matched_entity_id?: string | null
           normalised: Json
+          published_at?: string | null
+          published_by?: string | null
+          published_entity_id?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_record_id?: string | null
           status?: Database["public"]["Enums"]["moderation_state"]
         }
         Update: {
@@ -646,6 +660,13 @@ export type Database = {
           match_confidence?: number | null
           matched_entity_id?: string | null
           normalised?: Json
+          published_at?: string | null
+          published_by?: string | null
+          published_entity_id?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_record_id?: string | null
           status?: Database["public"]["Enums"]["moderation_state"]
         }
         Relationships: [
@@ -663,10 +684,33 @@ export type Database = {
             referencedRelation: "import_runs"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "import_candidates_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_candidates_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_candidates_source_record_id_fkey"
+            columns: ["source_record_id"]
+            isOneToOne: false
+            referencedRelation: "source_records"
+            referencedColumns: ["id"]
+          },
         ]
       }
       import_conflicts: {
         Row: {
+          confidence: number | null
+          conflict_reason: string | null
           created_at: string
           entity_id: string | null
           entity_type: Database["public"]["Enums"]["entity_type"]
@@ -676,10 +720,18 @@ export type Database = {
           import_candidate_id: string
           incoming_value: Json | null
           resolution: string | null
+          resolution_note: string | null
+          resolution_outcome:
+            | Database["public"]["Enums"]["conflict_resolution"]
+            | null
+          resolved_at: string | null
           resolved_by: string | null
+          source_record_id: string | null
           status: Database["public"]["Enums"]["moderation_state"]
         }
         Insert: {
+          confidence?: number | null
+          conflict_reason?: string | null
           created_at?: string
           entity_id?: string | null
           entity_type: Database["public"]["Enums"]["entity_type"]
@@ -689,10 +741,18 @@ export type Database = {
           import_candidate_id: string
           incoming_value?: Json | null
           resolution?: string | null
+          resolution_note?: string | null
+          resolution_outcome?:
+            | Database["public"]["Enums"]["conflict_resolution"]
+            | null
+          resolved_at?: string | null
           resolved_by?: string | null
+          source_record_id?: string | null
           status?: Database["public"]["Enums"]["moderation_state"]
         }
         Update: {
+          confidence?: number | null
+          conflict_reason?: string | null
           created_at?: string
           entity_id?: string | null
           entity_type?: Database["public"]["Enums"]["entity_type"]
@@ -702,7 +762,13 @@ export type Database = {
           import_candidate_id?: string
           incoming_value?: Json | null
           resolution?: string | null
+          resolution_note?: string | null
+          resolution_outcome?:
+            | Database["public"]["Enums"]["conflict_resolution"]
+            | null
+          resolved_at?: string | null
           resolved_by?: string | null
+          source_record_id?: string | null
           status?: Database["public"]["Enums"]["moderation_state"]
         }
         Relationships: [
@@ -714,10 +780,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "import_conflicts_import_candidate_id_fkey"
+            columns: ["import_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "import_review_queue"
+            referencedColumns: ["candidate_id"]
+          },
+          {
             foreignKeyName: "import_conflicts_resolved_by_fkey"
             columns: ["resolved_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_conflicts_source_record_id_fkey"
+            columns: ["source_record_id"]
+            isOneToOne: false
+            referencedRelation: "source_records"
             referencedColumns: ["id"]
           },
         ]
@@ -813,6 +893,7 @@ export type Database = {
           id: string
           key: string
           licence: string | null
+          source_id: string | null
         }
         Insert: {
           adapter: string
@@ -824,6 +905,7 @@ export type Database = {
           id?: string
           key: string
           licence?: string | null
+          source_id?: string | null
         }
         Update: {
           adapter?: string
@@ -835,8 +917,17 @@ export type Database = {
           id?: string
           key?: string
           licence?: string | null
+          source_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "import_sources_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       moderation_actions: {
         Row: {
@@ -2317,6 +2408,49 @@ export type Database = {
       }
     }
     Views: {
+      import_review_queue: {
+        Row: {
+          candidate_id: string | null
+          candidate_location_accuracy_m: number | null
+          candidate_name: string | null
+          candidate_place_type: string | null
+          conflict_count: number | null
+          distance_to_match_m: number | null
+          entity_type: Database["public"]["Enums"]["entity_type"] | null
+          external_ids: Json | null
+          import_run_id: string | null
+          match_confidence: number | null
+          matched_entity_id: string | null
+          matched_location_accuracy_m: number | null
+          matched_place_name: string | null
+          matched_place_type: Database["public"]["Enums"]["place_type"] | null
+          published_at: string | null
+          published_entity_id: string | null
+          review_status: Database["public"]["Enums"]["moderation_state"] | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_key: string | null
+          source_record_external_id: string | null
+          source_url: string | null
+          unresolved_conflict_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_candidates_import_run_id_fkey"
+            columns: ["import_run_id"]
+            isOneToOne: false
+            referencedRelation: "import_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_candidates_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       places_geo: {
         Row: {
           access_cost: Database["public"]["Enums"]["access_cost"] | null
@@ -2423,6 +2557,18 @@ export type Database = {
       is_editor: { Args: never; Returns: boolean }
       is_moderator: { Args: never; Returns: boolean }
       place_is_public: { Args: { p_place_id: string }; Returns: boolean }
+      publish_import_candidate: {
+        Args: { p_candidate_id: string; p_note?: string }
+        Returns: string
+      }
+      resolve_import_conflict: {
+        Args: {
+          p_conflict_id: string
+          p_note?: string
+          p_outcome: Database["public"]["Enums"]["conflict_resolution"]
+        }
+        Returns: undefined
+      }
       route_is_public: { Args: { p_route_id: string }; Returns: boolean }
       search_places: {
         Args: {
@@ -2456,6 +2602,7 @@ export type Database = {
           summary: string
         }[]
       }
+      slugify_unique: { Args: { p_name: string }; Returns: string }
     }
     Enums: {
       access_cost: "free" | "paid" | "donation" | "exterior_only"
@@ -2473,6 +2620,13 @@ export type Database = {
         | "region"
         | "trail"
         | "community"
+      conflict_resolution:
+        | "keep_canonical"
+        | "accept_source_value"
+        | "keep_both_as_distinct_facts"
+        | "mark_not_a_conflict"
+        | "defer"
+        | "reject_source_claim"
       contribution_type:
         | "review"
         | "comment"
@@ -2596,6 +2750,7 @@ export type Database = {
         | "lost_structure"
         | "building"
         | "structure"
+        | "unknown"
       report_reason:
         | "incorrect_information"
         | "incorrect_access"
@@ -2777,6 +2932,14 @@ export const Constants = {
         "trail",
         "community",
       ],
+      conflict_resolution: [
+        "keep_canonical",
+        "accept_source_value",
+        "keep_both_as_distinct_facts",
+        "mark_not_a_conflict",
+        "defer",
+        "reject_source_claim",
+      ],
       contribution_type: [
         "review",
         "comment",
@@ -2909,6 +3072,7 @@ export const Constants = {
         "lost_structure",
         "building",
         "structure",
+        "unknown",
       ],
       report_reason: [
         "incorrect_information",

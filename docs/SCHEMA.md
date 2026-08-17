@@ -30,6 +30,8 @@ never the app code.
 | `0019_place_type_structures.sql` | `place_type` gains `building` and `structure` |
 | `0020_location_accuracy.sql` | `location_method` enum; positional accuracy on `places` and position provenance on `source_records` |
 | `0021_grants.sql` | Table privileges for `anon`/`authenticated`/`service_role` |
+| `0022_place_type_unknown.sql` | `place_type` gains `unknown`; `structure` stops being a universal fallback |
+| `0023_governed_publish.sql` | `conflict_resolution` enum, publish state on candidates, `publish_import_candidate()`, `resolve_import_conflict()`, `import_review_queue` |
 
 ## Key design decisions
 
@@ -70,10 +72,23 @@ precision, and our estimate.
 > polygon centroid the honest figure comes from the feature's own extent —
 > Fountains Abbey's 33-hectare precinct gives ~327 m.
 
-**`place_type` stays broad.** `building` and `structure` exist so ordinary
-listed heritage — most of the ~380,000 NHLE entries — has an honest
-classification instead of being forced into `monument`. Detailed subtype belongs
-in `place_categories`/`place_tags`, which extend without a migration.
+**`place_type` stays broad, and `structure` is not a wildcard.** `building` and
+`structure` exist so ordinary listed heritage — most of the ~380,000 NHLE
+entries — has an honest classification instead of being forced into `monument`.
+
+`structure` means **a constructed work with no more specific type**. It is *not*
+a universal heritage fallback: battlefields, designed landscapes, protected
+wrecks, earthworks and demolished sites are not built works, and 0022 adds
+`unknown` so a record whose designation implies nothing about form can say so.
+The ingestion fallback is designation-aware — scheduled monument →
+`archaeological_site`, registered park → `historic_landscape`, listed building →
+`structure`, otherwise `unknown`. Detailed subtype belongs in
+`place_categories`/`place_tags`, which extend without a migration.
+
+**Canonical data has one entrance.** `publish_import_candidate()` is the only
+supported route from an import candidate to a canonical place. It is atomic,
+editor-only, refuses unresolved conflicts, and is idempotent on retry; see
+[INGESTION.md](INGESTION.md).
 
 **Grants are not optional.** RLS filters rows *after* the privilege check, so a
 table with perfect policies and no `GRANT` is simply unreadable. `0021` grants
@@ -110,10 +125,11 @@ patterns:
   by the caller, or moderator). Lookup vocabularies that name no entity
   (`place_categories`, `place_tags`, `sources`, `badges`) stay world-readable.
 
-All of the above is executed, not asserted: 61 pgTAP assertions across five
-files in `supabase/tests/` cover approved-vs-draft child visibility, editor
-access, that authenticating alone grants nothing, and that ordinary users cannot
-write canonical records by any route.
+All of the above is executed, not asserted: **106 pgTAP assertions across six
+files** in `supabase/tests/` cover approved-vs-draft child visibility, editor
+access, that authenticating alone grants nothing, that ordinary users cannot
+write canonical records by any route, and the whole governed publish state
+machine including authorisation, conflict refusal and idempotency.
 
 ## Where the schema is validated
 

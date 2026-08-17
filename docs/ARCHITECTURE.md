@@ -17,6 +17,15 @@ connects both (spec §54).
   governed by Row Level Security. (spec §38)
 - **Ingestion is not inside a frontend.** Import logic lives in `ingestion/`
   with modular per-source adapters. (spec §3, §35)
+- **No source gets a special case.** Every source implements the same
+  `SourceAdapter` contract and travels the same NORMALISE → VALIDATE → MATCH →
+  COMPARE path; the runner takes a list of `{adapter, normalise}` pairs and
+  branches on nothing. Historic England and Wikidata are peers.
+- **Canonical data has exactly one entrance.** `publish_import_candidate()` is
+  the only supported route from an import candidate to a canonical place:
+  atomic, editor-only, refuses unresolved conflicts, idempotent on retry.
+  Nothing — no client, no ingestion caller — writes canonical heritage tables
+  directly. (spec §35, §38)
 - **The database is verified in CI, not on a developer's machine.** Migrations
   and the pgTAP/RLS suite run on ephemeral GitHub-hosted Postgres. Local Docker
   is optional for developers, not required for CI correctness — and Whilom has
