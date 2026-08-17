@@ -11,6 +11,17 @@ import {
 const enumValues = <T extends Record<string, string>>(obj: T) =>
   z.enum(Object.values(obj) as [string, ...string[]]);
 
+/** A canonical entity id. */
+export const uuidSchema = z.string().uuid();
+
+/** A URL slug as generated for places/people/routes. */
+export const slugSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(200)
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'must be a lowercase hyphenated slug');
+
 export const lngLatSchema = z.object({
   lng: z.number().min(-180).max(180),
   lat: z.number().min(-90).max(90),
@@ -56,9 +67,52 @@ export const visitSchema = z.object({
   visitedOn: z.string().date().optional(),
   rating: z.number().int().min(1).max(5).optional(),
   minutesSpent: z.number().int().positive().max(24 * 60).optional(),
+  /** Shown on the place page if the visit is made public. */
+  publicNote: z.string().trim().max(5000).optional(),
   privateNote: z.string().trim().max(5000).optional(),
 });
 export type VisitInput = z.infer<typeof visitSchema>;
+
+/** Add/remove a place on the signed-in user's wishlist (spec §16). */
+export const wishlistItemSchema = z.object({
+  placeId: z.string().uuid(),
+  /** Slug of the page the mutation was issued from, used to revalidate it. */
+  slug: slugSchema.optional(),
+});
+export type WishlistItemInput = z.infer<typeof wishlistItemSchema>;
+
+/**
+ * A suggested correction to an existing record (spec §17). Free-text only —
+ * corrections are proposals for a moderator, never direct edits.
+ */
+export const correctionSchema = z
+  .object({
+    entityType: enumValues(EntityType),
+    entityId: z.string().uuid(),
+    field: z.string().trim().max(120).optional(),
+    suggestedValue: z.string().trim().max(2000).optional(),
+    note: z.string().trim().max(2000).optional(),
+  })
+  .refine((c) => Boolean(c.suggestedValue || c.note), {
+    message: 'give a suggested value or a note',
+    path: ['note'],
+  });
+export type CorrectionInput = z.infer<typeof correctionSchema>;
+
+/**
+ * Account credentials. The length floor mirrors Supabase Auth's own minimum;
+ * strength rules beyond that stay in Supabase so there is one authority.
+ */
+export const credentialsSchema = z.object({
+  email: z.string().trim().email().max(254),
+  password: z.string().min(8).max(72),
+});
+export type CredentialsInput = z.infer<typeof credentialsSchema>;
+
+export const signUpSchema = credentialsSchema.extend({
+  displayName: z.string().trim().min(2).max(80),
+});
+export type SignUpInput = z.infer<typeof signUpSchema>;
 
 /** Relationship suggestion — a *historical claim*, requires strong moderation. */
 export const relationshipSuggestionSchema = z.object({

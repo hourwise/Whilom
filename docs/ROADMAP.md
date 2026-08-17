@@ -3,21 +3,60 @@
 The build is sequenced so the data model is proven on one interface (web) before
 a second (mobile) is developed. Status markers: ✅ done · 🟡 partial · ⬜ not started.
 
-## Phase 0 — Proof of concept ✅ (data model)
+## Phase 0 — Proof of concept
+
+Phase 0 was originally written as one gate and marked done off the schema work
+alone. That conflated two different proofs, so it is split here. Only the first
+is complete, and the second is the one that actually licenses national scale.
+
+### Phase 0A — Schema / data-model proof ✅
 
 One controlled test area (Yorkshire), ~5 deliberately different entities in the
 seed exercising places, taxonomy, a person, a source, a relationship and a
-route. Gate: don't scale nationally until the model holds. The model is in place;
-real ingestion (Phase 2) will stress it further.
+route. This demonstrated that the relational model can represent: places,
+taxonomy, people, sources, relationships, routes and seed data.
+
+What it demonstrates is that the model is *expressible* — hand-authored records
+that were designed to fit do fit.
+
+### Phase 0B — Real-data proof ⬜
+
+**Not complete.** The scale gate is roughly **25–50 deliberately varied real
+heritage records** drawn from genuine sources, passed end to end through the
+real pipeline, before any national-scale ingestion begins.
+
+The point of this phase is to break the model early, not to accumulate records.
+It must stress:
+
+- multiple source representations of the same site;
+- deduplication;
+- provenance retained end to end;
+- conflicting field values between sources;
+- imagery rights and attribution;
+- place ↔ person relationships;
+- routes;
+- obscure sites as well as famous ones.
+
+Fixtures compiling, tests passing, or a matcher running cleanly do **not**
+satisfy this gate. Phase 0B is met only when real records from a real source
+have been through normalise → validate → match → conflict → review, the
+deficiencies found have been recorded, and the schema has been corrected where
+the data genuinely demanded it.
+
+Current status: the Historic England / NHLE adapter, normaliser and matcher
+exist and run over an official-schema Yorkshire sample (see
+[INGESTION.md](INGESTION.md)); persistence and the second-source conflict cases
+remain unproven. See "Real-data proof" in INGESTION.md for the standing gaps.
 
 ## Phase 1 — Shared foundation ✅
 
 Monorepo (pnpm + Turborepo), shared TypeScript packages with the real domain
 model, both app skeletons, Supabase project config, CI, and the test framework.
 
-## Phase 2 — Data MVP ⬜
+## Phase 2 — Data MVP 🟡
 
-First ingest connectors (Historic England / NHLE, Wikidata, OSM…), each a modular
+Blocked on Phase 0B for anything national; the bounded POC is under way. First
+ingest connectors (Historic England / NHLE, Wikidata, OSM…), each a modular
 adapter under `ingestion/sources`. Populate places, categories, coordinates,
 designations, source records, basic dates/periods, initial imagery and
 relationships. Build the duplicate matcher, conflict queue and manual review
