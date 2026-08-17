@@ -34,17 +34,48 @@ export const THRESHOLDS = {
   reviewScore: 0.5,
   /** Name similarity required before an automatic match is even considered. */
   confidentNameSimilarity: 0.9,
-  /** Distance floor for an automatic match, widened by positional uncertainty. */
-  confidentDistanceFloorMeters: 150,
+  /** Positions always count as agreeing within this, even for exact coordinates. */
+  positionAgreementFloorMeters: 50,
+  /**
+   * Hard ceiling on how far positional uncertainty may widen that.
+   *
+   * Uncertainty must make the matcher more *cautious*, never more permissive.
+   * Without this ceiling a vague record earns a wider automatic-match radius
+   * purely by being vague — and the Yorkshire sample shows exactly what that
+   * costs: the Saltaire World Heritage Site is 1,628 hectares, so its centroid
+   * has a ~2.3 km equivalent radius, and a listed mill 382 m away fell inside
+   * it. But a mill inside a World Heritage Site is *contained by* it, not
+   * identical to it. Beyond this distance a human decides, however imprecise
+   * the coordinates are.
+   */
+  positionAgreementCeilingMeters: 150,
   /** Coordinates further apart than this, on a match, are raised as a conflict. */
   coordinateConflictMeters: 500,
 } as const;
 
+/**
+ * The distance at which two records' positions still count as agreeing.
+ *
+ * Widened by the less precise of the two records — comparing a 6 m survey point
+ * against a 327 m polygon centroid, the honest tolerance is the centroid's —
+ * but bounded, so imprecision can never buy an automatic match.
+ */
+function agreementRadius(candidateAccuracy: number, existingAccuracy: number | undefined): number {
+  const worst = Math.max(candidateAccuracy, existingAccuracy ?? 0);
+  return Math.min(
+    Math.max(THRESHOLDS.positionAgreementFloorMeters, worst),
+    THRESHOLDS.positionAgreementCeilingMeters,
+  );
+}
+
 /** How the score responds to distance. Bands, not a curve, so it is explicable. */
-function distanceSignal(meters: number, uncertainty: number): MatchSignal {
-  const tight = Math.max(50, uncertainty);
-  if (meters <= tight) {
-    return { name: 'distance', weight: 0.45, detail: `${Math.round(meters)}m, within positional uncertainty (${Math.round(uncertainty)}m)` };
+function distanceSignal(meters: number, radius: number): MatchSignal {
+  if (meters <= radius) {
+    return {
+      name: 'distance',
+      weight: 0.45,
+      detail: `${Math.round(meters)}m, within the ${Math.round(radius)}m positional agreement radius`,
+    };
   }
   if (meters <= 250) return { name: 'distance', weight: 0.3, detail: `${Math.round(meters)}m apart` };
   if (meters <= 1000) return { name: 'distance', weight: 0.1, detail: `${Math.round(meters)}m apart` };
@@ -137,6 +168,7 @@ interface ScoredMatch {
   signals: MatchSignal[];
   conflicts: FieldConflict[];
   meters: number;
+  radius: number;
   nameScore: number;
   generic: boolean;
 }
@@ -153,8 +185,8 @@ function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): S
   const nameScore = bestNameSimilarity(candidateNames, existingNames);
   const generic = isGenericName(candidate.name) && isGenericName(existing.name);
 
-  const uncertainty = candidate.locationUncertaintyMeters;
-  const signals: MatchSignal[] = [distanceSignal(meters, uncertainty), nameSignal(nameScore, generic)];
+  const radius = agreementRadius(candidate.locationAccuracyMeters, existing.locationAccuracyMeters);
+  const signals: MatchSignal[] = [distanceSignal(meters, radius), nameSignal(nameScore, generic)];
 
   const bothTyped = candidate.placeTypeConfidence >= 0.7;
   if (bothTyped) {
@@ -186,6 +218,7 @@ function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): S
     signals,
     conflicts: collectConflicts(candidate, existing, meters),
     meters,
+    radius,
     nameScore,
     generic,
   };
@@ -272,8 +305,7 @@ export function matchCandidate(
     best.nameScore >= THRESHOLDS.confidentNameSimilarity &&
     !best.generic &&
     !ambiguous &&
-    best.meters <=
-      Math.max(THRESHOLDS.confidentDistanceFloorMeters, candidate.locationUncertaintyMeters);
+    best.meters <= best.radius;
 
   if (confidentGatesPass) {
     return {
@@ -290,8 +322,8 @@ export function matchCandidate(
   if (best.generic) why.push('the name is not distinctive');
   if (ambiguous && runnerUp) why.push(`"${runnerUp.existing.name}" scores almost as well`);
   if (best.nameScore < THRESHOLDS.confidentNameSimilarity) why.push('names are not close enough');
-  if (best.meters > Math.max(THRESHOLDS.confidentDistanceFloorMeters, candidate.locationUncertaintyMeters)) {
-    why.push(`${Math.round(best.meters)}m apart`);
+  if (best.meters > best.radius) {
+    why.push(`${Math.round(best.meters)}m apart, outside the ${Math.round(best.radius)}m agreement radius`);
   }
   if (best.score < THRESHOLDS.confidentScore) why.push(`score ${best.score.toFixed(2)} below ${THRESHOLDS.confidentScore}`);
 

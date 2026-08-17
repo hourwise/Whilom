@@ -7,7 +7,7 @@ import {
   epochToIso,
 } from '../sources/historic-england/nhle-adapter';
 import { deriveAltNames, normaliseNhleRecord, tidyName } from '../transforms/normalise-nhle';
-import { inferPlaceType } from '../transforms/place-type';
+import { GENERIC_FALLBACK_RULE, inferPlaceType } from '../transforms/place-type';
 import type { RawPlaceRecord } from '../sources/source-adapter';
 
 const FIXTURE = fileURLToPath(
@@ -99,10 +99,33 @@ describe('inferPlaceType', () => {
     expect(inferPlaceType('CASTLE FARMHOUSE AND ADJOINING BARN').placeType).not.toBe('castle');
   });
 
-  it('reports zero confidence rather than guessing', () => {
-    const inferred = inferPlaceType('Numbers 12 And 14 And Attached Railings');
-    expect(inferred.confidence).toBe(0);
-    expect(inferred.rule).toBe('unmatched');
+  it('classifies ordinary listed heritage honestly instead of guessing', () => {
+    // Before `building`/`structure` existed this fell back to `monument` with
+    // zero confidence — a placeholder asserting something commemorative that
+    // was simply untrue. `structure` is a true statement about any designated
+    // built work, and the low confidence still says the specific type is
+    // unknown.
+    const inferred = inferPlaceType('Numbers 12 And 14, Kirkgate');
+    expect(inferred.placeType).toBe('structure');
+    expect(inferred.rule).toBe(GENERIC_FALLBACK_RULE);
+    expect(inferred.confidence).toBeLessThan(0.5);
+  });
+
+  it('promotes a recognisable ordinary building above the generic fallback', () => {
+    const rectory = inferPlaceType('THE OLD RECTORY');
+    expect(rectory.placeType).toBe('building');
+    expect(rectory.rule).not.toBe(GENERIC_FALLBACK_RULE);
+
+    // "Attached Railings" is a named structure rule, not the catch-all.
+    const railings = inferPlaceType('Numbers 12 And 14 And Attached Railings');
+    expect(railings.placeType).toBe('structure');
+    expect(railings.rule).not.toBe(GENERIC_FALLBACK_RULE);
+  });
+
+  it('does not reclassify recognised heritage into the generic type', () => {
+    for (const name of ['Middleham Castle', 'Rievaulx Abbey', 'CHURCH OF ST MARY']) {
+      expect(inferPlaceType(name).rule).not.toBe(GENERIC_FALLBACK_RULE);
+    }
   });
 });
 

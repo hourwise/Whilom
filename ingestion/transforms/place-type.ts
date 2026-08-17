@@ -5,10 +5,11 @@ import { PlaceType } from '@whilom/domain';
  *
  * NHLE PUBLISHES NO TYPE FIELD. A record is a name, a designation, a grade and
  * a grid reference — nothing more. So the type has to be inferred from the
- * name, which works well for "Rievaulx Abbey Cistercian monastery…" and not at
- * all for "THE OLD RECTORY". Rather than let a guess masquerade as data, every
- * rule carries a confidence, and an unmatched name yields a low-confidence
- * fallback that the matcher and the review queue both treat as "unknown".
+ * name, which works well for "Rievaulx Abbey Cistercian monastery…" and poorly
+ * for "Numbers 12 And 14 And Attached Railings". Rather than let a guess
+ * masquerade as data, every rule carries a confidence, and an unmatched name
+ * falls back to the generic `structure` classification at low confidence, which
+ * the matcher treats as "type not established".
  *
  * This is the single largest fidelity gap in the NHLE import and is recorded as
  * such in docs/INGESTION.md.
@@ -81,15 +82,29 @@ const RULES: readonly Rule[] = [
   { rule: 'monument', pattern: /\bcross(es)?\b|\bmonuments?\b|\bmemorials?\b|\bmilestones?\b|\bobelisks?\b|\bstocks\b/i, placeType: PlaceType.Monument, confidence: 0.8 },
   { rule: 'ruin', pattern: /\bruins?\b/i, placeType: PlaceType.Ruin, confidence: 0.7 },
   { rule: 'lost', pattern: /^\s*(site of|remains of)\b|\bsite\s+of\s+(the\s+)?former\b/i, placeType: PlaceType.LostStructure, confidence: 0.8 },
+
+  // --- Ordinary listed heritage ---------------------------------------------
+  // Most of NHLE is this: buildings and built works with no dramatic category.
+  // Before `building`/`structure` existed these had nowhere honest to go.
+  { rule: 'building', pattern: /\b(house|houses|cottages?|farmhouses?|barns?|terraces?|almshouses?|vicarage|rectory|parsonage|schools?|inns?|hotels?|stables?|granar(y|ies)|warehouses?|dovecotes?|lodges?)\b/i, placeType: PlaceType.Building, confidence: 0.7 },
+  { rule: 'structure', pattern: /\b(bridges?|walls?|gates?|gate\s+piers?|piers?|railings?|culverts?|steps?|fountains?|troughs?|pumps?|posts?|boundary\s+stones?|sundials?|gazebos?|follies|folly)\b/i, placeType: PlaceType.Structure, confidence: 0.7 },
 ];
 
 /**
- * `PlaceType` has no generic "building" or "structure" member, so an ordinary
- * listed building whose name yields nothing — the majority of the 380k+ NHLE
- * listed-building records — has no honest type to receive. It is mapped to
- * `Monument` with confidence 0, which downstream code reads as "untyped".
+ * Where a name yields no specific type.
+ *
+ * Every NHLE entry is by definition a designated built work, so `Structure` —
+ * "a built work with no more specific classification" — is a true statement
+ * about it, unlike the old fallback of `Monument`, which asserted something
+ * commemorative that was usually false. The confidence stays low because the
+ * *specific* type really is unknown, and the matcher must keep treating it as
+ * "type not established" rather than as evidence about identity.
+ *
+ * This is a genuine classification, not a placeholder, so it is reported
+ * separately (via `rule`) rather than by pretending confidence is zero.
  */
-export const UNTYPED_FALLBACK: PlaceType = PlaceType.Monument;
+export const GENERIC_FALLBACK: PlaceType = PlaceType.Structure;
+export const GENERIC_FALLBACK_RULE = 'generic-structure';
 
 export function inferPlaceType(name: string, layerName?: string): TypeInference {
   // The battlefield and WHS layers are authoritative about what they contain,
@@ -107,7 +122,7 @@ export function inferPlaceType(name: string, layerName?: string): TypeInference 
     }
   }
 
-  return { placeType: UNTYPED_FALLBACK, confidence: 0, rule: 'unmatched' };
+  return { placeType: GENERIC_FALLBACK, confidence: 0.25, rule: GENERIC_FALLBACK_RULE };
 }
 
 /**
@@ -120,13 +135,17 @@ export function inferPlaceType(name: string, layerName?: string): TypeInference 
 const COMPATIBLE_GROUPS: readonly (readonly PlaceType[])[] = [
   [PlaceType.Abbey, PlaceType.Priory, PlaceType.Church, PlaceType.Cathedral, PlaceType.Ruin, PlaceType.Monument],
   [PlaceType.Castle, PlaceType.Fort, PlaceType.Hillfort, PlaceType.Ruin, PlaceType.ArchaeologicalSite],
-  [PlaceType.CountryHouse, PlaceType.Palace, PlaceType.Garden, PlaceType.HistoricLandscape],
-  [PlaceType.IndustrialSite, PlaceType.RailwaySite, PlaceType.CanalStructure],
+  [PlaceType.CountryHouse, PlaceType.Palace, PlaceType.Garden, PlaceType.HistoricLandscape, PlaceType.Building],
+  [PlaceType.IndustrialSite, PlaceType.RailwaySite, PlaceType.CanalStructure, PlaceType.Building],
   [PlaceType.MilitaryInstallation, PlaceType.Pillbox, PlaceType.Bunker, PlaceType.Airfield],
   [PlaceType.ArchaeologicalSite, PlaceType.Settlement, PlaceType.HistoricVillage, PlaceType.LostStructure, PlaceType.RomanVilla],
 ];
 
 export function typesAreCompatible(a: PlaceType, b: PlaceType): boolean {
   if (a === b) return true;
+  // `structure` is the deliberate catch-all for "a built work we cannot type
+  // more precisely". It is a true statement about almost any heritage record,
+  // so it must never be the thing that argues two records are different places.
+  if (a === PlaceType.Structure || b === PlaceType.Structure) return true;
   return COMPATIBLE_GROUPS.some((group) => group.includes(a) && group.includes(b));
 }

@@ -198,21 +198,13 @@ function round7(value: number): number {
 }
 
 /**
- * Positional uncertainty implied by NHLE's `CaptureScale`, in metres.
+ * Positional accuracy deliberately does NOT live here.
  *
- * A record digitised at 1:10000 is not locating a building to the metre. The
- * matcher needs this: two records 60 m apart mean something different when both
- * were captured at 1:1250 than when one was captured at 1:10000.
- * Convention: ~0.5 mm at map scale, plus the ~5 m Helmert residual.
+ * This module is about the transformation, and its precision (0.44 mm against
+ * the Ordnance Survey worked example) says nothing about how well the input
+ * coordinate describes the real site. Keeping the two in separate modules is
+ * what stops them being conflated — see `transforms/position.ts`.
  */
-export function captureScaleUncertaintyMeters(captureScale: string | null | undefined): number {
-  const HELMERT_RESIDUAL_M = 5;
-  const match = /1\s*:\s*(\d+)/.exec(captureScale ?? '');
-  if (!match?.[1]) return 25 + HELMERT_RESIDUAL_M;
-  const denominator = Number(match[1]);
-  if (!Number.isFinite(denominator) || denominator <= 0) return 25 + HELMERT_RESIDUAL_M;
-  return Math.round(denominator * 0.0005 + HELMERT_RESIDUAL_M);
-}
 
 /** Great-circle distance in metres between two WGS84 points (haversine). */
 export function distanceMeters(a: LngLat, b: LngLat): number {
