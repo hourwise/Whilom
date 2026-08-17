@@ -1,4 +1,5 @@
 import { PlaceType } from '@whilom/domain';
+import type { DesignationType } from '@whilom/domain';
 
 /**
  * Map a heritage record onto Whilom's `PlaceType` vocabulary.
@@ -8,8 +9,9 @@ import { PlaceType } from '@whilom/domain';
  * name, which works well for "Rievaulx Abbey Cistercian monastery…" and poorly
  * for "Numbers 12 And 14 And Attached Railings". Rather than let a guess
  * masquerade as data, every rule carries a confidence, and an unmatched name
- * falls back to the generic `structure` classification at low confidence, which
- * the matcher treats as "type not established".
+ * falls back to whatever the *designation* honestly implies — or to `unknown`
+ * when it implies nothing. `structure` is a constructed-work fallback only; it
+ * is never applied to a battlefield, a designed landscape or a wreck.
  *
  * This is the single largest fidelity gap in the NHLE import and is recorded as
  * such in docs/INGESTION.md.
@@ -90,30 +92,43 @@ const RULES: readonly Rule[] = [
   { rule: 'structure', pattern: /\b(bridges?|walls?|gates?|gate\s+piers?|piers?|railings?|culverts?|steps?|fountains?|troughs?|pumps?|posts?|boundary\s+stones?|sundials?|gazebos?|follies|folly)\b/i, placeType: PlaceType.Structure, confidence: 0.7 },
 ];
 
-/**
- * Where a name yields no specific type.
- *
- * Every NHLE entry is by definition a designated built work, so `Structure` —
- * "a built work with no more specific classification" — is a true statement
- * about it, unlike the old fallback of `Monument`, which asserted something
- * commemorative that was usually false. The confidence stays low because the
- * *specific* type really is unknown, and the matcher must keep treating it as
- * "type not established" rather than as evidence about identity.
- *
- * This is a genuine classification, not a placeholder, so it is reported
- * separately (via `rule`) rather than by pretending confidence is zero.
- */
-export const GENERIC_FALLBACK: PlaceType = PlaceType.Structure;
-export const GENERIC_FALLBACK_RULE = 'generic-structure';
+export const GENERIC_FALLBACK_RULE = 'generic-fallback';
 
-export function inferPlaceType(name: string, layerName?: string): TypeInference {
-  // The battlefield and WHS layers are authoritative about what they contain,
-  // so they win over anything the name might suggest.
-  if (layerName === 'Battlefields') {
-    return { placeType: PlaceType.Battlefield, confidence: 0.98, rule: 'layer:battlefields' };
+/**
+ * What a designation implies when the name says nothing.
+ *
+ * `structure` is NOT a universal fallback — it means "a constructed work with
+ * no more specific type", and most designations do not imply a constructed
+ * work at all. A scheduled monument is a nationally important *archaeological*
+ * site, frequently an earthwork or a barrow; a registered park is grown rather
+ * than built; a protected wreck is a vessel. Only a listed building is
+ * definitionally a built work.
+ *
+ * Where a designation implies nothing about form, the answer is `unknown`.
+ * Saying so is honest and reviewable; calling a shipwreck a structure is not.
+ */
+const DESIGNATION_FALLBACK: Readonly<Partial<Record<DesignationType, PlaceType>>> = {
+  listed_building: PlaceType.Structure,
+  scheduled_monument: PlaceType.ArchaeologicalSite,
+  registered_park_garden: PlaceType.HistoricLandscape,
+  registered_battlefield: PlaceType.Battlefield,
+  protected_wreck: PlaceType.ArchaeologicalSite,
+  // Deliberately absent: world_heritage_site and conservation_area imply
+  // nothing about form. A WHS can be a village (Saltaire), a landscape
+  // (Studley Royal) or an industrial complex.
+};
+
+export function inferPlaceType(
+  name: string,
+  layerName?: string,
+  designation?: DesignationType,
+): TypeInference {
+  // A designation that names the form outright beats anything a name suggests.
+  if (layerName === 'Battlefields' || designation === 'registered_battlefield') {
+    return { placeType: PlaceType.Battlefield, confidence: 0.98, rule: 'designation:battlefield' };
   }
-  if (layerName === 'Parks and Gardens') {
-    return { placeType: PlaceType.HistoricLandscape, confidence: 0.9, rule: 'layer:parks-and-gardens' };
+  if (layerName === 'Parks and Gardens' || designation === 'registered_park_garden') {
+    return { placeType: PlaceType.HistoricLandscape, confidence: 0.9, rule: 'designation:park-garden' };
   }
 
   for (const rule of RULES) {
@@ -122,7 +137,22 @@ export function inferPlaceType(name: string, layerName?: string): TypeInference 
     }
   }
 
-  return { placeType: GENERIC_FALLBACK, confidence: 0.25, rule: GENERIC_FALLBACK_RULE };
+  const byDesignation = designation ? DESIGNATION_FALLBACK[designation] : undefined;
+  if (byDesignation) {
+    return {
+      placeType: byDesignation,
+      confidence: 0.3,
+      rule: `${GENERIC_FALLBACK_RULE}:${designation}`,
+    };
+  }
+
+  // Nothing in the name, nothing implied by the designation. Say so.
+  return { placeType: PlaceType.Unknown, confidence: 0, rule: GENERIC_FALLBACK_RULE };
+}
+
+/** True when a classification came from a fallback rather than real evidence. */
+export function isFallbackClassification(rule: string): boolean {
+  return rule.startsWith(GENERIC_FALLBACK_RULE);
 }
 
 /**
@@ -143,9 +173,25 @@ const COMPATIBLE_GROUPS: readonly (readonly PlaceType[])[] = [
 
 export function typesAreCompatible(a: PlaceType, b: PlaceType): boolean {
   if (a === b) return true;
-  // `structure` is the deliberate catch-all for "a built work we cannot type
-  // more precisely". It is a true statement about almost any heritage record,
-  // so it must never be the thing that argues two records are different places.
-  if (a === PlaceType.Structure || b === PlaceType.Structure) return true;
+  // `unknown` asserts nothing, so it can never argue two records differ.
+  if (a === PlaceType.Unknown || b === PlaceType.Unknown) return true;
+  // `structure` is the low-information classification for a constructed work.
+  // It should not contradict a more specific *constructed* type, but it is not
+  // a wildcard: a battlefield or a designed landscape is not a structure, and
+  // that difference is real evidence.
+  const CONSTRUCTED = new Set<PlaceType>([
+    PlaceType.Structure, PlaceType.Building, PlaceType.Monument, PlaceType.Castle,
+    PlaceType.Church, PlaceType.Abbey, PlaceType.Priory, PlaceType.Cathedral,
+    PlaceType.CountryHouse, PlaceType.Palace, PlaceType.Fort, PlaceType.Ruin,
+    PlaceType.IndustrialSite, PlaceType.RailwaySite, PlaceType.CanalStructure,
+    PlaceType.MilitaryInstallation, PlaceType.Pillbox, PlaceType.Bunker,
+    PlaceType.Museum, PlaceType.LostStructure,
+  ]);
+  if (
+    (a === PlaceType.Structure && CONSTRUCTED.has(b)) ||
+    (b === PlaceType.Structure && CONSTRUCTED.has(a))
+  ) {
+    return true;
+  }
   return COMPATIBLE_GROUPS.some((group) => group.includes(a) && group.includes(b));
 }

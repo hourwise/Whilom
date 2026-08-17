@@ -238,16 +238,64 @@ Recorded rather than patched over. These are Phase 0B's real output.
 
 None of these was worked around by quietly changing the schema to fit the data.
 
+## Cross-source comparison
+
+Identity and agreement are separate questions. Deciding that two records
+describe one place says nothing about whether the sources agree about it, so
+comparison (`matching/compare.ts`) is its own stage with three per-field
+outcomes:
+
+| Outcome | Meaning |
+| --- | --- |
+| `AGREEMENT` | Both sources assert the same value. Corroboration. |
+| `COMPLEMENTARY` | One asserts a value the other is silent about. |
+| `CONFLICT` | Both assert, and the assertions cannot both be true. |
+
+Nearly all useful cross-source data is complementary. Treating that as
+disagreement would bury a reviewer, so the rules are deliberately narrow:
+
+- **Predicate identity.** Only like predicates are compared. "Construction began
+  1150" and "completed 1180" answer different questions, so a source supplying a
+  completion date can never contradict one supplying an inception date.
+- **Names are never a conflict.** Sources routinely name a site differently; the
+  second name is an alias to record, not a dispute to arbitrate.
+- **Identifiers compare as sets per scheme.** A site with several designations
+  legitimately carries several list entries — Wikidata's Fountains Abbey item
+  links to both 1014395 and 1149811. Overlapping sets corroborate; only sets
+  sharing nothing at all disagree.
+- **Positions disagree only beyond the sum of both sources' accuracy**, so a
+  precise point and a coarse centroid are not forced into false conflict.
+
+### Governed publish
+
+`publish_import_candidate()` (migration 0023) is the only route from candidate
+to canonical data. It is one database function rather than a sequence of client
+writes, because a partial publish — a place created without its source record —
+would be a canonical value nobody can trace.
+
+It refuses to publish a candidate that is unreviewed, rejected, or carrying an
+unresolved conflict; requires editor authority read from the database rather
+than from anything the client sends; and is idempotent, so a retry returns the
+same entity instead of creating a second one. `resolve_import_conflict()`
+records a decision from a six-value vocabulary **without erasing the original
+disagreement**.
+
+`import_review_queue` is the backend seam for the future moderation UI:
+candidate, source, proposed match, confidence, conflict counts and a computed
+positional comparison.
+
 ## Real-data proof: what is still missing
 
 Phase 0B is **not** met by the above. Outstanding:
 
 - **Persistence is unexecuted.** No candidate has been written to a database,
   and the RLS behaviour around imported rows is untested.
-- **Only one source.** Every genuine cross-source conflict case — two sources
-  disagreeing about a name, a date, a position — is still unproven, because
-  Wikidata is currently used for identifiers only and agreed with NHLE
-  everywhere it was consulted.
+- ~~**Only one source.**~~ **Resolved.** Wikidata is now a full
+  `SourceAdapter` (see `sources/wikidata/README.md`), and the two sources
+  produce real disagreement: 23 complementary and 9 conflicting comparisons
+  over the bounded sample, including a genuine type conflict, a ~1 km
+  positional disagreement on a battlefield, and two Wikidata items claiming one
+  NHLE identifier.
 - **No imagery.** Commons categories are recorded as pointers; no image has been
   ingested, and imagery stays closed until licence/creator/attribution storage is
   proven end to end.

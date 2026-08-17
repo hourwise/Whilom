@@ -100,6 +100,20 @@ export interface PlaceCandidate {
   postcode?: string;
   /** Area in hectares where the source publishes one (polygon layers). */
   areaHectares?: number;
+  /**
+   * Year the place came into being, where a source states one.
+   *
+   * Deliberately a single named predicate. It is compared only against another
+   * inception year — a source stating a *completion* date is answering a
+   * different question, and conflating the two would manufacture conflicts.
+   */
+  inceptionYear?: number;
+  /** Official website, where a source states one. */
+  officialWebsite?: string;
+  /** Wikimedia Commons category. Recorded as a pointer; no image is ingested. */
+  commonsCategory?: string;
+  /** People a source associates with the place, as labels plus optional ids. */
+  relatedPeople?: { label: string; role: string }[];
   /** Free-form source notes, e.g. NHLE "Buffer Zone". */
   sourceNotes?: string;
 }

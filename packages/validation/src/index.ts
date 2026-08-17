@@ -210,6 +210,14 @@ export const placeCandidateSchema = z.object({
   postcode: z.string().trim().max(12).optional(),
   areaHectares: z.number().nonnegative().max(1_000_000).optional(),
   sourceNotes: z.string().trim().max(2000).optional(),
+  /** Single named predicate; compared only against another inception year. */
+  inceptionYear: z.number().int().min(-5000).max(2200).optional(),
+  officialWebsite: z.string().url().max(2000).optional(),
+  commonsCategory: z.string().trim().max(300).optional(),
+  relatedPeople: z
+    .array(z.object({ label: z.string().trim().min(1).max(200), role: z.string().trim().min(1).max(60) }))
+    .max(50)
+    .optional(),
   warnings: z.array(z.string()).max(50),
 });
 export type PlaceCandidateInput = z.infer<typeof placeCandidateSchema>;

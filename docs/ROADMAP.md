@@ -19,11 +19,11 @@ taxonomy, people, sources, relationships, routes and seed data.
 What it demonstrates is that the model is *expressible* — hand-authored records
 that were designed to fit do fit.
 
-### Phase 0B — Real-data proof ⬜
+### Phase 0B — Real-data proof ✅ (bounded Yorkshire POC)
 
-**Not complete.** The scale gate is roughly **25–50 deliberately varied real
-heritage records** drawn from genuine sources, passed end to end through the
-real pipeline, before any national-scale ingestion begins.
+The scale gate was roughly **25–50 deliberately varied real heritage records**
+drawn from genuine sources, passed end to end through the real pipeline, before
+any national-scale ingestion begins. Met, and exceeded, with two sources.
 
 The point of this phase is to break the model early, not to accumulate records.
 It must stress:
@@ -43,17 +43,26 @@ have been through normalise → validate → match → conflict → review, the
 deficiencies found have been recorded, and the schema has been corrected where
 the data genuinely demanded it.
 
-Current status: the Historic England / NHLE adapter, normaliser and matcher
-exist and run over an official-schema Yorkshire sample (see
-[INGESTION.md](INGESTION.md)). The **real-data path is proven** end to end short
-of publication, and the schema it publishes into is now itself proven — RLS,
-constraints and generated types all execute in CI.
+**Complete for the bounded Yorkshire POC.** Two genuinely independent sources —
+Historic England / NHLE and Wikidata — run through one pipeline with no
+per-source branching, and the full lifecycle is demonstrated:
 
-Still outstanding for 0B: **real cross-source conflict behaviour**, which cannot
-be demonstrated with one source. Wikidata is currently used for identifiers
-only and agreed with NHLE everywhere it was consulted, so no genuine
-disagreement has ever been exercised. Imagery rights and place↔person
-relationships also remain unproven end to end. See "Real-data proof" in INGESTION.md for the standing gaps.
+two independent real sources → identity → disagreement → review → governed
+publication → traceable canonical data
+
+- 68 real source rows, 30 of them overlapping by NHLE identifier.
+- Live cross-source disagreements found without inventing any: Wikidata types
+  Bishop Middleham Castle an episcopal palace where NHLE says castle; the two
+  sources place the Battle of Stamford Bridge about a kilometre apart; two
+  Wikidata items both claim NHLE 1004051.
+- Conflicts survive for human review rather than being resolved by the machine,
+  and publication of a candidate carrying an unresolved conflict is refused.
+- Every published value traces back to its source record and original external
+  record.
+
+**This does not mean national scale is proven.** It means the model holds for a
+deliberately adversarial 68-record sample. Still unproven: imagery rights end to
+end, place↔person relationships, and behaviour at volume. See "Real-data proof" in INGESTION.md for the standing gaps.
 
 ## Phase 1 — Shared foundation ✅
 

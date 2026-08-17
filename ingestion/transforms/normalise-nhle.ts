@@ -8,7 +8,7 @@ import type {
 import type { RawPlaceRecord } from '../sources/source-adapter';
 import { epochToIso } from '../sources/historic-england/nhle-adapter';
 import { osgbToWgs84 } from './osgb';
-import { GENERIC_FALLBACK_RULE, inferPlaceType } from './place-type';
+import { inferPlaceType, isFallbackClassification } from './place-type';
 import { OSGB36_CONVERSION_ID, estimatePosition } from './position';
 
 /**
@@ -56,10 +56,11 @@ export function normaliseNhleRecord(raw: RawPlaceRecord, importRunId: string): N
 
   // --- Type -----------------------------------------------------------------
   const layerName = typeof extra.layerName === 'string' ? extra.layerName : undefined;
-  const inferred = inferPlaceType(raw.name, layerName);
-  if (inferred.rule === GENERIC_FALLBACK_RULE) {
+  const designationForType = extra.designation as DesignationType | undefined;
+  const inferred = inferPlaceType(raw.name, layerName, designationForType);
+  if (isFallbackClassification(inferred.rule)) {
     warnings.push(
-      `no specific type could be inferred from the name; classified generically as ${inferred.placeType}`,
+      `no specific type could be inferred from the name; fell back to ${inferred.placeType} via ${inferred.rule}`,
     );
   }
 

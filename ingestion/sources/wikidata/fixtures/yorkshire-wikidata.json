@@ -1,0 +1,736 @@
+{
+  "_source": {
+    "dataset": "Wikidata",
+    "endpoint": "https://query.wikidata.org/sparql",
+    "licence": "CC0-1.0",
+    "attribution": "Wikidata contributors, CC0 1.0 Universal (public domain dedication)",
+    "retrievedAt": "2026-08-17T19:14:45.002Z",
+    "note": "Structured statements only, captured via SPARQL. No Wikipedia article text is used. Coordinates carry Wikidata's own geoPrecision (degrees)."
+  },
+  "items": [
+    {
+      "qid": "Q203225",
+      "label": "Battle of Stamford Bridge",
+      "nhleIds": [
+        "1000035"
+      ],
+      "lat": 53.9925,
+      "lon": -0.9125,
+      "geoPrecision": 0.00027777777777778,
+      "commons": "Battle of Stamford Bridge",
+      "modified": "2026-06-14T22:38:14Z",
+      "instanceOf": [
+        "battle"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "Registered Battlefield"
+      ]
+    },
+    {
+      "qid": "Q259173",
+      "label": "Studley Royal Park",
+      "nhleIds": [
+        "1000410"
+      ],
+      "lat": 54.116111111111,
+      "lon": -1.5730555555556,
+      "geoPrecision": 0.00027777777777778,
+      "website": "https://www.nationaltrust.org.uk/fountains-abbey-and-studley-royal-water-garden",
+      "commons": "Studley Royal Park",
+      "modified": "2025-10-28T20:44:58Z",
+      "instanceOf": [
+        "French formal garden",
+        "English garden"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "Grade I listed park and garden",
+        "part of UNESCO World Heritage Site"
+      ]
+    },
+    {
+      "qid": "Q540237",
+      "label": "Fountains Abbey",
+      "nhleIds": [
+        "1014395",
+        "1149811"
+      ],
+      "lat": 54.1097,
+      "lon": -1.58139,
+      "geoPrecision": 0.0001,
+      "inception": "1132-01-01T00:00:00Z",
+      "website": "https://www.nationaltrust.org.uk/fountains-abbey-and-studley-royal-water-garden",
+      "commons": "Fountains Abbey",
+      "modified": "2026-07-23T09:43:16Z",
+      "instanceOf": [
+        "monastery",
+        "abbey",
+        "building complex",
+        "monastery ruins"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "World Heritage Site",
+        "scheduled monument",
+        "Grade I listed building"
+      ]
+    },
+    {
+      "qid": "Q16363480",
+      "label": "Studley Royal Park including the Ruins of Fountains Abbey",
+      "nhleIds": [
+        "1000094"
+      ],
+      "lat": 54.11611111,
+      "lon": -1.573055556,
+      "geoPrecision": 0.000001,
+      "website": "https://www.nationaltrust.org.uk/fountains-abbey-and-studley-royal-water-garden",
+      "modified": "2026-07-10T18:43:36Z",
+      "instanceOf": [
+        "group of structures or buildings"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "World Heritage Site"
+      ]
+    },
+    {
+      "qid": "Q17534765",
+      "label": "Saltaire Mills - Main Block Including Sheds",
+      "nhleIds": [
+        "1133523"
+      ],
+      "lat": 53.8384,
+      "lon": -1.78748,
+      "geoPrecision": 0.000001,
+      "modified": "2024-07-04T02:10:15Z",
+      "instanceOf": [
+        "mill building"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "Grade II* listed building"
+      ]
+    },
+    {
+      "qid": "Q17538145",
+      "label": "Church of St Mary",
+      "nhleIds": [
+        "1151297"
+      ],
+      "lat": 54.0816,
+      "lon": -1.24468,
+      "geoPrecision": 0.000001,
+      "inception": "1150-01-01T00:00:00Z",
+      "commons": "St Mary the Virgin's church, Alne, North Yorkshire",
+      "modified": "2025-04-03T20:10:44Z",
+      "instanceOf": [
+        "church building"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "Grade I listed building"
+      ]
+    },
+    {
+      "qid": "Q17641563",
+      "label": "Weighton Lock",
+      "nhleIds": [
+        "1005217",
+        "1031829"
+      ],
+      "lat": 53.7198,
+      "lon": -0.676327,
+      "geoPrecision": 0.000001,
+      "commons": "Weighton Lock",
+      "modified": "2024-06-29T15:09:54Z",
+      "instanceOf": [
+        "lock"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "scheduled monument",
+        "Grade II listed building"
+      ]
+    },
+    {
+      "qid": "Q17643277",
+      "label": "Elsecar New Colliery, including the Elsecar Newcomen Engine",
+      "nhleIds": [
+        "1004790"
+      ],
+      "lat": 53.4949,
+      "lon": -1.41808,
+      "geoPrecision": 0.000001,
+      "modified": "2026-07-08T05:40:46Z",
+      "instanceOf": [
+        "mine",
+        "Newcomen atmospheric engine"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "scheduled monument"
+      ]
+    },
+    {
+      "qid": "Q17643821",
+      "label": "St Mary's Abbey precinct walls",
+      "nhleIds": [
+        "1004920"
+      ],
+      "lat": 53.9629,
+      "lon": -1.08764,
+      "geoPrecision": 0.000001,
+      "modified": "2026-05-20T22:36:11Z",
+      "instanceOf": [
+        "wall"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "scheduled monument"
+      ]
+    },
+    {
+      "qid": "Q17644281",
+      "label": "Bowl barrow 700m west of Wharram Percy Farm",
+      "nhleIds": [
+        "1007560"
+      ],
+      "lat": 54.0616,
+      "lon": -0.719668,
+      "geoPrecision": 0.000001,
+      "modified": "2024-12-18T21:29:14Z",
+      "instanceOf": [
+        "bowl barrow"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "scheduled monument"
+      ]
+    },
+    {
+      "qid": "Q17647376",
+      "label": "Biship Middleham Castle",
+      "nhleIds": [
+        "1002330"
+      ],
+      "lat": 54.6736,
+      "lon": -1.4939,
+      "geoPrecision": 0.000001,
+      "modified": "2026-06-30T08:42:39Z",
+      "instanceOf": [
+        "episcopal palace",
+        "fortified manor house"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "scheduled monument"
+      ]
+    },
+    {
+      "qid": "Q17647485",
+      "label": "Middleham market cross",
+      "nhleIds": [
+        "1010548",
+        "1318545"
+      ],
+      "lat": 54.2853,
+      "lon": -1.80572,
+      "geoPrecision": 0.000001,
+      "commons": "Middleham Market Cross",
+      "modified": "2025-06-20T16:12:43Z",
+      "instanceOf": [
+        "market cross",
+        "monumental cross"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "scheduled monument",
+        "Grade II listed building"
+      ]
+    },
+    {
+      "qid": "Q17647743",
+      "label": "Aldborough Roman Town",
+      "nhleIds": [
+        "1003133"
+      ],
+      "lat": 54.09,
+      "lon": -1.38,
+      "geoPrecision": 0.000001,
+      "website": "http://www.english-heritage.org.uk/visit/places/aldborough-roman-site/",
+      "modified": "2026-05-14T16:24:58Z",
+      "instanceOf": [
+        "museum",
+        "archaeological site",
+        "history museum"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "scheduled monument"
+      ]
+    },
+    {
+      "qid": "Q17649015",
+      "label": "Site of Malton Castle",
+      "nhleIds": [
+        "1004051"
+      ],
+      "lat": 54.1348,
+      "lon": -0.79282,
+      "geoPrecision": 0.000001,
+      "modified": "2026-06-30T08:42:56Z",
+      "instanceOf": [
+        "castle"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "scheduled monument"
+      ]
+    },
+    {
+      "qid": "Q17649624",
+      "label": "Round barrows on Wharram Percy Wold",
+      "nhleIds": [
+        "1004127"
+      ],
+      "lat": 54.0621,
+      "lon": -0.67432,
+      "geoPrecision": 0.000001,
+      "modified": "2024-06-24T00:44:14Z",
+      "instanceOf": [
+        "round barrow"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "scheduled monument"
+      ]
+    },
+    {
+      "qid": "Q17674370",
+      "label": "Cross shaft in St Mary's churchyard",
+      "nhleIds": [
+        "1013301",
+        "1132040"
+      ],
+      "lat": 54.2211,
+      "lon": -1.65398,
+      "geoPrecision": 0.000001,
+      "modified": "2024-06-29T14:09:16Z",
+      "instanceOf": [
+        "high cross",
+        "churchyard cross"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "scheduled monument",
+        "Grade II listed building"
+      ]
+    },
+    {
+      "qid": "Q26282718",
+      "label": "Station House",
+      "nhleIds": [
+        "1031358"
+      ],
+      "lat": 53.85067231,
+      "lon": -0.743659804,
+      "geoPrecision": 0.000001,
+      "modified": "2024-06-29T12:17:44Z",
+      "instanceOf": [
+        "house"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "Grade II listed building"
+      ]
+    },
+    {
+      "qid": "Q26442825",
+      "label": "St Mary's Church",
+      "nhleIds": [
+        "1149951"
+      ],
+      "lat": 53.999476,
+      "lon": -1.4151,
+      "geoPrecision": 0.000001,
+      "commons": "St Mary's church, Goldsborough, Harrogate",
+      "modified": "2025-04-03T14:29:03Z",
+      "instanceOf": [
+        "church building"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "Grade II listed building"
+      ]
+    },
+    {
+      "qid": "Q26583909",
+      "label": "Weir On River Skell Approximately 10 Metres East Of The Infirmary At Fountains Abbey",
+      "nhleIds": [
+        "1296240"
+      ],
+      "lat": 54.109883,
+      "lon": -1.578891,
+      "geoPrecision": 0.000001,
+      "modified": "2024-07-01T13:47:18Z",
+      "instanceOf": [
+        "weir"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "Grade II listed building"
+      ]
+    },
+    {
+      "qid": "Q26672754",
+      "label": "Ww2 Pillbox And 2 Fire Posts South Of Former Royal Ordnance Factory",
+      "nhleIds": [
+        "1393602"
+      ],
+      "lat": 53.897861,
+      "lon": -1.955473,
+      "geoPrecision": 0.000001,
+      "modified": "2024-07-02T16:17:37Z",
+      "instanceOf": [
+        "architectural structure"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "Grade II listed building"
+      ]
+    },
+    {
+      "qid": "Q26675947",
+      "label": "Light Anti-Aircraft Gun Emplacement For The Former Thorp Arch Royal Ordnance Factory",
+      "nhleIds": [
+        "1407624"
+      ],
+      "lat": 53.914507,
+      "lon": -1.307467,
+      "geoPrecision": 0.000001,
+      "modified": "2024-07-02T23:20:40Z",
+      "instanceOf": [
+        "architectural structure"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "Grade II listed building"
+      ]
+    },
+    {
+      "qid": "Q634629",
+      "label": "Battle of Towton",
+      "nhleIds": [
+        "1000040"
+      ],
+      "lat": 53.839722222222,
+      "lon": -1.2683333333333,
+      "geoPrecision": 0.00027777777777778,
+      "commons": "Battle of Towton",
+      "modified": "2026-06-14T22:43:15Z",
+      "instanceOf": [
+        "battle"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "Registered Battlefield"
+      ]
+    },
+    {
+      "qid": "Q838920",
+      "label": "Saltaire",
+      "nhleIds": [
+        "1000099"
+      ],
+      "lat": 53.83717,
+      "lon": -1.79026,
+      "geoPrecision": 0.00027777777777778,
+      "website": "http://www.saltairevillage.info",
+      "commons": "Saltaire",
+      "modified": "2026-08-11T20:48:16Z",
+      "instanceOf": [
+        "model village"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "World Heritage Site"
+      ]
+    },
+    {
+      "qid": "Q1426965",
+      "label": "St Mary's Abbey, York",
+      "nhleIds": [
+        "1257128",
+        "1004919"
+      ],
+      "lat": 53.9622,
+      "lon": -1.08796,
+      "geoPrecision": 0.000001,
+      "inception": "1089-01-01T00:00:00Z",
+      "website": "http://www.yorkshiremuseum.org.uk/",
+      "commons": "St Mary's Abbey",
+      "modified": "2026-08-03T19:34:15Z",
+      "instanceOf": [
+        "abbey",
+        "church ruin"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "scheduled monument",
+        "Grade I listed building"
+      ]
+    },
+    {
+      "qid": "Q2705370",
+      "label": "Middleham Castle",
+      "nhleIds": [
+        "1010629",
+        "1318543"
+      ],
+      "lat": 54.28404,
+      "lon": -1.80685,
+      "geoPrecision": 0.00001,
+      "inception": "1190-01-01T00:00:00Z",
+      "website": "https://www.english-heritage.org.uk/visit/places/middleham-castle/",
+      "commons": "Middleham Castle",
+      "modified": "2026-06-30T08:30:43Z",
+      "instanceOf": [
+        "castle"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "scheduled monument",
+        "Grade I listed building"
+      ]
+    },
+    {
+      "qid": "Q2883914",
+      "label": "York Museum Gardens",
+      "nhleIds": [
+        "1000117"
+      ],
+      "lat": 53.9614,
+      "lon": -1.08806,
+      "geoPrecision": 0.0001,
+      "inception": "1835-01-01T00:00:00Z",
+      "website": "https://www.yorkshiremuseum.org.uk/york-museum-gardens/",
+      "commons": "York Museum Gardens",
+      "modified": "2025-04-28T02:33:10Z",
+      "instanceOf": [
+        "botanical garden",
+        "museum district",
+        "independent museum"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "Grade II listed park and garden"
+      ]
+    },
+    {
+      "qid": "Q5000832",
+      "label": "Burton Constable Hall",
+      "nhleIds": [
+        "1000921",
+        "1083444"
+      ],
+      "lat": 53.8137,
+      "lon": -0.196,
+      "geoPrecision": 0.0001,
+      "website": "https://www.burtonconstable.com/",
+      "commons": "Burton Constable Hall",
+      "modified": "2026-05-14T16:36:03Z",
+      "instanceOf": [
+        "English country house",
+        "historic house museum",
+        "independent museum"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "Grade I listed building",
+        "Grade II* listed park and garden"
+      ]
+    },
+    {
+      "qid": "Q5157863",
+      "label": "Wharram Percy",
+      "nhleIds": [
+        "1011377"
+      ],
+      "lat": 54.0675,
+      "lon": -0.68972222222222,
+      "geoPrecision": 0.00027777777777778,
+      "website": "https://www.english-heritage.org.uk/visit/places/wharram-percy-deserted-medieval-village/",
+      "commons": "Wharram Percy",
+      "modified": "2025-10-21T22:30:26Z",
+      "instanceOf": [
+        "deserted medieval village"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "scheduled monument"
+      ]
+    },
+    {
+      "qid": "Q6645746",
+      "label": "Richmond Castle",
+      "nhleIds": [
+        "1010627",
+        "1318398"
+      ],
+      "lat": 54.40218548,
+      "lon": -1.737511865,
+      "geoPrecision": 0.000001,
+      "inception": "1071-01-01T00:00:00Z",
+      "website": "https://www.english-heritage.org.uk/visit/places/richmond-castle/",
+      "commons": "Richmond Castle",
+      "modified": "2026-06-30T08:36:44Z",
+      "instanceOf": [
+        "castle",
+        "archaeological site"
+      ],
+      "architects": [],
+      "heritageDesignations": [
+        "scheduled monument",
+        "Grade I listed building"
+      ]
+    },
+    {
+      "qid": "Q15244323",
+      "label": "Malton Castle",
+      "nhleIds": [
+        "1004051"
+      ],
+      "lat": 54.13469,
+      "lon": -0.79192,
+      "geoPrecision": 0.00000277777777778,
+      "modified": "2026-06-30T08:39:49Z",
+      "instanceOf": [
+        "castle"
+      ],
+      "architects": [],
+      "heritageDesignations": []
+    },
+    {
+      "qid": "Q891638",
+      "label": "Bolton Abbey",
+      "nhleIds": [],
+      "instanceOf": [
+        "abbey"
+      ],
+      "architects": [],
+      "heritageDesignations": [],
+      "lat": 53.9825,
+      "lon": -1.8872222222222,
+      "geoPrecision": 0.00027777777777778,
+      "inception": "1101-01-01T00:00:00Z",
+      "commons": "Bolton Abbey",
+      "modified": "2026-03-05T11:47:22Z"
+    },
+    {
+      "qid": "Q2820597",
+      "label": "Gilling Abbey",
+      "nhleIds": [],
+      "instanceOf": [
+        "abbey"
+      ],
+      "architects": [],
+      "heritageDesignations": [],
+      "lat": 54.2,
+      "lon": -1.072,
+      "geoPrecision": 0.00002777777777778,
+      "inception": "0601-01-01T00:00:00Z",
+      "modified": "2021-03-20T06:28:07Z"
+    },
+    {
+      "qid": "Q3012194",
+      "label": "Ampleforth Abbey",
+      "nhleIds": [],
+      "instanceOf": [
+        "abbey"
+      ],
+      "architects": [],
+      "heritageDesignations": [],
+      "lat": 54.2018,
+      "lon": -1.0847,
+      "geoPrecision": 0.0001,
+      "inception": "1897-01-01T00:00:00Z",
+      "website": "http://www.abbey.ampleforth.org.uk/",
+      "commons": "Ampleforth Abbey",
+      "modified": "2026-01-10T16:10:03Z"
+    },
+    {
+      "qid": "Q5002858",
+      "label": "Buttercrambe Castle",
+      "nhleIds": [],
+      "instanceOf": [
+        "castle"
+      ],
+      "architects": [],
+      "heritageDesignations": [],
+      "lat": 54.016538888889,
+      "lon": -0.88198055555556,
+      "geoPrecision": 0.00027777777777778,
+      "modified": "2026-06-30T08:33:18Z"
+    },
+    {
+      "qid": "Q5312360",
+      "label": "Duffield Castle",
+      "nhleIds": [],
+      "instanceOf": [
+        "castle"
+      ],
+      "architects": [],
+      "heritageDesignations": [],
+      "lat": 53.8281,
+      "lon": -0.9507,
+      "geoPrecision": 0.0001,
+      "modified": "2026-06-30T08:33:59Z"
+    },
+    {
+      "qid": "Q5470576",
+      "label": "Fors Abbey",
+      "nhleIds": [],
+      "instanceOf": [
+        "abbey"
+      ],
+      "architects": [],
+      "heritageDesignations": [],
+      "lat": 54.31283333,
+      "lon": -2.10155556,
+      "geoPrecision": 0.00047531595516581,
+      "modified": "2023-07-24T00:10:16Z"
+    },
+    {
+      "qid": "Q5527379",
+      "label": "Gatherley Castle",
+      "nhleIds": [],
+      "instanceOf": [
+        "castle"
+      ],
+      "architects": [],
+      "heritageDesignations": [],
+      "lat": 54.4107,
+      "lon": -1.66016,
+      "geoPrecision": 0.0001,
+      "modified": "2026-06-30T08:35:27Z"
+    },
+    {
+      "qid": "Q7452870",
+      "label": "Serbian Orthodox Church, Halifax",
+      "nhleIds": [],
+      "instanceOf": [
+        "church building"
+      ],
+      "architects": [],
+      "heritageDesignations": [],
+      "lat": 53.7354,
+      "lon": -1.8654,
+      "geoPrecision": 0.015186683229293,
+      "website": "http://www.st-johnthebaptistchurch-halifax.org.uk/",
+      "commons": "Serbian Orthodox Church, Halifax, West Yorkshire",
+      "modified": "2026-06-30T12:41:42Z"
+    }
+  ]
+}

@@ -7,7 +7,7 @@ import {
   epochToIso,
 } from '../sources/historic-england/nhle-adapter';
 import { deriveAltNames, normaliseNhleRecord, tidyName } from '../transforms/normalise-nhle';
-import { GENERIC_FALLBACK_RULE, inferPlaceType } from '../transforms/place-type';
+import { inferPlaceType, isFallbackClassification } from '../transforms/place-type';
 import type { RawPlaceRecord } from '../sources/source-adapter';
 
 const FIXTURE = fileURLToPath(
@@ -105,26 +105,31 @@ describe('inferPlaceType', () => {
     // was simply untrue. `structure` is a true statement about any designated
     // built work, and the low confidence still says the specific type is
     // unknown.
-    const inferred = inferPlaceType('Numbers 12 And 14, Kirkgate');
-    expect(inferred.placeType).toBe('structure');
-    expect(inferred.rule).toBe(GENERIC_FALLBACK_RULE);
-    expect(inferred.confidence).toBeLessThan(0.5);
+    // With the listed-building designation, `structure` is a true statement.
+    const listed = inferPlaceType('Numbers 12 And 14, Kirkgate', undefined, 'listed_building');
+    expect(listed.placeType).toBe('structure');
+    expect(isFallbackClassification(listed.rule)).toBe(true);
+    expect(listed.confidence).toBeLessThan(0.5);
+
+    // Without one, nothing is known and nothing is claimed.
+    const bare = inferPlaceType('Numbers 12 And 14, Kirkgate');
+    expect(bare.placeType).toBe('unknown');
   });
 
   it('promotes a recognisable ordinary building above the generic fallback', () => {
     const rectory = inferPlaceType('THE OLD RECTORY');
     expect(rectory.placeType).toBe('building');
-    expect(rectory.rule).not.toBe(GENERIC_FALLBACK_RULE);
+    expect(isFallbackClassification(rectory.rule)).toBe(false);
 
     // "Attached Railings" is a named structure rule, not the catch-all.
     const railings = inferPlaceType('Numbers 12 And 14 And Attached Railings');
     expect(railings.placeType).toBe('structure');
-    expect(railings.rule).not.toBe(GENERIC_FALLBACK_RULE);
+    expect(isFallbackClassification(railings.rule)).toBe(false);
   });
 
   it('does not reclassify recognised heritage into the generic type', () => {
     for (const name of ['Middleham Castle', 'Rievaulx Abbey', 'CHURCH OF ST MARY']) {
-      expect(inferPlaceType(name).rule).not.toBe(GENERIC_FALLBACK_RULE);
+      expect(isFallbackClassification(inferPlaceType(name).rule)).toBe(false);
     }
   });
 });
