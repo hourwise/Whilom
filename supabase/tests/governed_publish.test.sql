@@ -207,6 +207,8 @@ create temporary table first_publish as
   select published_entity_id as entity_id
     from public.import_candidates
    where id = '53000000-0000-0000-0000-000000000001';
+-- Created by the superuser, so the editor role below needs to be let in.
+grant select on first_publish to authenticated;
 
 select isnt((select entity_id from first_publish), null,
   'the candidate records the entity it produced');
