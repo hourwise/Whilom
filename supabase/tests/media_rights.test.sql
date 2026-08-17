@@ -6,7 +6,7 @@
 
 begin;
 create extension if not exists pgtap;
-select plan(28);
+select plan(29);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'user@example.test'),
@@ -137,10 +137,21 @@ select throws_ok(
   $$select public.publish_media_candidate('d0000000-0000-0000-0000-000000000005')$$,
   '23514', null, 'an editor cannot publish media whose subject is uncertain');
 
--- Even flipping the stored state does not help: publication re-assesses.
+-- An editor cannot even reach for the flag: the table is read-only to them.
+select throws_ok(
+  $$update public.import_media_candidates set rights_state = 'media_ready'
+     where id = 'd0000000-0000-0000-0000-000000000002'$$,
+  '42501', null, 'an editor cannot edit rights state directly');
+reset role;
+
+-- ...and if something with more privilege did flip it, publication re-assesses
+-- from the underlying metadata, so a stale or tampered flag buys nothing.
 update public.import_media_candidates
    set rights_state = 'media_ready'
  where id = 'd0000000-0000-0000-0000-000000000002';
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}';
 select throws_ok(
   $$select public.publish_media_candidate('d0000000-0000-0000-0000-000000000002')$$,
   '23514', null, 'marking a candidate ready by hand does not make it publishable');
