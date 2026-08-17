@@ -1,19 +1,20 @@
 import Link from 'next/link';
 import { signIn } from '@/lib/actions';
+import { ActionNotice } from '@/components/ActionNotice';
 
 export const metadata = { title: 'Sign in' };
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; fields?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, fields } = await searchParams;
 
   return (
     <div className="stack" style={{ maxWidth: 380 }}>
       <h1>Sign in</h1>
-      {error && <p className="error">{error}</p>}
+      <ActionNotice error={error} fields={fields} allowRawMessage />
       <form action={signIn} className="stack">
         <div className="field">
           <label htmlFor="email">Email</label>

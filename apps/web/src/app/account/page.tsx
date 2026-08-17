@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { removeFromWishlist } from '@/lib/actions';
+import { ActionNotice } from '@/components/ActionNotice';
 
 export const metadata = { title: 'Account' };
 
@@ -10,7 +11,12 @@ interface PlaceRef {
   name: string;
 }
 
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; fields?: string; done?: string }>;
+}) {
+  const notice = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -54,6 +60,7 @@ export default async function AccountPage() {
     <div className="stack">
       <h1>{(profile as { display_name: string | null } | null)?.display_name ?? 'Your account'}</h1>
       <p className="muted">{user.email}</p>
+      <ActionNotice error={notice.error} fields={notice.fields} done={notice.done} />
 
       <section className="section">
         <h2>Wishlist</h2>
@@ -69,6 +76,7 @@ export default async function AccountPage() {
                   <Link href={`/place/${row.places.slug}`}>{row.places.name}</Link>
                   <form action={removeFromWishlist} style={{ display: 'inline' }}>
                     <input type="hidden" name="place_id" value={row.place_id} />
+                    <input type="hidden" name="slug" value={row.places.slug} />
                     <button className="secondary" style={{ padding: '0.15rem 0.5rem' }}>
                       Remove
                     </button>

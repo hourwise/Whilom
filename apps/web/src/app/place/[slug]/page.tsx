@@ -19,6 +19,7 @@ import {
   getSourcesForEntity,
 } from '@/lib/data';
 import { PlaceCard } from '@/components/PlaceCard';
+import { ActionNotice } from '@/components/ActionNotice';
 
 const label = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
@@ -28,8 +29,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return { title: place?.name ?? 'Place' };
 }
 
-export default async function PlacePage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function PlacePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ error?: string; fields?: string; done?: string }>;
+}) {
   const { slug } = await params;
+  const notice = await searchParams;
   const place = await getPlace(slug);
   if (!place) notFound();
 
@@ -97,6 +105,7 @@ export default async function PlacePage({ params }: { params: Promise<{ slug: st
       {/* Saved / visited / review actions */}
       <section className="section">
         <h2>Your visit</h2>
+        <ActionNotice error={notice.error} fields={notice.fields} done={notice.done} />
         {!user ? (
           <p className="muted">
             <Link href="/login">Sign in</Link> to save this place, record a visit or leave a review.
