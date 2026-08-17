@@ -13,12 +13,12 @@
     "clean": "rimraf .next .turbo *.tsbuildinfo"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.4",
+    "@supabase/supabase-js": "^2.45.4",
     "@whilom/database": "workspace:*",
     "@whilom/domain": "workspace:*",
     "@whilom/search": "workspace:*",
     "@whilom/validation": "workspace:*",
-    "@supabase/ssr": "^0.5.1",
-    "@supabase/supabase-js": "^2.45.4",
     "next": "^15.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

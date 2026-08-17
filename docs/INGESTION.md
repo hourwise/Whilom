@@ -92,6 +92,13 @@ in `THRESHOLDS` in `matching/matcher.ts`.
   evidence that two records are different places.
 - **Postcode** `±0.20`, **town** `+0.05` (NHLE supplies neither).
 
+Positional agreement is clamped between **50 m and 150 m**. Uncertainty widens
+the radius but can never buy an automatic match: Saltaire is a 1,628-hectare
+World Heritage Site whose centroid has a ~2.3 km equivalent radius, and without
+the ceiling it auto-matched a listed mill 382 m inside it. A mill within a World
+Heritage Site is *contained by* it, not identical to it, and that is now a
+regression test.
+
 Hard rules that override the score:
 
 - **> 5 km apart cannot be the same place**, whatever else agrees. This is what
@@ -121,10 +128,12 @@ run it will also create an `import_runs` row and persist raw payloads,
 candidates and conflicts so a run is fully auditable and repeatable. Keep
 credentials in the root `.env` (server-side), never in an app.
 
-**PUBLISH is not implemented.** Turning candidates into canonical rows needs a
-database, and this batch ran under a local-storage gate (no Docker, so no local
-Supabase). The runner reports exactly what it *would* publish and what it would
-queue; nothing has been written to any database.
+**PUBLISH is not implemented.** Turning candidates into canonical rows is the
+remaining step: the runner reports exactly what it *would* publish and what it
+would queue, and nothing has been written to any database. The schema it will
+publish into is now itself verified in CI — migrations replay from zero, the RLS
+contract is executed by pgTAP, and the generated types are held to the schema —
+so the target of PUBLISH is no longer the unknown it was.
 
 ## Yorkshire real-data POC
 
@@ -139,7 +148,7 @@ prints the figures below, so this section cannot drift from the truth.
 | Valid | 30 |
 | Rejected | 0 |
 | Enriched (Wikidata) | 30 |
-| Untyped candidates | 1 |
+| Generic `structure` classification | 1 |
 | Duplicates detected within the run | 3 |
 | Field conflicts | 0 |
 | `NEW_CANONICAL` | 27 |
@@ -166,17 +175,43 @@ the church it is named after; two identically named Grade I "Church of St Mary"
 records 14 km apart stayed separate; a registered park published at
 byte-identical coordinates to an abbey was not merged with it.
 
+### Positional accuracy
+
+**Coordinate-transformation accuracy is not source-feature positional
+accuracy.** The BNG→WGS84 conversion in `transforms/osgb.ts` is pinned to the
+Ordnance Survey worked example at **0.44 mm**. That proves the arithmetic is
+correct. It says nothing about whether the coordinate fed into it describes the
+real site — and for most NHLE records it does not, because the published
+easting/northing is a representative point for an area.
+
+`transforms/position.ts` estimates the honest figure instead:
+
+| Record | Method | Accuracy | Why |
+| --- | --- | --- | --- |
+| Listed building point, 1:1250 | `source_coordinate` | ~5.6 m | 0.6 m digitising + 5 m datum-shift residual |
+| Scheduled monument, 33.58 ha | `geometry_centroid` | ~327 m | radius of the circle with the same area |
+| Saltaire WHS, 1,628 ha | `geometry_centroid` | ~2,276 m | ditto — a centroid cannot be more precise than the thing it centres |
+
+Both figures travel with the record: `location_method` and
+`location_accuracy_m` on the candidate, and the original coordinate, CRS,
+conversion identifier and version on the source record. A later, better
+transform (OSTN15) will be distinguishable from this one because the conversion
+identifier carries a version.
+
+The matcher uses accuracy **only to become more cautious** — see the ceiling in
+the deduplication section.
+
 ### Deficiencies this POC found
 
 Recorded rather than patched over. These are Phase 0B's real output.
 
-1. **`PlaceType` has no generic building/structure member.** NHLE's ~380,000
-   listed buildings are mostly ordinary structures whose names ("Numbers 12 and
-   14 and Attached Railings") imply no type. They currently fall back to
-   `monument` with confidence 0, which is a placeholder, not a fact. Adding a
-   `building` / `structure` member is a small, justified schema correction, but
-   it changes a shared enum and both apps, so it is deliberately **not** made in
-   this batch.
+1. ~~**`PlaceType` has no generic building/structure member.**~~ **Fixed** in
+   migration `0019`. NHLE's ~380,000 listed buildings are mostly ordinary
+   structures whose names ("Numbers 12 and 14, Kirkgate") imply no type; they
+   used to fall back to `monument` with confidence 0, a placeholder asserting
+   something commemorative that was usually false. `building` and `structure`
+   now exist, `structure` being the deliberate catch-all — every designated
+   record is a built work, so it is always a true statement.
 2. **NHLE carries no town, county or postcode**, so places imported from it
    alone cannot be filtered by location text — and `places.town` / `county` are
    the columns discovery filters on. A reverse-geocoding or ONS-boundary
@@ -186,10 +221,18 @@ Recorded rather than patched over. These are Phase 0B's real output.
    Fountains scheduling description typed an abbey as an industrial site, and
    singular-only patterns failed to type "Round barrows…" and "Saltaire Mills".
    Both are fixed; the class of bug is not, and this remains the weakest link.
-4. **Positional precision varies by an order of magnitude** (1:1250 to 1:10000
-   capture scale) and the schema has nowhere to record it. `places` has no
-   positional-uncertainty column, so the matcher's most useful input is lost at
-   publication time.
+4. ~~**Positional precision varies by an order of magnitude and the schema has
+   nowhere to record it.**~~ **Fixed** in migration `0020`. `places` now carries
+   `location_method` and `location_accuracy_m`, and `source_records` retains the
+   coordinate as published, its CRS, the conversion identifier and version, and
+   the source's own stated precision.
+
+   The figure is derived from what the coordinate *is*, not from how precisely
+   it was converted: a point gets the digitising floor, while a polygon centroid
+   gets the feature's equivalent radius — ~327 m for Fountains Abbey's
+   33-hectare precinct. `transforms/osgb.ts` no longer exports an accuracy
+   figure at all, so transformation precision and positional accuracy cannot be
+   confused. See "Positional accuracy" below.
 5. **The pipeline order in the spec puts ENRICH after MATCH**, which discards the
    strongest available matching signal. Implemented as documented above.
 

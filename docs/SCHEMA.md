@@ -25,6 +25,11 @@ never the app code.
 | `0014_contributions_moderation.sql` | contributions, corrections, reports, moderation_items, moderation_actions |
 | `0015_import.sql` | import_sources, import_runs, import_raw, import_candidates, import_conflicts |
 | `0016_views.sql` | `places_geo` view (exposes lng/lat; `security_invoker`) |
+| `0017_child_row_visibility.sql` | Parent-gated read policies for place/route/collection/image child rows |
+| `0018_visibility_helper_hardening.sql` | `SECURITY DEFINER` helpers pinned to an empty `search_path`; explicit EXECUTE; role-guard fix |
+| `0019_place_type_structures.sql` | `place_type` gains `building` and `structure` |
+| `0020_location_accuracy.sql` | `location_method` enum; positional accuracy on `places` and position provenance on `source_records` |
+| `0021_grants.sql` | Table privileges for `anon`/`authenticated`/`service_role` |
 
 ## Key design decisions
 
@@ -43,10 +48,38 @@ source-tagged assertions to any entity (spec §34). `trust_level` on entities an
 sources drives the content-trust display model (spec §39), so an imported claim
 is never indistinguishable from an editorial fact or a user claim.
 
-**Enums mirror the domain package.** All 21 SQL enum types match the string
-unions in `packages/domain/src/enums.ts` one-for-one (checked by a parity
-script). `place_type`, `historical_period`, etc. are enums; add a value with
-`ALTER TYPE ... ADD VALUE` and mirror it in the domain package.
+**Enums mirror the domain package.** The SQL enum types match the string unions
+in `packages/domain/src/enums.ts` one-for-one, enforced by
+`packages/domain/src/enum-parity.test.ts`, which reads the migrations and
+applies `create type` and `alter type … add value` in filename order. Add a
+value with `ALTER TYPE … ADD VALUE` and mirror it in the domain package, in a
+migration of its own — Postgres refuses to *use* a new enum value in the
+transaction that adds it.
+
+**Positional accuracy is explicit.** A PostGIS point is a claim of infinite
+precision, and for heritage data that claim is usually false. `places` carries
+`location_method` (a nine-value controlled vocabulary) and `location_accuracy_m`
+(the radius the real feature is expected to lie within, NULL when unassessed);
+`source_records` keeps what each source published — the original coordinate, its
+CRS, the transformation identifier and version, the source's own stated
+precision, and our estimate.
+
+> **Coordinate-transformation accuracy is not source-feature positional
+> accuracy.** Whilom's BNG→WGS84 conversion is pinned to the Ordnance Survey
+> worked example at 0.44 mm; that proves the arithmetic, not the location. For a
+> polygon centroid the honest figure comes from the feature's own extent —
+> Fountains Abbey's 33-hectare precinct gives ~327 m.
+
+**`place_type` stays broad.** `building` and `structure` exist so ordinary
+listed heritage — most of the ~380,000 NHLE entries — has an honest
+classification instead of being forced into `monument`. Detailed subtype belongs
+in `place_categories`/`place_tags`, which extend without a migration.
+
+**Grants are not optional.** RLS filters rows *after* the privilege check, so a
+table with perfect policies and no `GRANT` is simply unreadable. `0021` grants
+read to `anon`/`authenticated`, writes to `authenticated` only on the tables
+users legitimately write to, and sets default privileges so a future table
+cannot be silently unreadable.
 
 **Denormalised filter columns.** `places` keeps `place_type`, `primary_period`,
 `access_cost`, `is_visitable` on the row for fast filtering, with full visitor
@@ -70,14 +103,58 @@ patterns:
 - **Privileged** (moderation_*, import_*, badges award): moderator/admin only;
   moderation_actions are append-only (no update/delete policy), and badges can
   never be self-awarded.
+- **Parent-gated child rows** (0017): a child row is publicly readable only when
+  its parent is. The parent conditions genuinely differ and are encoded
+  separately — a route must be `approved`, a collection must be **both**
+  published and approved, and image rights follow the image (approved, or owned
+  by the caller, or moderator). Lookup vocabularies that name no entity
+  (`place_categories`, `place_tags`, `sources`, `badges`) stay world-readable.
 
-## Regenerating types
+All of the above is executed, not asserted: 61 pgTAP assertions across five
+files in `supabase/tests/` cover approved-vs-draft child visibility, editor
+access, that authenticating alone grants nothing, and that ordinary users cannot
+write canonical records by any route.
+
+## Where the schema is validated
+
+**Whilom's database migrations and DB tests are validated on ephemeral,
+GitHub-hosted Supabase/Postgres infrastructure. Local Docker is optional for
+developers, not required for CI correctness.**
+
+The `database` job in `.github/workflows/ci.yml` builds the schema from nothing
+on every pull request:
+
+1. start a throwaway Supabase stack (Studio, image proxy, edge runtime and the
+   log pipeline excluded — none is needed to verify migrations or run pgTAP);
+2. `supabase db reset`, which replays every migration from an empty database and
+   loads the seed;
+3. `supabase test db`, the pgTAP suite in `supabase/tests/`;
+4. `supabase gen types typescript --local`;
+5. diff the result against the committed types.
+
+No hosted Supabase project is involved and the job needs no secrets, so it also
+runs on forks. Whilom has no hosted Supabase environment.
+
+### The generated type contract
+
+```
+migrations → fresh CI database → supabase gen types → compare with committed
+```
+
+`packages/database/src/generated/database.types.ts` is generated from the real
+migration-produced schema and committed. **A schema change without regenerated
+types fails CI.** The candidate is generated into a temp directory so CI never
+mutates the working tree, and is uploaded as the `generated-database-types`
+artifact — which is how you refresh the committed file without Docker.
+
+### Locally (optional)
 
 ```bash
 supabase start
 supabase db reset          # apply all migrations + seed
-pnpm db:types              # regenerate packages/database/src/generated/database.types.ts
+supabase test db           # pgTAP suite
+pnpm db:types              # regenerate the committed types
 ```
 
-> Local validation needs the Supabase stack (Docker) or a Postgres with PostGIS.
-> `supabase test db` runs the pgTAP suite in `supabase/tests/`.
+pgTAP is created inside each test's own transaction rather than by a migration,
+so the test framework never reaches a real deployment.

@@ -1,4 +1,10 @@
 * text=auto eol=lf
+
+# Machine-generated and compared byte-for-byte by the database CI job against
+# `supabase gen types` output. Its trailing blank line is part of that output,
+# so whitespace checks must not be applied — "fixing" it would break the drift
+# gate. Marked linguist-generated so diffs stay collapsed in review.
+packages/database/src/generated/database.types.ts -whitespace linguist-generated=true
 *.png binary
 *.jpg binary
 *.gif binary

@@ -39,7 +39,7 @@ Mobile**; publicly both are simply **Whilom**.
 | Doc | What it covers |
 | --- | --- |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Boundaries, package graph, data flow, trust model |
-| [docs/SCHEMA.md](docs/SCHEMA.md) | Database schema reference (16 migrations, 46 tables, RLS) |
+| [docs/SCHEMA.md](docs/SCHEMA.md) | Database schema reference (21 migrations, 46 tables, RLS, type contract) |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Phased build plan (Phase 0–9) and current status |
 | [docs/INGESTION.md](docs/INGESTION.md) | The governed data-ingestion pipeline design |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Dev setup, workspace commands, conventions |
@@ -47,18 +47,34 @@ Mobile**; publicly both are simply **Whilom**.
 ## Prerequisites
 
 - Node 20.11+ (`.nvmrc`) and **pnpm 9** (`corepack enable`)
-- [Supabase CLI](https://supabase.com/docs/guides/cli) + Docker (for local DB)
+- [Supabase CLI](https://supabase.com/docs/guides/cli) + Docker — **optional**,
+  see below
+
+### Where the database is verified
+
+**Whilom's database migrations and DB tests are validated on ephemeral,
+GitHub-hosted Supabase/Postgres infrastructure. Local Docker is optional for
+developers, not required for CI correctness.**
+
+Every pull request builds the schema from nothing, replays all migrations, runs
+the pgTAP/RLS suite, regenerates the TypeScript types and fails if the committed
+types no longer match the schema. No hosted Supabase project exists or is used,
+and the database job requires no secrets. You can contribute to the schema
+without ever installing Docker: push, and read the `database` job.
+
+Steps 1 and 2 below are therefore optional conveniences for working offline.
 
 ## Getting started
 
 ```bash
 pnpm install
 
-# 1) Start the local Supabase stack (Postgres + PostGIS + Auth + Studio)
+# 1) OPTIONAL — local Supabase stack (Postgres + PostGIS + Auth + Studio)
 supabase start
 supabase db reset          # applies migrations + loads supabase/seed/seed.sql
+supabase test db           # pgTAP suite
 
-# 2) Generate database types into packages/database
+# 2) OPTIONAL — regenerate database types (CI does this and checks for drift)
 pnpm db:types
 
 # 3) Configure env (values printed by `supabase start`)

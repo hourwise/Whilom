@@ -17,6 +17,22 @@ connects both (spec §54).
   governed by Row Level Security. (spec §38)
 - **Ingestion is not inside a frontend.** Import logic lives in `ingestion/`
   with modular per-source adapters. (spec §3, §35)
+- **The database is verified in CI, not on a developer's machine.** Migrations
+  and the pgTAP/RLS suite run on ephemeral GitHub-hosted Postgres. Local Docker
+  is optional for developers, not required for CI correctness — and Whilom has
+  no hosted Supabase environment at all. See [SCHEMA.md](SCHEMA.md).
+- **Generated types are a contract, not a convenience.** CI regenerates them
+  from the migration-produced schema and fails if the committed file differs, so
+  the schema cannot drift away from the types the apps compile against.
+
+## Deferred: mobile lint
+
+`apps/mobile` has no lint step. Its script used to be `expo lint`, which
+**self-installs** `eslint` + `eslint-config-expo` and writes an `.eslintrc.js`
+the first time it runs — so simply running `pnpm lint` mutated the repository
+and the lockfile. It is now a deterministic no-op that says so. Giving mobile a
+real, checked-in ESLint config is a small task in its own right; it should not
+ride along in an unrelated batch.
 
 ## Package graph
 

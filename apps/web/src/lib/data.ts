@@ -1,3 +1,4 @@
+import type { EntityType } from '@whilom/domain';
 import { placeSearchSchema } from '@whilom/validation';
 import { buildSearchArgs } from '@whilom/search';
 import { createClient } from '@/lib/supabase/server';
@@ -163,7 +164,10 @@ export async function getRoutesForPlace(placeId: string): Promise<Route[]> {
   return (data ?? []) as Route[];
 }
 
-export async function getSourcesForEntity(entityType: string, entityId: string): Promise<Source[]> {
+export async function getSourcesForEntity(
+  entityType: EntityType,
+  entityId: string,
+): Promise<Source[]> {
   const supabase = await createClient();
   const { data: recs } = await supabase
     .from('source_records')

@@ -10,9 +10,16 @@ import {
   RouteType,
 } from '@whilom/domain';
 
-/** Turn a domain `const` object into a Zod enum of its values. */
+/**
+ * Turn a domain `const` object into a Zod enum of its values.
+ *
+ * The cast preserves the literal union rather than widening to `string`, so a
+ * parsed `entityType` is `'place' | 'person' | …` and assigns directly to the
+ * generated database enum. Widening here was silently costing type safety at
+ * every call site that fed a parsed value into a Supabase insert.
+ */
 const enumValues = <T extends Record<string, string>>(obj: T) =>
-  z.enum(Object.values(obj) as [string, ...string[]]);
+  z.enum(Object.values(obj) as [T[keyof T], ...T[keyof T][]]);
 
 /** A canonical entity id. */
 export const uuidSchema = z.string().uuid();
