@@ -140,7 +140,7 @@ select is(
     where p.name = 'Generalised Castle'),
   'associated_with', 'a founder maps to an existing domain predicate, not a new one');
 
-select like(
+select alike(
   (select er.note from public.entity_relationships er
      join public.places p on p.id = er.subject_id
     where p.name = 'Generalised Castle'),

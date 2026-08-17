@@ -69,8 +69,13 @@ returns jsonb language sql immutable as $$
     'designations', jsonb_build_array(jsonb_build_object(
       'designation', 'listed_building', 'grade', 'I', 'reference', p_external)),
     'externalIds', jsonb_build_array(jsonb_build_object('scheme', 'nhle', 'value', p_external)),
-    'inceptionYear', 1190,
-    'officialWebsite', 'https://example.org/' || p_external
+    -- Since 0024 publication is data-driven: facts arrive as a list of
+    -- registered predicate/value pairs rather than as named top-level fields
+    -- that the publish procedure knew about individually.
+    'facts', jsonb_build_array(
+      jsonb_build_object('predicate', 'inception_year', 'value', 1190, 'sourceValue', '1190'),
+      jsonb_build_object('predicate', 'official_website',
+                         'value', 'https://example.org/' || p_external))
   );
 $$;
 
