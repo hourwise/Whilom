@@ -11,6 +11,10 @@ const DONE_MESSAGES: Record<string, string> = {
   visit_recorded: 'Visit recorded.',
   review_submitted: 'Review submitted — it will appear once moderated.',
   correction_submitted: 'Thank you — your correction has been sent for review.',
+  // Review workbench
+  review_recorded: 'Decision recorded.',
+  conflict_resolved: 'Conflict resolved. Both source values are still on record.',
+  published: 'Published to canonical data.',
 };
 
 export function ActionNotice({

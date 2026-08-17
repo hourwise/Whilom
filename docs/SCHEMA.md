@@ -32,6 +32,8 @@ never the app code.
 | `0021_grants.sql` | Table privileges for `anon`/`authenticated`/`service_role` |
 | `0022_place_type_unknown.sql` | `place_type` gains `unknown`; `structure` stops being a universal fallback |
 | `0023_governed_publish.sql` | `conflict_resolution` enum, publish state on candidates, `publish_import_candidate()`, `resolve_import_conflict()`, `import_review_queue` |
+| `0024_generalised_publication.sql` | `fact_predicates` registry, fact/relationship provenance and per-source identity, data-driven publish, `preview_import_candidate()` |
+| `0025_review_workbench_access.sql` | Editor read access to review material, `review_import_candidate()`, `import_decision_history` |
 
 ## Key design decisions
 
@@ -89,6 +91,18 @@ The ingestion fallback is designation-aware — scheduled monument →
 supported route from an import candidate to a canonical place. It is atomic,
 editor-only, refuses unresolved conflicts, and is idempotent on retry; see
 [INGESTION.md](INGESTION.md).
+
+**Publication is data-driven, not hard-coded.** Candidates carry a `facts` array
+of predicate/value pairs, and publish iterates it against the
+`fact_predicates` registry — an unregistered predicate is refused. Adding a fact
+is an `INSERT` into the registry plus a mapping in
+`ingestion/pipeline/facts.ts`; it is never an edit to a stored procedure.
+
+**Agreement never erases attribution.** `facts` and `entity_relationships` are
+unique *per source*, not globally. Two sources asserting the same value are two
+rows with two sources, because who corroborated what is itself information. The
+original `entity_relationships` constraint was global, which silently rejected
+the second source's claim as a duplicate; `0024` replaces it.
 
 **Grants are not optional.** RLS filters rows *after* the privilege check, so a
 table with perfect policies and no `GRANT` is simply unreadable. `0021` grants

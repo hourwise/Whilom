@@ -321,11 +321,13 @@ export type Database = {
           date_end: string | null
           date_start: string | null
           id: string
+          import_run_id: string | null
           note: string | null
           object_id: string
           object_type: Database["public"]["Enums"]["entity_type"]
           predicate: string
           source_id: string | null
+          source_record_id: string | null
           status: Database["public"]["Enums"]["moderation_state"]
           subject_id: string
           subject_type: Database["public"]["Enums"]["entity_type"]
@@ -338,11 +340,13 @@ export type Database = {
           date_end?: string | null
           date_start?: string | null
           id?: string
+          import_run_id?: string | null
           note?: string | null
           object_id: string
           object_type: Database["public"]["Enums"]["entity_type"]
           predicate: string
           source_id?: string | null
+          source_record_id?: string | null
           status?: Database["public"]["Enums"]["moderation_state"]
           subject_id: string
           subject_type: Database["public"]["Enums"]["entity_type"]
@@ -355,11 +359,13 @@ export type Database = {
           date_end?: string | null
           date_start?: string | null
           id?: string
+          import_run_id?: string | null
           note?: string | null
           object_id?: string
           object_type?: Database["public"]["Enums"]["entity_type"]
           predicate?: string
           source_id?: string | null
+          source_record_id?: string | null
           status?: Database["public"]["Enums"]["moderation_state"]
           subject_id?: string
           subject_type?: Database["public"]["Enums"]["entity_type"]
@@ -374,10 +380,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "entity_relationships_import_run_id_fkey"
+            columns: ["import_run_id"]
+            isOneToOne: false
+            referencedRelation: "import_runs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "entity_relationships_source_id_fkey"
             columns: ["source_id"]
             isOneToOne: false
             referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_relationships_source_record_id_fkey"
+            columns: ["source_record_id"]
+            isOneToOne: false
+            referencedRelation: "source_records"
             referencedColumns: ["id"]
           },
         ]
@@ -454,6 +474,30 @@ export type Database = {
           },
         ]
       }
+      fact_predicates: {
+        Row: {
+          created_at: string
+          description: string | null
+          label: string
+          predicate: string
+          value_kind: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          label: string
+          predicate: string
+          value_kind: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          label?: string
+          predicate?: string
+          value_kind?: string
+        }
+        Relationships: []
+      }
       facts: {
         Row: {
           confidence: number | null
@@ -462,9 +506,12 @@ export type Database = {
           entity_id: string
           entity_type: Database["public"]["Enums"]["entity_type"]
           id: string
+          is_preferred: boolean
           note: string | null
           predicate: string
           source_id: string | null
+          source_record_id: string | null
+          source_value: string | null
           status: Database["public"]["Enums"]["moderation_state"]
           valid_from: string | null
           valid_to: string | null
@@ -477,9 +524,12 @@ export type Database = {
           entity_id: string
           entity_type: Database["public"]["Enums"]["entity_type"]
           id?: string
+          is_preferred?: boolean
           note?: string | null
           predicate: string
           source_id?: string | null
+          source_record_id?: string | null
+          source_value?: string | null
           status?: Database["public"]["Enums"]["moderation_state"]
           valid_from?: string | null
           valid_to?: string | null
@@ -492,9 +542,12 @@ export type Database = {
           entity_id?: string
           entity_type?: Database["public"]["Enums"]["entity_type"]
           id?: string
+          is_preferred?: boolean
           note?: string | null
           predicate?: string
           source_id?: string | null
+          source_record_id?: string | null
+          source_value?: string | null
           status?: Database["public"]["Enums"]["moderation_state"]
           valid_from?: string | null
           valid_to?: string | null
@@ -513,6 +566,13 @@ export type Database = {
             columns: ["source_id"]
             isOneToOne: false
             referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facts_source_record_id_fkey"
+            columns: ["source_record_id"]
+            isOneToOne: false
+            referencedRelation: "source_records"
             referencedColumns: ["id"]
           },
         ]
@@ -2408,6 +2468,26 @@ export type Database = {
       }
     }
     Views: {
+      import_decision_history: {
+        Row: {
+          action: string | null
+          action_id: string | null
+          candidate_id: string | null
+          created_at: string | null
+          moderator_id: string | null
+          moderator_name: string | null
+          note: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moderation_actions_moderator_id_fkey"
+            columns: ["moderator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_review_queue: {
         Row: {
           candidate_id: string | null
@@ -2557,6 +2637,10 @@ export type Database = {
       is_editor: { Args: never; Returns: boolean }
       is_moderator: { Args: never; Returns: boolean }
       place_is_public: { Args: { p_place_id: string }; Returns: boolean }
+      preview_import_candidate: {
+        Args: { p_candidate_id: string }
+        Returns: Json
+      }
       publish_import_candidate: {
         Args: { p_candidate_id: string; p_note?: string }
         Returns: string
@@ -2566,6 +2650,18 @@ export type Database = {
           p_conflict_id: string
           p_note?: string
           p_outcome: Database["public"]["Enums"]["conflict_resolution"]
+        }
+        Returns: undefined
+      }
+      resolve_person_from_source: {
+        Args: { p_external_id: string; p_label: string; p_source_id: string }
+        Returns: string
+      }
+      review_import_candidate: {
+        Args: {
+          p_candidate_id: string
+          p_decision: Database["public"]["Enums"]["moderation_state"]
+          p_note?: string
         }
         Returns: undefined
       }

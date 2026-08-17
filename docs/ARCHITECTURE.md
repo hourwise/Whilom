@@ -26,6 +26,18 @@ connects both (spec §54).
   atomic, editor-only, refuses unresolved conflicts, idempotent on retry.
   Nothing — no client, no ingestion caller — writes canonical heritage tables
   directly. (spec §35, §38)
+- **The UI is a caller, not an authority.** The review workbench renders the
+  backend's own publish preview and offers only actions the governed functions
+  implement. It never writes a canonical table, an import candidate or a
+  conflict row itself, and its role gate is one of three layers rather than the
+  protection.
+
+## Internal tooling
+
+`/admin/imports` is the import review workbench: editorial staff only, and
+deliberately not part of the public product. It exists so that conflicts the
+pipeline surfaces have somewhere to be resolved. See
+[INGESTION.md](INGESTION.md).
 - **The database is verified in CI, not on a developer's machine.** Migrations
   and the pgTAP/RLS suite run on ephemeral GitHub-hosted Postgres. Local Docker
   is optional for developers, not required for CI correctness — and Whilom has

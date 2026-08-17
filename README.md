@@ -1,4 +1,4 @@
-﻿# Whilom
+# Whilom
 
 **History, where it happened.**
 
@@ -39,9 +39,10 @@ Mobile**; publicly both are simply **Whilom**.
 | Doc | What it covers |
 | --- | --- |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Boundaries, package graph, data flow, trust model |
-| [docs/SCHEMA.md](docs/SCHEMA.md) | Database schema reference (23 migrations, RLS, governed publish, type contract) |
+| [docs/SCHEMA.md](docs/SCHEMA.md) | Database schema reference (25 migrations, RLS, governed publish, type contract) |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Phased build plan (Phase 0â€“9) and current status |
 | [docs/INGESTION.md](docs/INGESTION.md) | The governed data-ingestion pipeline design |
+| [docs/INGESTION.md](docs/INGESTION.md) — review workbench | Internal `/admin/imports` editorial tool (editor-only) |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Dev setup, workspace commands, conventions |
 
 ## Prerequisites
