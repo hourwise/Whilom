@@ -6,7 +6,7 @@
 
 begin;
 create extension if not exists pgtap;
-select plan(30);
+select plan(31);
 
 -- ---------------------------------------------------------------------------
 -- Actors
@@ -198,11 +198,25 @@ select is(
     where p.name = 'Test Castle' and pd.reference = '9000001'),
   1::bigint, 'the designation was attached with its list-entry reference');
 
+reset role;
+
 -- --- Idempotency -----------------------------------------------------------
+-- The entity the first publish produced, captured in its own statement so the
+-- comparison below cannot be confused by same-statement snapshot visibility.
+create temporary table first_publish as
+  select published_entity_id as entity_id
+    from public.import_candidates
+   where id = '53000000-0000-0000-0000-000000000001';
+
+select isnt((select entity_id from first_publish), null,
+  'the candidate records the entity it produced');
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}';
+
 select is(
   (select public.publish_import_candidate('53000000-0000-0000-0000-000000000001')),
-  (select published_entity_id from public.import_candidates
-    where id = '53000000-0000-0000-0000-000000000001'),
+  (select entity_id from first_publish),
   'republishing returns the same entity');
 
 select is(
@@ -287,7 +301,7 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"44444444-4444-4444-4444-444444444444","role":"authenticated"}';
 select is(
   (select count(*) from public.import_review_queue),
-  4::bigint, 'a moderator sees every candidate in the review queue');
+  5::bigint, 'a moderator sees every candidate in the review queue');
 reset role;
 
 set local request.jwt.claims = '';

@@ -389,7 +389,8 @@ begin
          resolution_note    = p_note,
          resolved_by        = v_actor,
          resolved_at        = now(),
-         status             = case when p_outcome = 'defer' then 'needs_review' else 'approved' end
+         -- A deferred conflict stays in the queue; anything else is settled.
+         status             = (case when p_outcome = 'defer' then 'needs_review' else 'approved' end)::public.moderation_state
    where id = p_conflict_id;
 
   if not found then
