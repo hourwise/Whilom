@@ -3,10 +3,17 @@
 --
 -- Community change reaches canonical data through corrections/contributions and
 -- a moderator, never by direct write. That is the property under test here.
+--
+-- Canonical tables are closed to `authenticated` at two independent layers: no
+-- INSERT/UPDATE/DELETE grant (0021) and an editor-only policy (0004). Both
+-- report 42501, and the assertions below deliberately test the outcome rather
+-- than which layer produced it — either one alone would be sufficient, and
+-- requiring both is the point.
 
 begin;
--- pgTAP lives only inside this transaction: created here and rolled back with
--- everything else, so the test framework never reaches a real deployment.
+-- supabase test db already provides pgTAP; this keeps the file runnable on
+-- its own via psql. It is never created by a migration, so the test framework
+-- cannot reach a real deployment.
 create extension if not exists pgtap;
 select plan(18);
 
@@ -33,18 +40,23 @@ select throws_ok(
               extensions.st_setsrid(extensions.st_makepoint(-1.0, 54.0), 4326)::extensions.geography)$$,
   '42501', null, 'an ordinary user cannot insert a canonical place');
 
-select is(
-  (select count(*) from (
-     update public.places set name = 'Renamed'
-      where id = 'aaaaaaaa-0000-0000-0000-000000000001' returning 1) u),
-  0::bigint,
+-- RLS filters rows rather than raising on UPDATE/DELETE, so these assert that
+-- nothing was affected. A data-modifying statement has to sit in a CTE; it is
+-- not valid inside a plain subquery.
+with attempted as (
+  update public.places set name = 'Renamed'
+   where id = 'aaaaaaaa-0000-0000-0000-000000000001'
+  returning 1
+)
+select is((select count(*) from attempted), 0::bigint,
   'an ordinary user cannot update a canonical place');
 
-select is(
-  (select count(*) from (
-     delete from public.places
-      where id = 'aaaaaaaa-0000-0000-0000-000000000001' returning 1) d),
-  0::bigint,
+with attempted as (
+  delete from public.places
+   where id = 'aaaaaaaa-0000-0000-0000-000000000001'
+  returning 1
+)
+select is((select count(*) from attempted), 0::bigint,
   'an ordinary user cannot delete a canonical place');
 
 select throws_ok(

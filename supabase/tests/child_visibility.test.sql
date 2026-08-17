@@ -5,13 +5,14 @@
 --   approved; an editor keeps full access; merely authenticating grants
 --   nothing extra.
 --
--- pgTAP is created inside each test's own transaction and rolled back with it,
--- so the test framework is never installed by a migration and never reaches a
--- real deployment.
+-- Note that reads here depend on BOTH halves of Postgres' access control: the
+-- GRANTs in 0021 and the policies in 0004/0017. Missing grants is what made
+-- every one of these fail the first time the schema actually ran.
 
 begin;
--- pgTAP lives only inside this transaction: created here and rolled back with
--- everything else, so the test framework never reaches a real deployment.
+-- supabase test db already provides pgTAP; this keeps the file runnable on
+-- its own via psql. It is never created by a migration, so the test framework
+-- cannot reach a real deployment.
 create extension if not exists pgtap;
 select plan(23);
 

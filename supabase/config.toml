@@ -13,6 +13,14 @@ port = 54322
 shadow_port = 54320
 major_version = 15
 
+# The seed lives in `seed/seed.sql`, not the CLI's default `supabase/seed.sql`,
+# so it has to be named explicitly. Without this it was silently never loaded —
+# which is why the search_places tests, which assume seeded data, failed the
+# first time the database actually ran.
+[db.seed]
+enabled = true
+sql_paths = ["./seed/seed.sql"]
+
 [studio]
 enabled = true
 port = 54323

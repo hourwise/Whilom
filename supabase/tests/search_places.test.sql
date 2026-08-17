@@ -2,8 +2,9 @@
 -- Assumes seed data loaded.
 
 begin;
--- pgTAP lives only inside this transaction: created here and rolled back with
--- everything else, so the test framework never reaches a real deployment.
+-- supabase test db already provides pgTAP; this keeps the file runnable on
+-- its own via psql. It is never created by a migration, so the test framework
+-- cannot reach a real deployment.
 create extension if not exists pgtap;
 select plan(3);
 
