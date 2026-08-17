@@ -209,9 +209,19 @@ export function normaliseWikidataRecord(
     ...(facts.inceptionYear !== undefined ? { inceptionYear: facts.inceptionYear } : {}),
     ...(facts.officialWebsite ? { officialWebsite: facts.officialWebsite } : {}),
     ...(facts.commonsCategory ? { commonsCategory: facts.commonsCategory } : {}),
-    ...(facts.architects.length
-      ? { relatedPeople: facts.architects.map((label) => ({ label, role: 'architect' })) }
-      : {}),
+    ...(item.relatedPeople?.length
+      ? {
+          relatedPeople: item.relatedPeople.map((person) => ({
+            label: person.label,
+            role: person.role,
+            // The QID, so publication resolves the person by identifier rather
+            // than by name — two people called John Carr stay two people.
+            ...(person.qid ? { externalId: person.qid } : {}),
+          })),
+        }
+      : facts.architects.length
+        ? { relatedPeople: facts.architects.map((label) => ({ label, role: 'architect' })) }
+        : {}),
     warnings,
   };
 
