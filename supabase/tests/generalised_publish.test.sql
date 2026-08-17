@@ -159,33 +159,39 @@ select is(
   1::bigint, 'the created person carries a source record of their own');
 
 -- ---------------------------------------------------------------------------
--- Idempotency: the same source again changes nothing
+-- Reimport: the same external record arrives again in a later run.
+--
+-- Modelled as a NEW candidate carrying the same source and external id, matched
+-- to the place the first run produced — which is what a reimport actually looks
+-- like. (Clearing published_entity_id would not be a reimport; it would be a
+-- fresh candidate, and would correctly create a second place.)
 -- ---------------------------------------------------------------------------
-update public.import_candidates
-   set published_entity_id = null, published_at = null, source_record_id = null
- where id = '53000000-0000-0000-0000-000000000001';
+insert into public.import_candidates (id, import_run_id, entity_type, normalised, status, matched_entity_id)
+select '53000000-0000-0000-0000-00000000000a', '52000000-0000-0000-0000-000000000001', 'place',
+       c.normalised, 'approved', c.published_entity_id
+  from public.import_candidates c where c.id = '53000000-0000-0000-0000-000000000001';
 
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}';
 select lives_ok(
-  $$select public.publish_import_candidate('53000000-0000-0000-0000-000000000001')$$,
-  'republishing the same source record succeeds');
+  $$select public.publish_import_candidate('53000000-0000-0000-0000-00000000000a')$$,
+  'reimporting the same source record succeeds');
 reset role;
 
 select is(
   (select count(*) from public.facts f join public.places p on p.id = f.entity_id
     where p.name = 'Generalised Castle'),
-  6::bigint, 'republishing did not duplicate any fact');
+  6::bigint, 'reimporting did not duplicate any fact');
 
 select is(
   (select count(*) from public.entity_relationships er
      join public.places p on p.id = er.subject_id
     where p.name = 'Generalised Castle'),
-  1::bigint, 'republishing did not duplicate the relationship');
+  1::bigint, 'reimporting did not duplicate the relationship');
 
 select is(
   (select count(*) from public.people where name = 'Titus Salt'),
-  1::bigint, 'republishing did not create a second person');
+  1::bigint, 'reimporting did not create a second person');
 
 -- ---------------------------------------------------------------------------
 -- A second, independent source agreeing must stay separately attributable
