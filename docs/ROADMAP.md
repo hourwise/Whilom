@@ -65,9 +65,14 @@ array checked against a registry, and imported place↔person relationships are
 materialised into the canonical graph with full provenance. An internal review
 workbench (`/admin/imports`, editor-only) lets a human work the queue.
 
+Rights-safe open media is now proven too: Wikimedia Commons runs as a media
+source with per-file licence evaluation, and no image can be published unless
+Whilom can generate valid attribution for that exact file. Reviewer decisions
+also now move the displayed claim deterministically.
+
 **This does not mean national scale is proven.** It means the model holds for a
-deliberately adversarial 68-record sample. Still unproven: imagery rights end to
-end, and behaviour at volume. See "Real-data proof" in INGESTION.md for the standing gaps.
+deliberately adversarial sample. Still unproven: throughput at volume, reviewer
+ergonomics at volume, OpenStreetMap, and museum collections. See "Real-data proof" in INGESTION.md for the standing gaps.
 
 ## Phase 1 — Shared foundation ✅
 

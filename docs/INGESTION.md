@@ -315,6 +315,51 @@ target entity, facts, relationships, conflicts and any blockers — and writes
 nothing. The review workbench renders this rather than computing its own view,
 so a reviewer never sees an action the engine cannot perform.
 
+## Wikimedia Commons: media, with rights as an invariant
+
+Commons is a **media** source. It proposes pictures of entities Whilom already
+knows; it never proposes new canonical places. See
+`ingestion/sources/commons/README.md`.
+
+**Mechanism.** The official MediaWiki Action API — `list=categorymembers` to
+find files in a category the entity's own Wikidata item names, then
+`prop=imageinfo` with `iiprop=extmetadata` for each file's own rights block. No
+HTML page is scraped and no article prose is imported. The anonymous API returns
+HTTP 429 on bursts (the first capture run was cut off after five categories), so
+requests are serialised with ~1.2 s spacing and exponential backoff. That limit
+bounds how fast media can ever be ingested and is documented rather than
+engineered around.
+
+### The three rules
+
+**File-level rights, never source-level assumptions.** "From Wikimedia Commons"
+is not a licence. Commons hosts everything from CC0 to non-reusable fair use,
+and the bounded sample of 40 files really does contain six different licences.
+Licence is read from each file's own metadata; the raw string is always kept
+beside the normalised value as the evidence for the decision.
+
+**No attribution, no publication.** `build_media_attribution()` composes a
+credit from stored data and returns NULL when a licence requires a creator and
+none is known. That NULL is the gate: `publish_media_candidate()` refuses
+anything that is not `media_ready`, and it re-assesses at publication time, so
+editing the stored state achieves nothing.
+
+**Association is not identity.** A Commons category for an abbey complex holds
+the abbey, the river beside it, the visitor centre, a memorial and an old
+engraving. A category match is therefore never confident on its own — only a
+structured `depicts` statement naming the entity is. Rights-perfect media with
+an uncertain subject is held at `media_association_review`, because a correctly
+licensed photograph of the wrong place is still the wrong place.
+
+### Attribution examples
+
+| Licence | Stored | Rendered |
+| --- | --- | --- |
+| CC BY 4.0 | creator `Jane Smith` | `"Abbey.jpg", by Jane Smith, CC BY 4.0, via Wikimedia Commons` |
+| CC BY-SA 3.0 | creator `Jane Smith` | `"Keep.jpg", by Jane Smith, CC BY-SA 3.0, via Wikimedia Commons` |
+| Public domain | no creator | `"Old.jpg", Public domain, via Wikimedia Commons` |
+| CC BY-SA 4.0 | no creator | *(none — publication refused)* |
+
 ## The review workbench
 
 `/admin/imports` and `/admin/imports/[id]`, internal editorial tooling and not
@@ -329,6 +374,13 @@ complementary, conflict, positional, ambiguous and missing are distinguished and
 sorted so what needs a decision comes first. Most cross-source data is
 complementary, and styling it like a conflict would waste the attention the
 conflicts deserve.
+
+`/admin/imports/media` reviews imported media: thumbnail, creator, licence,
+generated attribution, proposed subject, rights state and exactly which fields
+are missing. **There is no "publish anyway".** A reviewer may confirm what an
+image shows — a judgement they are qualified to make — but cannot supply a
+creator or a licence the source did not state, and there is no parameter through
+which they could.
 
 ## Real-data proof: what is still missing
 

@@ -34,6 +34,8 @@ never the app code.
 | `0023_governed_publish.sql` | `conflict_resolution` enum, publish state on candidates, `publish_import_candidate()`, `resolve_import_conflict()`, `import_review_queue` |
 | `0024_generalised_publication.sql` | `fact_predicates` registry, fact/relationship provenance and per-source identity, data-driven publish, `preview_import_candidate()` |
 | `0025_review_workbench_access.sql` | Editor read access to review material, `review_import_candidate()`, `import_decision_history` |
+| `0026_preferred_claim_resolution.sql` | Predicate cardinality, single-preferred trigger, resolutions that move display state |
+| `0027_commons_media.sql` | `media_licence` vocabulary and terms, media candidates, rights readiness, `build_media_attribution()`, `publish_media_candidate()`, `media_review_queue` |
 
 ## Key design decisions
 
@@ -103,6 +105,22 @@ unique *per source*, not globally. Two sources asserting the same value are two
 rows with two sources, because who corroborated what is itself information. The
 original `entity_relationships` constraint was global, which silently rejected
 the second source's claim as a duplicate; `0024` replaces it.
+
+**A reviewer's decision moves the displayed value.** `facts.is_preferred` is set
+by `resolve_import_conflict()` atomically with the decision, and preference is a
+property of the predicate: `fact_predicates.cardinality` marks `official_website`
+as single-valued and `former_name` as multi-valued, so a blanket "one preferred
+row" rule is never imposed where several values are simultaneously true. A
+trigger enforces the invariant by *demoting*, never deleting, so Whilom can
+always still say "Source A said X, Source B said Y, a reviewer chose Z".
+
+**Media rights are file-level and non-negotiable.** `media_licence` normalises
+what a file states while `image_rights.licence_raw` keeps the original wording as
+evidence. `publish_media_candidate()` re-assesses rights at publication and
+refuses anything that is not `media_ready`, so a stale flag or an edited row
+cannot get an unrightsed image published. Imported open media keeps
+`images.is_community = false`: the legal model for external open media and for
+user-uploaded photographs is not the same and the two are not merged.
 
 **Grants are not optional.** RLS filters rows *after* the privilege check, so a
 table with perfect policies and no `GRANT` is simply unreadable. `0021` grants

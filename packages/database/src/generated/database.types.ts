@@ -476,6 +476,7 @@ export type Database = {
       }
       fact_predicates: {
         Row: {
+          cardinality: string
           created_at: string
           description: string | null
           label: string
@@ -483,6 +484,7 @@ export type Database = {
           value_kind: string
         }
         Insert: {
+          cardinality?: string
           created_at?: string
           description?: string | null
           label: string
@@ -490,6 +492,7 @@ export type Database = {
           value_kind: string
         }
         Update: {
+          cardinality?: string
           created_at?: string
           description?: string | null
           label?: string
@@ -582,33 +585,57 @@ export type Database = {
           attribution: string | null
           created_at: string
           creator: string | null
+          creator_raw: string | null
           image_id: string
           licence: string | null
+          licence_normalised:
+            | Database["public"]["Enums"]["media_licence"]
+            | null
+          licence_raw: string | null
           licence_url: string | null
           ownership_declared: boolean
+          raw: Json | null
+          retrieved_at: string | null
           source: string | null
+          source_file_id: string | null
           source_url: string | null
         }
         Insert: {
           attribution?: string | null
           created_at?: string
           creator?: string | null
+          creator_raw?: string | null
           image_id: string
           licence?: string | null
+          licence_normalised?:
+            | Database["public"]["Enums"]["media_licence"]
+            | null
+          licence_raw?: string | null
           licence_url?: string | null
           ownership_declared?: boolean
+          raw?: Json | null
+          retrieved_at?: string | null
           source?: string | null
+          source_file_id?: string | null
           source_url?: string | null
         }
         Update: {
           attribution?: string | null
           created_at?: string
           creator?: string | null
+          creator_raw?: string | null
           image_id?: string
           licence?: string | null
+          licence_normalised?:
+            | Database["public"]["Enums"]["media_licence"]
+            | null
+          licence_raw?: string | null
           licence_url?: string | null
           ownership_declared?: boolean
+          raw?: Json | null
+          retrieved_at?: string | null
           source?: string | null
+          source_file_id?: string | null
           source_url?: string | null
         }
         Relationships: [
@@ -631,8 +658,12 @@ export type Database = {
           height: number | null
           id: string
           is_community: boolean
+          mime_type: string | null
           moderation_status: Database["public"]["Enums"]["moderation_state"]
+          source_id: string | null
+          source_record_id: string | null
           storage_path: string
+          thumbnail_url: string | null
           uploaded_by: string | null
           width: number | null
         }
@@ -645,8 +676,12 @@ export type Database = {
           height?: number | null
           id?: string
           is_community?: boolean
+          mime_type?: string | null
           moderation_status?: Database["public"]["Enums"]["moderation_state"]
+          source_id?: string | null
+          source_record_id?: string | null
           storage_path: string
+          thumbnail_url?: string | null
           uploaded_by?: string | null
           width?: number | null
         }
@@ -659,12 +694,30 @@ export type Database = {
           height?: number | null
           id?: string
           is_community?: boolean
+          mime_type?: string | null
           moderation_status?: Database["public"]["Enums"]["moderation_state"]
+          source_id?: string | null
+          source_record_id?: string | null
           storage_path?: string
+          thumbnail_url?: string | null
           uploaded_by?: string | null
           width?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "images_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "images_source_record_id_fkey"
+            columns: ["source_record_id"]
+            isOneToOne: false
+            referencedRelation: "source_records"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "images_uploaded_by_fkey"
             columns: ["uploaded_by"]
@@ -779,6 +832,7 @@ export type Database = {
           id: string
           import_candidate_id: string
           incoming_value: Json | null
+          predicate: string | null
           resolution: string | null
           resolution_note: string | null
           resolution_outcome:
@@ -800,6 +854,7 @@ export type Database = {
           id?: string
           import_candidate_id: string
           incoming_value?: Json | null
+          predicate?: string | null
           resolution?: string | null
           resolution_note?: string | null
           resolution_outcome?:
@@ -821,6 +876,7 @@ export type Database = {
           id?: string
           import_candidate_id?: string
           incoming_value?: Json | null
+          predicate?: string | null
           resolution?: string | null
           resolution_note?: string | null
           resolution_outcome?:
@@ -847,6 +903,13 @@ export type Database = {
             referencedColumns: ["candidate_id"]
           },
           {
+            foreignKeyName: "import_conflicts_predicate_fkey"
+            columns: ["predicate"]
+            isOneToOne: false
+            referencedRelation: "fact_predicates"
+            referencedColumns: ["predicate"]
+          },
+          {
             foreignKeyName: "import_conflicts_resolved_by_fkey"
             columns: ["resolved_by"]
             isOneToOne: false
@@ -858,6 +921,165 @@ export type Database = {
             columns: ["source_record_id"]
             isOneToOne: false
             referencedRelation: "source_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_media_candidates: {
+        Row: {
+          association_confidence: number | null
+          association_evidence: Json
+          association_outcome: Database["public"]["Enums"]["media_association_outcome"]
+          attribution_text: string | null
+          caption: string | null
+          created_at: string
+          creator: string | null
+          creator_raw: string | null
+          depicted_entity_ids: string[]
+          entity_id: string | null
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          height: number | null
+          id: string
+          import_run_id: string | null
+          import_source_id: string
+          importer_version: string | null
+          licence: Database["public"]["Enums"]["media_licence"]
+          licence_raw: string | null
+          licence_url: string | null
+          media_url: string | null
+          mime_type: string | null
+          missing_rights_fields: string[]
+          published_at: string | null
+          published_by: string | null
+          published_image_id: string | null
+          raw: Json
+          retrieved_at: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          rights_state: Database["public"]["Enums"]["media_rights_state"]
+          source_file_id: string
+          source_page_url: string
+          source_title: string | null
+          source_updated_at: string | null
+          status: Database["public"]["Enums"]["moderation_state"]
+          thumbnail_url: string | null
+          width: number | null
+        }
+        Insert: {
+          association_confidence?: number | null
+          association_evidence?: Json
+          association_outcome?: Database["public"]["Enums"]["media_association_outcome"]
+          attribution_text?: string | null
+          caption?: string | null
+          created_at?: string
+          creator?: string | null
+          creator_raw?: string | null
+          depicted_entity_ids?: string[]
+          entity_id?: string | null
+          entity_type?: Database["public"]["Enums"]["entity_type"]
+          height?: number | null
+          id?: string
+          import_run_id?: string | null
+          import_source_id: string
+          importer_version?: string | null
+          licence?: Database["public"]["Enums"]["media_licence"]
+          licence_raw?: string | null
+          licence_url?: string | null
+          media_url?: string | null
+          mime_type?: string | null
+          missing_rights_fields?: string[]
+          published_at?: string | null
+          published_by?: string | null
+          published_image_id?: string | null
+          raw?: Json
+          retrieved_at?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rights_state?: Database["public"]["Enums"]["media_rights_state"]
+          source_file_id: string
+          source_page_url: string
+          source_title?: string | null
+          source_updated_at?: string | null
+          status?: Database["public"]["Enums"]["moderation_state"]
+          thumbnail_url?: string | null
+          width?: number | null
+        }
+        Update: {
+          association_confidence?: number | null
+          association_evidence?: Json
+          association_outcome?: Database["public"]["Enums"]["media_association_outcome"]
+          attribution_text?: string | null
+          caption?: string | null
+          created_at?: string
+          creator?: string | null
+          creator_raw?: string | null
+          depicted_entity_ids?: string[]
+          entity_id?: string | null
+          entity_type?: Database["public"]["Enums"]["entity_type"]
+          height?: number | null
+          id?: string
+          import_run_id?: string | null
+          import_source_id?: string
+          importer_version?: string | null
+          licence?: Database["public"]["Enums"]["media_licence"]
+          licence_raw?: string | null
+          licence_url?: string | null
+          media_url?: string | null
+          mime_type?: string | null
+          missing_rights_fields?: string[]
+          published_at?: string | null
+          published_by?: string | null
+          published_image_id?: string | null
+          raw?: Json
+          retrieved_at?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rights_state?: Database["public"]["Enums"]["media_rights_state"]
+          source_file_id?: string
+          source_page_url?: string
+          source_title?: string | null
+          source_updated_at?: string | null
+          status?: Database["public"]["Enums"]["moderation_state"]
+          thumbnail_url?: string | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_media_candidates_import_run_id_fkey"
+            columns: ["import_run_id"]
+            isOneToOne: false
+            referencedRelation: "import_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_media_candidates_import_source_id_fkey"
+            columns: ["import_source_id"]
+            isOneToOne: false
+            referencedRelation: "import_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_media_candidates_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_media_candidates_published_image_id_fkey"
+            columns: ["published_image_id"]
+            isOneToOne: false
+            referencedRelation: "images"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_media_candidates_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -988,6 +1210,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      media_licence_terms: {
+        Row: {
+          display_name: string
+          is_reusable: boolean
+          licence: Database["public"]["Enums"]["media_licence"]
+          licence_url: string | null
+          requires_attribution: boolean
+          requires_share_alike: boolean
+        }
+        Insert: {
+          display_name: string
+          is_reusable: boolean
+          licence: Database["public"]["Enums"]["media_licence"]
+          licence_url?: string | null
+          requires_attribution: boolean
+          requires_share_alike?: boolean
+        }
+        Update: {
+          display_name?: string
+          is_reusable?: boolean
+          licence?: Database["public"]["Enums"]["media_licence"]
+          licence_url?: string | null
+          requires_attribution?: boolean
+          requires_share_alike?: boolean
+        }
+        Relationships: []
       }
       moderation_actions: {
         Row: {
@@ -2531,6 +2780,44 @@ export type Database = {
           },
         ]
       }
+      media_review_queue: {
+        Row: {
+          association_confidence: number | null
+          association_outcome:
+            | Database["public"]["Enums"]["media_association_outcome"]
+            | null
+          attribution_text: string | null
+          candidate_id: string | null
+          creator: string | null
+          entity_id: string | null
+          entity_name: string | null
+          is_reusable: boolean | null
+          licence: Database["public"]["Enums"]["media_licence"] | null
+          licence_name: string | null
+          licence_url: string | null
+          media_url: string | null
+          missing_rights_fields: string[] | null
+          published_image_id: string | null
+          requires_attribution: boolean | null
+          retrieved_at: string | null
+          review_status: Database["public"]["Enums"]["moderation_state"] | null
+          rights_state: Database["public"]["Enums"]["media_rights_state"] | null
+          source_file_id: string | null
+          source_key: string | null
+          source_page_url: string | null
+          source_title: string | null
+          thumbnail_url: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_media_candidates_published_image_id_fkey"
+            columns: ["published_image_id"]
+            isOneToOne: false
+            referencedRelation: "images"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       places_geo: {
         Row: {
           access_cost: Database["public"]["Enums"]["access_cost"] | null
@@ -2617,6 +2904,27 @@ export type Database = {
       }
     }
     Functions: {
+      apply_candidate_preferences: {
+        Args: { p_candidate_id: string }
+        Returns: undefined
+      }
+      apply_conflict_preference: {
+        Args: { p_conflict_id: string }
+        Returns: undefined
+      }
+      assess_media_rights: {
+        Args: { p_candidate_id: string }
+        Returns: Database["public"]["Enums"]["media_rights_state"]
+      }
+      build_media_attribution: {
+        Args: {
+          p_creator: string
+          p_licence: Database["public"]["Enums"]["media_licence"]
+          p_source_name: string
+          p_title?: string
+        }
+        Returns: string
+      }
       collection_is_public: {
         Args: { p_collection_id: string }
         Returns: boolean
@@ -2645,6 +2953,10 @@ export type Database = {
         Args: { p_candidate_id: string; p_note?: string }
         Returns: string
       }
+      publish_media_candidate: {
+        Args: { p_candidate_id: string; p_note?: string }
+        Returns: string
+      }
       resolve_import_conflict: {
         Args: {
           p_conflict_id: string
@@ -2661,6 +2973,15 @@ export type Database = {
         Args: {
           p_candidate_id: string
           p_decision: Database["public"]["Enums"]["moderation_state"]
+          p_note?: string
+        }
+        Returns: undefined
+      }
+      review_media_candidate: {
+        Args: {
+          p_candidate_id: string
+          p_decision: Database["public"]["Enums"]["moderation_state"]
+          p_entity_id?: string
           p_note?: string
         }
         Returns: undefined
@@ -2800,6 +3121,31 @@ export type Database = {
         | "manual"
         | "approximate"
         | "unknown"
+      media_association_outcome:
+        | "media_match_confident"
+        | "media_match_review"
+        | "media_no_match"
+      media_licence:
+        | "CC0-1.0"
+        | "PUBLIC-DOMAIN"
+        | "CC-BY-2.0"
+        | "CC-BY-2.5"
+        | "CC-BY-3.0"
+        | "CC-BY-4.0"
+        | "CC-BY-SA-2.0"
+        | "CC-BY-SA-2.5"
+        | "CC-BY-SA-3.0"
+        | "CC-BY-SA-4.0"
+        | "OTHER-REUSABLE"
+        | "UNSUPPORTED"
+        | "UNKNOWN"
+      media_rights_state:
+        | "media_ready"
+        | "media_rights_incomplete"
+        | "media_licence_unsupported"
+        | "media_creator_unknown"
+        | "media_association_review"
+        | "media_invalid"
       moderation_state:
         | "submitted"
         | "automatically_screened"
@@ -3119,6 +3465,34 @@ export const Constants = {
         "manual",
         "approximate",
         "unknown",
+      ],
+      media_association_outcome: [
+        "media_match_confident",
+        "media_match_review",
+        "media_no_match",
+      ],
+      media_licence: [
+        "CC0-1.0",
+        "PUBLIC-DOMAIN",
+        "CC-BY-2.0",
+        "CC-BY-2.5",
+        "CC-BY-3.0",
+        "CC-BY-4.0",
+        "CC-BY-SA-2.0",
+        "CC-BY-SA-2.5",
+        "CC-BY-SA-3.0",
+        "CC-BY-SA-4.0",
+        "OTHER-REUSABLE",
+        "UNSUPPORTED",
+        "UNKNOWN",
+      ],
+      media_rights_state: [
+        "media_ready",
+        "media_rights_incomplete",
+        "media_licence_unsupported",
+        "media_creator_unknown",
+        "media_association_review",
+        "media_invalid",
       ],
       moderation_state: [
         "submitted",

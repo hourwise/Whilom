@@ -15,6 +15,8 @@ const DONE_MESSAGES: Record<string, string> = {
   review_recorded: 'Decision recorded.',
   conflict_resolved: 'Conflict resolved. Both source values are still on record.',
   published: 'Published to canonical data.',
+  media_reviewed: 'Media decision recorded.',
+  media_published: 'Media published with its stored attribution.',
 };
 
 export function ActionNotice({
