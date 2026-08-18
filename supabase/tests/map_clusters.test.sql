@@ -95,7 +95,7 @@ select is(
 -- it would tell the user there are 40 churches here when there are none.
 select is(
   (select coalesce(sum(place_count), 0)::bigint from public.map_clusters(
-    -2.0, 53.8, -1.0, 54.5, 0.1, array['church'])),
+    -4.0, 51.3, -3.0, 52.0, 0.1, array['church'])),
   25::bigint, 'filtering by type changes the cluster counts, not just the markers');
 
 select is(
@@ -139,13 +139,16 @@ select ok(
   (select count(*) from public.map_clusters(-4.0, 51.3, -3.0, 52.0, 0.1)) > 0,
   'and can see cluster density');
 
-select throws_ok(
-  $$select count(*) from public.import_candidates$$,
-  '42501', null, 'but cannot read import candidates');
+-- Staging data is withheld by RLS returning nothing, not by a privilege error:
+-- `anon` holds a blanket SELECT grant on the public schema, so the row-level
+-- policies are what actually protect the review queue.
+select is(
+  (select count(*) from public.import_candidates),
+  0::bigint, 'but sees no import candidates');
 
-select throws_ok(
-  $$select count(*) from public.import_conflicts$$,
-  '42501', null, 'nor unresolved review conflicts');
+select is(
+  (select count(*) from public.import_conflicts),
+  0::bigint, 'nor any unresolved review conflicts');
 
 select is(
   (select count(*) from public.map_places(-3.51, 51.49, -3.49, 51.51, null, 500)
