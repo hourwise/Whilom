@@ -51,6 +51,17 @@ comment on function public.place_matches_period(uuid, text) is
   'Whether a place has a temporal claim overlapping a navigation period. Overlap rather than containment, because a place that spanned a period belongs to it.';
 
 -- ---------------------------------------------------------------------------
+-- Retire the 0028 signature FIRST
+-- ---------------------------------------------------------------------------
+-- The filterable version below takes different arguments, so `create or
+-- replace` adds an overload rather than replacing anything. While both exist,
+-- `comment on function public.map_places` cannot resolve which one is meant and
+-- the migration fails — so the old one goes before the new one arrives, not
+-- after.
+drop function if exists public.map_places(
+  double precision, double precision, double precision, double precision, text[], integer);
+
+-- ---------------------------------------------------------------------------
 -- map_places: individual markers, now filterable by time
 -- ---------------------------------------------------------------------------
 -- Replaces the 0028 signature. The viewport, size cap and row cap are unchanged
@@ -284,7 +295,3 @@ grant execute on function public.map_clusters(
   double precision, double precision, double precision, double precision,
   double precision, text[], text, integer, integer, text, text[], boolean, integer) to anon, authenticated;
 grant execute on function public.place_matches_period(uuid, text) to anon, authenticated;
-
--- The old four-argument signature is superseded by the filterable one above.
-drop function if exists public.map_places(
-  double precision, double precision, double precision, double precision, text[], integer);
