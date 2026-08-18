@@ -101,6 +101,25 @@ regression test.
 
 Hard rules that override the score:
 
+- **Two entries in one source's register are two things.** A source with a
+  stable primary key has, by publishing two entries under two keys, asserted
+  that there are two entities, and no similarity measure may overrule it. This
+  is scoped to a *shared designation*, because one site genuinely can hold two:
+  Fountains Abbey is scheduled monument 1014395 and listed building 1149811, and
+  recognising those as one abbey is the point of matching. Rows sharing a record
+  id still merge — the NHLE service returns one row per geometry part, so
+  multi-part sites like Saltaire and Studley Royal arrive twice.
+- **A name that positions itself against another thing is not that thing.**
+  "Sundial to South of Church of St Mary" is a separately protected sundial.
+  Names are split into subject and position, and the positional tail is kept as
+  a discriminator rather than stripped: "Round barrow 300m south west of Cot Nab
+  Farm" and "Round barrow 350m west of Cot Nab Farm" are two barrows, and the
+  tail is the only thing that says so. Street numbers are compared for the same
+  reason — bigrams rate "2, Westfield Road" and "8, Westfield Road" at 0.93 by
+  ignoring the one character that identifies them.
+- **A landscape is not a structure inside it.** Registered parks, battlefields
+  and World Heritage Sites go to review against listed buildings rather than
+  merging with them.
 - **> 5 km apart cannot be the same place**, whatever else agrees. This is what
   keeps the two real places both named "Middleham Castle", 48 km apart, separate.
 - **A non-distinctive name cannot produce an automatic match.** NHLE contains
@@ -113,6 +132,16 @@ Hard rules that override the score:
 
 Ambiguous matches never auto-merge — they go to `import_candidates` /
 `import_conflicts` with `status = needs_review` for a human.
+
+### Comparison is only meaningful between two sources
+
+`compareSources` answers "do the sources agree", which is a question that cannot
+be asked of two records from the *same* source. Historic England does not
+disagree with itself; it holds several designations over overlapping ground, so
+a listed building and the scheduled monument around it differ in type and
+position by design. Same-source matches are counted as `withinSourceMatches` and
+kept out of the conflict figures entirely. Before this was scoped, every one of
+the 1,000-record tier's 142 "cross-source conflicts" was NHLE against NHLE.
 
 ## Provenance (spec §34)
 
@@ -382,6 +411,62 @@ image shows — a judgement they are qualified to make — but cannot supply a
 creator or a licence the source did not state, and there is no parameter through
 which they could.
 
+## The staged scale experiment
+
+Phase 0B proved the model on 30 records. That is enough to show a lifecycle
+works and far too few to show it *scales*, so the next question was answered by
+measurement rather than by argument: 1,000 → 2,500 → 5,000 real NHLE records,
+with health gates declared and committed **before the first tier ran**.
+
+Everything lives under `ingestion/scale/`:
+
+| File | Role |
+| --- | --- |
+| `manifest.json` | Reproducible definition of the dataset. |
+| `capture.ts` | Rebuilds the payloads from the manifest. |
+| `tier.ts` | Materialises one tier as an ordinary NHLE fixture. |
+| `gates.ts` | The ten health gates, with the reasoning for each threshold. |
+| `run-tier.ts` | Runs a tier, measures it, evaluates its gates. |
+| `db-seed.ts` | Turns accepted candidates into canonical SQL rows. |
+| `commons-throughput.ts` | Bounded live probe of the media lane. |
+
+`supabase/scale/benchmark.sql` and `plans.sql` measure the read paths and
+capture their query plans. `.github/workflows/scale-test.yml` runs both lanes.
+
+### The dataset is real, and not cherry-picked
+
+A fixed British National Grid envelope over Yorkshire and adjacent Northern
+England, every intersecting record taken in list-entry order up to a per-layer
+quota. The sample therefore contains unnamed, mundane and poorly located entries
+as well as famous ones. Parks (183), battlefields (7), wrecks (3) and World
+Heritage Sites (4) fall below quota because the region genuinely holds no more.
+
+The payloads are **not committed**. `manifest.json` pins the service, envelope,
+quotas, ordering, a checksum and all 5,000 list entry numbers — enough to
+rebuild the dataset byte-for-byte and to audit exactly which records were used,
+without 1.8 MB of churn in the history. `capture.ts` refuses to run a partial
+tier if the register has changed underneath.
+
+Tiers are **prefixes of a stratified interleave**, so tier 1 is a strict subset
+of tier 2 and every tier carries the same designation mix. Taking the first N of
+a layer-ordered capture would have made tier 1 entirely listed buildings and
+hidden scheduled-monument behaviour until the largest and most expensive run.
+
+### What it found
+
+It failed, which is what it was for. Of 20 audited automatic matches at 5,000
+records, **17 were wrong** — and none of them could have occurred at POC scale,
+because the statutory list only becomes dense enough to produce them at a few
+thousand records in one region. The causes and their fixes are the hard rules in
+[Deduplication](#deduplication-spec-36) above; the cases are locked into
+`tests/curtilage-merges.test.ts`.
+
+The measurement that matters most is not a timing. It is that **review pressure
+was mostly an artefact of a defect**: 760 records queued at 5,000 became 15 once
+the matcher stopped proposing merges that were never real questions.
+
+See [SCALE.md](SCALE.md) for the full results and the readiness verdict.
+
 ## Real-data proof: what is still missing
 
 Phase 0B is **not** met by the above. Outstanding:
@@ -400,4 +485,7 @@ Phase 0B is **not** met by the above. Outstanding:
 - **No place↔person relationships** have been imported.
 - **Routes are untouched** by ingestion.
 - **0 field conflicts** in this run is a statement about a single-source sample,
-  not evidence that conflict detection works at scale.
+  not evidence that conflict detection works at scale. The scale experiment
+  confirms this from the other direction: across 5,000 single-source records
+  only 4 conflicts arise, all from cross-designation matches. Conflict detection
+  is exercised by the two-source tests, not by corpus size.
