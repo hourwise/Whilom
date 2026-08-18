@@ -348,7 +348,11 @@ join public.source_records sr
   on sr.external_id = spl.source_record_id
  and sr.source_id = 'b0000000-0000-4000-8000-000000000001'
  and sr.entity_type = 'place'
-on conflict (subject_type, subject_id, predicate, object_type, object_id) do nothing;
+-- Matches the per-source unique index 0024 installed in place of the original
+-- five-column constraint: relationships are unique PER SOURCE, so two sources
+-- asserting the same edge stay two attributable claims.
+on conflict (subject_type, subject_id, predicate, object_type, object_id,
+             coalesce(source_id, '00000000-0000-0000-0000-000000000000'::uuid)) do nothing;
 
 update public.import_runs
    set status = 'succeeded', finished_at = now(),
