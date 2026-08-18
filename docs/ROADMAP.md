@@ -163,6 +163,29 @@ first-class control rather than a filter buried in a panel.
 See [DISCOVERY.md](DISCOVERY.md). National ingestion remains a separate, unmet
 gate.
 
+### Phase 2E — WHERE, WHEN, WHO ✅
+
+The discovery model becomes three questions rather than a filter panel.
+
+- the homepage **is** the map, defaulting to the United Kingdom
+- coverage is explicit: an empty area says Whilom has not activated there, never
+  that the area has no history
+- a century ruler with twenty-one clickable epoch bands, BCE/CE display, no year
+  zero, and four time modes whose fill carries their meaning
+- a ten-group map key using colour **and** symbol, doubling as a filter
+- one search box for places and people, with canonical identity rather than name
+  matching
+- following a person shows their places with the relationship as stated, and
+  places outside coverage are labelled rather than hidden
+- 155 people from a bounded Wikidata enrichment, all already connected to a
+  published regional place
+
+Includes a correction to the Iron Age boundary, which had been recorded as 43 BC
+where the Roman invasion is AD 43 — leaving 84 years belonging to no period.
+
+See [DISCOVERY.md](DISCOVERY.md). National ingestion remains a separate, unmet
+gate.
+
 ## Phase 3 — Website MVP 🟡
 
 Home, discover, search, filters, place page, sign-up/login, wishlist, visits,
