@@ -213,6 +213,19 @@ export interface CanonicalPlaceRef {
   locationAccuracyMeters?: number;
   externalIds: ExternalId[];
   designationReferences: string[];
+  /**
+   * Which source record this row was created from, when it came from an
+   * import. Two records from the SAME source carrying the SAME designation are
+   * two separate entries in that source's own register and therefore two
+   * different things — a fact no amount of name or distance similarity can
+   * overturn. See `matchCandidate`.
+   */
+  sourceIdentity?: {
+    sourceId: string;
+    sourceRecordId: string;
+    /** Designation types this record holds, e.g. ['listed_building']. */
+    designations: string[];
+  };
   postcode?: string;
   town?: string;
   county?: string;

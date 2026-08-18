@@ -43,6 +43,7 @@ Mobile**; publicly both are simply **Whilom**.
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Phased build plan (Phase 0â€“9) and current status |
 | [docs/INGESTION.md](docs/INGESTION.md) | The governed data-ingestion pipeline design |
 | [docs/INGESTION.md](docs/INGESTION.md) — review workbench | Internal `/admin/imports` editorial tool (editor-only) |
+| [docs/SCALE.md](docs/SCALE.md) | Staged scale experiment to 5,000 real records, health gates and readiness verdict |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Dev setup, workspace commands, conventions |
 
 ## Prerequisites

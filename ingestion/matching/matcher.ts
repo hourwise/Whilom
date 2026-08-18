@@ -8,7 +8,7 @@ import type {
 import { MatchOutcome } from '../pipeline/candidate';
 import { distanceMeters } from '../transforms/osgb';
 import { typesAreCompatible } from '../transforms/place-type';
-import { bestNameSimilarity, isGenericName } from './name';
+import { allNamePairsDistinct, bestNameSimilarity, isGenericName } from './name';
 
 /**
  * Conservative matcher v1 (spec §36).
@@ -52,6 +52,34 @@ export const THRESHOLDS = {
   /** Coordinates further apart than this, on a match, are raised as a conflict. */
   coordinateConflictMeters: 500,
 } as const;
+
+/**
+ * Optional sink for how much work a match actually cost.
+ *
+ * Matching compares each candidate against the canonical records it is given,
+ * so the honest measure of scalability is not wall-clock time but how many
+ * comparisons each record provokes and how many the distance veto discards
+ * before scoring. Callers that do not care pass nothing and the matcher
+ * behaves identically.
+ */
+export interface MatchStats {
+  comparisons: number;
+  vetoedByDistance: number;
+  /** Comparisons discarded because the names denote different things. */
+  vetoedByName: number;
+  /** Comparisons discarded because one source's register lists them separately. */
+  vetoedByRegister: number;
+  /**
+   * Comparisons where the two records are beyond the plausible-distance limit,
+   * counted independently of which veto actually rejected them.
+   *
+   * This is the size of the prize for a spatial pre-filter: every one of these
+   * is a comparison a locality-bounded candidate set would never have made, and
+   * discarding them cannot change an outcome, because the matcher already
+   * refuses to match at this distance.
+   */
+  beyondMaxDistance: number;
+}
 
 /**
  * The distance at which two records' positions still count as agreeing.
@@ -171,9 +199,80 @@ interface ScoredMatch {
   radius: number;
   nameScore: number;
   generic: boolean;
+  /** One record protects a landscape, the other a structure within it. */
+  areaVsStructure: boolean;
+}
+
+/**
+ * Whether one source's own register already says these are two different
+ * things.
+ *
+ * A source with a stable primary key has, by publishing two entries under two
+ * keys, asserted that there are two entities. Historic England lists a hall and
+ * its stable block, a church and its sundial, three separate buildings all
+ * called "New Tame" — each with its own list entry number — and no similarity
+ * measure should be permitted to overrule the register on the question of how
+ * many things it contains.
+ *
+ * The comparison is scoped to a shared designation, because one site CAN hold
+ * two designations and appear twice: Fountains Abbey is scheduled monument
+ * 1014395 and listed building 1149811, and recognising those as one abbey is
+ * the whole point of matching. Different designations therefore remain
+ * matchable; a repeated designation does not.
+ *
+ * Rows sharing a record id are the same entry arriving twice — the NHLE service
+ * returns one row per geometry part, so multi-part World Heritage Sites like
+ * Saltaire do exactly this — and those must still merge.
+ */
+/**
+ * Designations that protect an AREA of landscape rather than a single work.
+ *
+ * A listed building standing inside a registered park is contained by it, not
+ * identical to it — the same lesson the Saltaire World Heritage Site taught the
+ * positional radius, arriving again through a different door. The 5,000-record
+ * tier merged "Falinge Park" into "Falinge Park Hall Facade and Pavilions" and
+ * a registered park into "Babworth Hall", because a park's centroid naturally
+ * sits a few tens of metres from the house it was laid out around and shares
+ * its name.
+ */
+const AREA_DESIGNATIONS = new Set([
+  'registered_park_garden',
+  'registered_battlefield',
+  'world_heritage_site',
+]);
+
+/** True when one record protects a landscape and the other a structure in it. */
+function areaAgainstStructure(ours: readonly string[], theirs: readonly string[]): boolean {
+  if (ours.length === 0 || theirs.length === 0) return false;
+  const ourArea = ours.every((d) => AREA_DESIGNATIONS.has(d));
+  const theirArea = theirs.every((d) => AREA_DESIGNATIONS.has(d));
+  return ourArea !== theirArea;
+}
+
+function sameRegisterDifferentEntries(
+  candidate: PlaceCandidate,
+  existing: CanonicalPlaceRef,
+): boolean {
+  const theirs = existing.sourceIdentity;
+  if (!theirs) return false;
+  if (theirs.sourceId !== candidate.provenance.sourceId) return false;
+  if (theirs.sourceRecordId === candidate.provenance.sourceRecordId) return false;
+
+  const ours = candidate.designations.map((d) => d.designation).sort();
+  if (ours.length === 0 || theirs.designations.length === 0) return false;
+  return ours.some((designation) => theirs.designations.includes(designation));
 }
 
 function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): ScoredMatch | null {
+  // Hard register veto. Two entries in one source's register, under the same
+  // designation, are two different protected things by that source's own
+  // account. This is stronger evidence than any similarity signal, and it is
+  // what the 5,000-record tier showed to be missing: the statutory list names
+  // curtilage structures after their parent building and puts them metres away,
+  // so name and distance are at their most persuasive exactly where the records
+  // are most certainly distinct.
+  if (sameRegisterDifferentEntries(candidate, existing)) return null;
+
   const meters = distanceMeters(candidate.location, existing.location);
   // Hard geographic veto. Two heritage sites 5km apart are not the same site,
   // however alike their names — this is what stops the two "Middleham Castle"
@@ -182,6 +281,16 @@ function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): S
 
   const candidateNames = [candidate.name, ...candidate.altNames];
   const existingNames = [existing.name, ...existing.altNames];
+
+  // Hard nominal veto, on the same footing as the geographic one. The statutory
+  // list separately designates thousands of curtilage structures and names each
+  // after the building it stands beside, so proximity and name overlap are both
+  // at their strongest exactly where the two records are most certainly
+  // different things. When the names themselves say so, no score can override
+  // it. See `namesDenoteDistinctThings`.
+  const distinct = allNamePairsDistinct(candidateNames, existingNames);
+  if (distinct.distinct) return null;
+
   const nameScore = bestNameSimilarity(candidateNames, existingNames);
   const generic = isGenericName(candidate.name) && isGenericName(existing.name);
 
@@ -221,6 +330,10 @@ function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): S
     radius,
     nameScore,
     generic,
+    areaVsStructure: areaAgainstStructure(
+      candidate.designations.map((d) => d.designation),
+      existing.sourceIdentity?.designations ?? [],
+    ),
   };
 }
 
@@ -232,11 +345,33 @@ function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): S
 export function matchCandidate(
   candidate: PlaceCandidate,
   existingPlaces: readonly CanonicalPlaceRef[],
+  stats?: MatchStats,
 ): MatchDecision {
   // --- Deterministic identity ----------------------------------------------
   for (const existing of existingPlaces) {
     const shared = sharedExternalId(candidate, existing);
-    if (shared) {
+    if (shared && !sameRegisterDifferentEntries(candidate, existing)) {
+      // A shared identifier is the strongest signal there is, but it is still
+      // an assertion made by a source, and sources do attach one QID to both a
+      // hall and its stable block. If the names say these are different
+      // things, that disagreement is for a human, not an automatic merge.
+      const namesDistinct = allNamePairsDistinct(
+        [candidate.name, ...candidate.altNames],
+        [existing.name, ...existing.altNames],
+      );
+      if (namesDistinct.distinct) {
+        return {
+          outcome: MatchOutcome.MatchReview,
+          confidence: 0.5,
+          matchedPlaceId: existing.id,
+          signals: [
+            { name: 'external-id', weight: 1, detail: `shared ${shared.scheme} identifier ${shared.value}` },
+            { name: 'name', weight: -1, detail: namesDistinct.reason ?? 'names denote different things' },
+          ],
+          conflicts: [],
+          rationale: `Shares a ${shared.scheme} identifier with "${existing.name}", but ${namesDistinct.reason ?? 'the names denote different things'}.`,
+        };
+      }
       const meters = distanceMeters(candidate.location, existing.location);
       const conflicts = collectConflicts(candidate, existing, meters);
       const signals: MatchSignal[] = [
@@ -266,7 +401,20 @@ export function matchCandidate(
 
   // --- Scored comparison ----------------------------------------------------
   const scored = existingPlaces
-    .map((existing) => scoreAgainst(candidate, existing))
+    .map((existing) => {
+      const match = scoreAgainst(candidate, existing);
+      if (stats) {
+        stats.comparisons += 1;
+        const meters = distanceMeters(candidate.location, existing.location);
+        if (meters > THRESHOLDS.maxPlausibleDistanceMeters) stats.beyondMaxDistance += 1;
+        if (match === null) {
+          if (sameRegisterDifferentEntries(candidate, existing)) stats.vetoedByRegister += 1;
+          else if (meters > THRESHOLDS.maxPlausibleDistanceMeters) stats.vetoedByDistance += 1;
+          else stats.vetoedByName += 1;
+        }
+      }
+      return match;
+    })
     .filter((m): m is ScoredMatch => m !== null)
     .sort((a, b) => b.score - a.score);
 
@@ -305,6 +453,7 @@ export function matchCandidate(
     best.nameScore >= THRESHOLDS.confidentNameSimilarity &&
     !best.generic &&
     !ambiguous &&
+    !best.areaVsStructure &&
     best.meters <= best.radius;
 
   if (confidentGatesPass) {
@@ -320,6 +469,9 @@ export function matchCandidate(
 
   const why: string[] = [];
   if (best.generic) why.push('the name is not distinctive');
+  if (best.areaVsStructure) {
+    why.push('one record protects a landscape and the other a structure within it');
+  }
   if (ambiguous && runnerUp) why.push(`"${runnerUp.existing.name}" scores almost as well`);
   if (best.nameScore < THRESHOLDS.confidentNameSimilarity) why.push('names are not close enough');
   if (best.meters > best.radius) {
