@@ -187,7 +187,7 @@ as $$
   )
   select
     p.id, p.slug, p.name, p.place_type::text,
-    public.map_display_category(p.place_type)::text,
+    public.place_display_category(p.place_type)::text,
     extensions.st_x(p.location::extensions.geometry),
     extensions.st_y(p.location::extensions.geometry),
     e.predicate, e.note,

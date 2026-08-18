@@ -32,19 +32,19 @@ insert into public.temporal_associations
 -- ---------------------------------------------------------------------------
 -- Display categories
 -- ---------------------------------------------------------------------------
-select is(public.map_display_category('church')::text, 'religious', 'a church is religious');
-select is(public.map_display_category('castle')::text, 'fortification', 'a castle is a fortification');
-select is(public.map_display_category('roman_villa')::text, 'archaeology', 'a villa is archaeology');
-select is(public.map_display_category('country_house')::text, 'building', 'a country house is a building');
-select is(public.map_display_category('canal_structure')::text, 'industrial', 'a lock is industrial');
+select is(public.place_display_category('church')::text, 'religious', 'a church is religious');
+select is(public.place_display_category('castle')::text, 'fortification', 'a castle is a fortification');
+select is(public.place_display_category('roman_villa')::text, 'archaeology', 'a villa is archaeology');
+select is(public.place_display_category('country_house')::text, 'building', 'a country house is a building');
+select is(public.place_display_category('canal_structure')::text, 'industrial', 'a lock is industrial');
 
 -- `structure` and `unknown` are honest fallbacks and must stay honest: forcing
 -- them into a more interesting group would be a lie told in colour.
-select is(public.map_display_category('structure')::text, 'other', 'an unclassified structure is other');
-select is(public.map_display_category('unknown')::text, 'other', 'and so is an unknown');
+select is(public.place_display_category('structure')::text, 'other', 'an unclassified structure is other');
+select is(public.place_display_category('unknown')::text, 'other', 'and so is an unknown');
 
 select ok(
-  (select count(distinct public.map_display_category(t)) from unnest(enum_range(null::public.place_type)) t) <= 10,
+  (select count(distinct public.place_display_category(t)) from unnest(enum_range(null::public.place_type)) t) <= 10,
   'the whole taxonomy collapses to at most ten legend entries');
 
 -- ---------------------------------------------------------------------------

@@ -31,7 +31,11 @@ create type public.map_display_category as enum (
 comment on type public.map_display_category is
   'Presentation grouping for map styling and the legend. Derived from place_type; never stored on a place, so canonical typing is never coarsened to suit a key.';
 
-create or replace function public.map_display_category(p_place_type public.place_type)
+-- Named `place_display_category`, not `map_display_category`: a function
+-- sharing a name with a type is unreachable, because Postgres reads
+-- `typename(value)` as CAST syntax and tries to coerce the argument to the
+-- enum instead of calling the function.
+create or replace function public.place_display_category(p_place_type public.place_type)
 returns public.map_display_category
 language sql
 immutable
@@ -71,10 +75,10 @@ as $$
   end::public.map_display_category;
 $$;
 
-comment on function public.map_display_category(public.place_type) is
+comment on function public.place_display_category(public.place_type) is
   'Maps the rich canonical taxonomy onto ten display groups. A place typed `structure` or `unknown` becomes `other`, which is the honest answer rather than a guess.';
 
-grant execute on function public.map_display_category(public.place_type) to anon, authenticated;
+grant execute on function public.place_display_category(public.place_type) to anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Coverage

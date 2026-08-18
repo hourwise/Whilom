@@ -147,7 +147,7 @@ begin
   return query
     select
       p.id, p.slug, p.name, p.place_type::text,
-      public.map_display_category(p.place_type)::text,
+      public.place_display_category(p.place_type)::text,
       extensions.st_x(p.location::extensions.geometry),
       extensions.st_y(p.location::extensions.geometry),
       p.location_accuracy_m,
@@ -163,7 +163,7 @@ begin
     where p.status = 'approved'
       and p.location operator(extensions.&&) envelope
       and (place_types is null or p.place_type::text = any(place_types))
-      and (categories is null or public.map_display_category(p.place_type)::text = any(categories))
+      and (categories is null or public.place_display_category(p.place_type)::text = any(categories))
       and (q is null or q = '' or p.search_vector @@ websearch_to_tsquery('english', q))
       and (designations is null or exists (
         select 1 from public.place_designations d
@@ -241,14 +241,14 @@ begin
     with matched as (
       select
         p.id, p.name,
-        public.map_display_category(p.place_type)::text as category,
+        public.place_display_category(p.place_type)::text as category,
         extensions.st_x(p.location::extensions.geometry) as x,
         extensions.st_y(p.location::extensions.geometry) as y
       from public.places p
       where p.status = 'approved'
         and p.location operator(extensions.&&) envelope
         and (place_types is null or p.place_type::text = any(place_types))
-        and (categories is null or public.map_display_category(p.place_type)::text = any(categories))
+        and (categories is null or public.place_display_category(p.place_type)::text = any(categories))
         and (q is null or q = '' or p.search_vector @@ websearch_to_tsquery('english', q))
         and (designations is null or exists (
           select 1 from public.place_designations d
