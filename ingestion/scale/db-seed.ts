@@ -92,7 +92,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const index = process.argv.indexOf('--tier');
   const tier = Number(index >= 0 ? process.argv[index + 1] : NaN);
   if (!isTierSize(tier)) {
-    console.error('--tier must be one of 1000, 2500, 5000');
+    console.error('--tier must be one of 1000, 2500, 5000, 10000, 25000');
     process.exitCode = 1;
   } else {
     buildSeed(tier)

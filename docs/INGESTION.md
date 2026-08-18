@@ -120,6 +120,15 @@ Hard rules that override the score:
 - **A landscape is not a structure inside it.** Registered parks, battlefields
   and World Heritage Sites go to review against listed buildings rather than
   merging with them.
+- **Containment is not identity, at the level of names.** When one name merely
+  contains the other, that is evidence of *association*: "Whitby Abbey" is
+  wholly inside "Whitby Abbey Cross", "Marrick Priory" inside "Marrick Priory
+  Farmhouse", "Church of All Saints" inside "Cross base for standing cross in
+  churchyard of All Saints Church". Each pair is two separately protected
+  things, so containment earns review and never an automatic merge. Place type
+  cannot corroborate it: NHLE types are inferred *from the name*, so the cross
+  is typed `abbey` and the cross base `church`, and agreeing types are the same
+  evidence read twice.
 - **> 5 km apart cannot be the same place**, whatever else agrees. This is what
   keeps the two real places both named "Middleham Castle", 48 km apart, separate.
 - **A non-distinctive name cannot produce an automatic match.** NHLE contains
@@ -132,6 +141,40 @@ Hard rules that override the score:
 
 Ambiguous matches never auto-merge — they go to `import_candidates` /
 `import_conflicts` with `status = needs_review` for a human.
+
+### Candidate generation
+
+The matcher decides identity. A separate stage decides only which records are
+worth asking it about, and nothing there may ever conclude that two records are
+the same place, or that they are not (`matching/candidates.ts`).
+
+Bounding is safe because `matchCandidate` reads its input in exactly two passes
+and each has a knowable sufficient set:
+
+1. The **deterministic identity pass** walks the array in order and returns on
+   the first record sharing an external identifier or designation reference. It
+   applies no distance bound — a shared Wikidata QID matches across the country
+   — so identifier candidates are produced regardless of locality.
+2. The **scored pass** keeps only records for which `scoreAgainst` is non-null,
+   and that returns null unconditionally beyond the plausible-distance veto.
+
+Any superset of *shares an identifier* ∪ *within the radius*, delivered in
+insertion order, therefore produces an identical decision. Order is part of the
+contract: the scored set is sorted with a stable sort and the near-tie test
+compares the top two, so a reordering could swap which of two equal records
+wins.
+
+The radius is read from `THRESHOLDS.maxPlausibleDistanceMeters` rather than
+restated, so the two cannot drift. Longitude spans are computed at each
+candidate's own latitude and clamped, because the cosine collapses at the poles.
+Positional uncertainty deliberately does **not** widen the sweep — it affects
+the agreement radius, which is clamped to 50–150 m and only influences scoring,
+while the hard veto is a flat 5 km. A vague record must not buy a wider search;
+that is precisely how a locality bound decays back into a full scan.
+
+This is proved rather than asserted: `scale:equivalence` runs 1,000, 2,500 and
+5,000 real records under both strategies and requires zero decision differences.
+See [SCALE.md](SCALE.md).
 
 ### Comparison is only meaningful between two sources
 

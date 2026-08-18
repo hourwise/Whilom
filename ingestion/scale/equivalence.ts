@@ -20,7 +20,7 @@ import { CandidateMode } from '../matching/candidates';
 import { executeTier } from './run-tier';
 import { buildOracle, compareOracles } from './oracle';
 import type { DecisionDifference, Oracle } from './oracle';
-import { isTierSize } from './tier';
+import { ORACLE_TIER_SIZES, isOracleTierSize } from './tier';
 import { round } from './metrics';
 
 export interface EquivalenceResult {
@@ -137,8 +137,11 @@ function parseTier(argv: readonly string[]): number {
   const index = argv.indexOf('--tier');
   const raw = index >= 0 ? argv[index + 1] : undefined;
   const tier = Number(raw);
-  if (!Number.isFinite(tier) || !isTierSize(tier)) {
-    throw new Error(`--tier must be one of 1000, 2500, 5000 (got ${String(raw)})`);
+  if (!Number.isFinite(tier) || !isOracleTierSize(tier)) {
+    throw new Error(
+      `--tier must be an oracle tier (${ORACLE_TIER_SIZES.join(', ')}) — got ${String(raw)}. ` +
+        'Larger tiers run the bounded path only; see ORACLE_TIER_SIZES.',
+    );
   }
   return tier;
 }

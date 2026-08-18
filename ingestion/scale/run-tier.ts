@@ -38,7 +38,7 @@ function parseTier(argv: readonly string[]): number {
   const raw = index >= 0 ? argv[index + 1] : undefined;
   const tier = Number(raw);
   if (!Number.isFinite(tier) || !isTierSize(tier)) {
-    throw new Error(`--tier must be one of 1000, 2500, 5000 (got ${String(raw)})`);
+    throw new Error(`--tier must be one of ${TIER_SIZES.join(', ')} (got ${String(raw)})`);
   }
   return tier;
 }
@@ -57,6 +57,7 @@ function reviewCause(decided: DecidedCandidate): string {
     return `sources disagree on ${fields || 'an unnamed field'}`;
   }
   const why = decision.rationale.split('needs review: ')[1] ?? decision.rationale;
+  if (why.includes('association rather than identity')) return 'one name contains the other';
   if (why.includes('protects a landscape')) return 'landscape designation versus a structure inside it';
   if (why.includes('the name is not distinctive')) return 'name is not distinctive';
   if (why.includes('scores almost as well')) return 'two candidates score alike';

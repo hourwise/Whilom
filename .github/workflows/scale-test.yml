@@ -12,9 +12,13 @@ on:
   workflow_dispatch:
     inputs:
       tiers:
-        description: 'Tiers to run, in order, comma-separated'
-        default: '1000,2500,5000'
-        type: string
+        # A closed list, not free text. An arbitrary tier would be an
+        # unreviewed ingestion run of unknown size, and the manifest only
+        # defines these five.
+        description: 'Largest tier to run (the ladder runs every tier up to it)'
+        default: '25000'
+        type: choice
+        options: ['1000', '2500', '5000', '10000', '25000']
       stop_on_gate_failure:
         description: 'Stop the ladder when a blocking gate fails'
         default: true
@@ -42,6 +46,75 @@ concurrency:
 
 jobs:
   # ---------------------------------------------------------------------------
+  # Gate 0 — decision equivalence.
+  #
+  # Runs first and blocks everything else. Bounded candidate generation is only
+  # an optimisation if it changes nothing, so until that is proved against the
+  # exhaustive oracle there is no point measuring how fast it is.
+  #
+  # Bounded at 5,000 on purpose: exhaustive matching at 25,000 records is 312
+  # million comparisons, spent re-demonstrating something the smaller corpora
+  # already establish.
+  # ---------------------------------------------------------------------------
+  equivalence:
+    name: equivalence
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Restore captured NHLE records
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ingestion/.scale-cache
+          key: nhle-scale-${{ hashFiles('ingestion/scale/manifest.json') }}
+
+      - name: Capture NHLE records
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @whilom/ingestion scale:capture
+
+      - name: Exhaustive versus bounded
+        working-directory: ingestion
+        run: |
+          set -o pipefail
+          for tier in 1000 2500 5000; do
+            echo "::group::equivalence ${tier}"
+            pnpm exec tsx scale/equivalence.ts --tier "${tier}"
+            echo "::endgroup::"
+          done
+
+      - name: Summarise
+        if: always()
+        working-directory: ingestion
+        run: |
+          {
+            echo '## Decision equivalence'
+            echo
+            echo '| tier | decision differences | possible pairs | candidate pairs | pruned | speedup |'
+            echo '|---:|---:|---:|---:|---:|---:|'
+            for f in scale-equivalence-*.json; do
+              [ -e "$f" ] || continue
+              jq -r '"| \(.tier) | \(.decisionDifferences) | \(.exhaustive.possiblePairs) | \(.bounded.candidatePairs) | \(.pruning.pruningRate * 10000 | round / 100)% | \(.speedup.endToEnd)x |"' "$f"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload equivalence results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scale-equivalence
+          path: ingestion/scale-equivalence-*.json
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------------------
   # Lane 1 — ingestion, matching and review pressure.
   #
   # The heritage pipeline is pure TypeScript, so this needs no database. Tiers
@@ -51,8 +124,9 @@ jobs:
   # ---------------------------------------------------------------------------
   pipeline:
     name: pipeline
+    needs: equivalence
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -82,7 +156,12 @@ jobs:
         working-directory: ingestion
         run: |
           set -o pipefail
-          IFS=',' read -ra TIERS <<< "${{ inputs.tiers || '1000,2500,5000' }}"
+          LARGEST="${{ inputs.tiers || '25000' }}"
+          TIERS=()
+          for tier in 1000 2500 5000 10000 25000; do
+            TIERS+=("${tier}")
+            [ "${tier}" = "${LARGEST}" ] && break
+          done
           stopped=''
           for tier in "${TIERS[@]}"; do
             echo "::group::tier ${tier}"
@@ -144,14 +223,15 @@ jobs:
   # ---------------------------------------------------------------------------
   queries:
     name: queries
+    needs: equivalence
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       # Each tier gets a clean database. Sequential so the runners are not
       # competing for CPU while latency is being measured.
       max-parallel: 1
       matrix:
-        tier: [1000, 2500, 5000]
+        tier: [1000, 5000, 25000]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

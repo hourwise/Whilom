@@ -208,6 +208,15 @@ export interface CanonicalPlaceRef {
   name: string;
   altNames: string[];
   placeType: PlaceType;
+  /**
+   * How confidently that type was determined, when known.
+   *
+   * Carried across from the candidate because losing it made the matcher treat
+   * a guessed type as evidence. "Marrick Priory Farmhouse" was typed `monument`
+   * at confidence 0.2 — a pure fallback — and that guess then counted in favour
+   * of merging it with a `priory`.
+   */
+  placeTypeConfidence?: number;
   location: LngLat;
   /** Known positional uncertainty of the canonical row, when recorded. */
   locationAccuracyMeters?: number;

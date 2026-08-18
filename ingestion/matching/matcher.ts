@@ -8,7 +8,7 @@ import type {
 import { MatchOutcome } from '../pipeline/candidate';
 import { distanceMeters } from '../transforms/osgb';
 import { typesAreCompatible } from '../transforms/place-type';
-import { allNamePairsDistinct, bestNameSimilarity, isGenericName } from './name';
+import { allNamePairsDistinct, bestNameSimilarityBreakdown, isGenericName } from './name';
 
 /**
  * Conservative matcher v1 (spec §36).
@@ -198,6 +198,8 @@ interface ScoredMatch {
   meters: number;
   radius: number;
   nameScore: number;
+  /** True when the name score rests on containment rather than resemblance. */
+  nameCarriedByContainment: boolean;
   generic: boolean;
   /** One record protects a landscape, the other a structure within it. */
   areaVsStructure: boolean;
@@ -291,21 +293,36 @@ function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): S
   const distinct = allNamePairsDistinct(candidateNames, existingNames);
   if (distinct.distinct) return null;
 
-  const nameScore = bestNameSimilarity(candidateNames, existingNames);
+  const nameMatch = bestNameSimilarityBreakdown(candidateNames, existingNames);
+  const nameScore = nameMatch.score;
   const generic = isGenericName(candidate.name) && isGenericName(existing.name);
 
   const radius = agreementRadius(candidate.locationAccuracyMeters, existing.locationAccuracyMeters);
   const signals: MatchSignal[] = [distanceSignal(meters, radius), nameSignal(nameScore, generic)];
 
-  const bothTyped = candidate.placeTypeConfidence >= 0.7;
-  if (bothTyped) {
-    if (typesAreCompatible(candidate.placeType, existing.placeType)) {
-      signals.push({ name: 'type', weight: 0.1, detail: `types compatible (${candidate.placeType}/${existing.placeType})` });
-    } else {
-      signals.push({ name: 'type', weight: -0.35, detail: `types incompatible (${candidate.placeType}/${existing.placeType})` });
-    }
-  } else {
+  // Type evidence is asymmetric on purpose. A guessed type must never be
+  // evidence that two records are DIFFERENT places, so the penalty is withheld
+  // unless the candidate was confidently typed. But nor may a guessed type be
+  // evidence that they are the SAME, and until this was fixed only the
+  // candidate's confidence was consulted at all — the canonical side's was not
+  // even carried. "Marrick Priory Farmhouse", typed `monument` at confidence
+  // 0.2 because nothing in its name could be recognised, was contributing
+  // positive evidence towards merging with an actual priory.
+  const candidateTyped = candidate.placeTypeConfidence >= 0.7;
+  const existingTyped = (existing.placeTypeConfidence ?? 0) >= 0.7;
+  const compatible = typesAreCompatible(candidate.placeType, existing.placeType);
+  if (candidateTyped && existingTyped && compatible) {
+    signals.push({ name: 'type', weight: 0.1, detail: `types compatible (${candidate.placeType}/${existing.placeType})` });
+  } else if (candidateTyped && !compatible) {
+    signals.push({ name: 'type', weight: -0.35, detail: `types incompatible (${candidate.placeType}/${existing.placeType})` });
+  } else if (!candidateTyped) {
     signals.push({ name: 'type', weight: 0, detail: 'candidate type not confidently known; ignored' });
+  } else {
+    signals.push({
+      name: 'type',
+      weight: 0,
+      detail: `existing type not confidently known (${existing.placeType}); ignored`,
+    });
   }
 
   if (candidate.postcode && existing.postcode) {
@@ -329,6 +346,7 @@ function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): S
     meters,
     radius,
     nameScore,
+    nameCarriedByContainment: nameMatch.carriedByContainment,
     generic,
     areaVsStructure: areaAgainstStructure(
       candidate.designations.map((d) => d.designation),
@@ -448,12 +466,31 @@ export function matchCandidate(
     };
   }
 
+  // Containment is not identity — the project's oldest matching principle,
+  // applied to names rather than geometry.
+  //
+  // When one name merely contains the other, the containment is real and it is
+  // evidence of ASSOCIATION: "Whitby Abbey" is wholly inside "Whitby Abbey
+  // Cross", "Marrick Priory" inside "Marrick Priory Farmhouse", "Church of All
+  // Saints" inside "Cross base for standing cross in churchyard of All Saints
+  // Church". Every one of those pairs is two separately protected things.
+  //
+  // An earlier attempt let confidently agreeing place types corroborate a
+  // containment match. The 25,000-record audit showed why that fails: NHLE
+  // place types are INFERRED FROM THE NAME, so "Whitby Abbey Cross" is typed
+  // `abbey` and the cross base beside All Saints is typed `church`. The types
+  // agreed because they were the same evidence read a second time, and
+  // circular corroboration is not corroboration. Containment therefore earns
+  // review and never an automatic merge.
+  const containmentIsNotIdentity = best.nameCarriedByContainment;
+
   const confidentGatesPass =
     best.score >= THRESHOLDS.confidentScore &&
     best.nameScore >= THRESHOLDS.confidentNameSimilarity &&
     !best.generic &&
     !ambiguous &&
     !best.areaVsStructure &&
+    !containmentIsNotIdentity &&
     best.meters <= best.radius;
 
   if (confidentGatesPass) {
@@ -469,6 +506,9 @@ export function matchCandidate(
 
   const why: string[] = [];
   if (best.generic) why.push('the name is not distinctive');
+  if (containmentIsNotIdentity) {
+    why.push('one name merely contains the other, which shows association rather than identity');
+  }
   if (best.areaVsStructure) {
     why.push('one record protects a landscape and the other a structure within it');
   }

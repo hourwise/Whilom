@@ -186,6 +186,7 @@ export function candidateAsCanonical(candidate: PlaceCandidate, id: string): Can
     name: candidate.name,
     altNames: candidate.altNames,
     placeType: candidate.placeType,
+    placeTypeConfidence: candidate.placeTypeConfidence,
     location: candidate.location,
     locationAccuracyMeters: candidate.locationAccuracyMeters,
     externalIds: candidate.externalIds,
