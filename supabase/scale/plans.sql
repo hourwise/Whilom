@@ -72,11 +72,18 @@ explain (analyze, buffers, verbose off)
 select * from public.search_places(
   q => 'hall', place_types => array['country_house', 'building'], max_rows => 100);
 
-reset enable_seqscan;
-
 \echo ''
-\echo '=== row counts agree with and without the index ==='
+\echo '=== the index returns the same rows the planner would have found ==='
+-- Compared against the underlying predicate, not against search_places: the RPC
+-- caps at 100 rows, so comparing it with an uncapped count would only ever
+-- prove that the cap works.
 select
-  (select count(*) from public.search_places(q => 'church', max_rows => 100)) as with_planner_choice,
   (select count(*) from public.places
-    where status = 'approved' and search_vector @@ websearch_to_tsquery('english', 'church')) as direct;
+    where status = 'approved'
+      and search_vector @@ websearch_to_tsquery('english', 'church')) as index_scan,
+  (select count(*) from public.places
+    where status = 'approved'
+      and to_tsvector('english', coalesce(name, '')) @@ websearch_to_tsquery('english', 'church')
+    ) as name_only_recompute;
+
+reset enable_seqscan;

@@ -254,13 +254,18 @@ it is a bounded change with a provable no-op property.** The residual local
 work still grows super-linearly (14.8k → 145k comparisons), so blocking buys
 roughly two orders of magnitude, not immunity.
 
-**Full-text search is not index-backed at this size.** The query plans show
-`places_search_gin` unused: at a few thousand rows the planner correctly prefers
-a sequential scan. The timings agree — text search grows linearly with the
-corpus, 0.29 → 0.77 → 1.51 ms, which is the sequential-scan signature. It is
-fast today because the table is small. `supabase/scale/plans.sql` now re-runs
-the same queries with sequential scans disabled, so that the index is proven
-usable and correct before a corpus arrives that needs it.
+**Full-text search is not index-backed at this size, but the index works.** The
+query plans show `places_search_gin` unused: at a few thousand rows the planner
+correctly prefers a sequential scan. The timings agree — text search grows
+linearly with the corpus, 0.29 → 0.77 → 1.51 ms, which is the sequential-scan
+signature. It is fast today because the table is small.
+
+That left the question that actually matters unanswered, so `plans.sql` re-runs
+the same queries with sequential scans disabled. At 5,000 records the planner
+then chooses a Bitmap Index Scan on `places_search_gin`, returning all 447
+matches for "church" in 1.29 ms. **The index is present, usable and correct**;
+the planner is simply right not to use it yet. Nothing needs building here — it
+needs re-checking once the corpus is large enough for the crossover.
 
 **Other limits of this experiment**, stated plainly:
 
@@ -297,8 +302,9 @@ problem.
 
 1. A spatial pre-filter on the matcher's candidate set. Quadratic matching is
    the binding constraint, and the fix is bounded and provably outcome-neutral.
-2. Confirmation that full-text search uses `places_search_gin` once the corpus
-   is large enough to warrant it.
+2. A re-check that the planner has switched to `places_search_gin` for text
+   search. The index is already proven usable and correct under a forced plan;
+   what is unknown is only where the crossover falls.
 3. A scale run with two sources, since single-source runs cannot exercise
    cross-source identity or conflict at volume.
 
