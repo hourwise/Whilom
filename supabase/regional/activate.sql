@@ -274,8 +274,11 @@ create temporary table staged_people (
   qid text primary key,
   slug text not null,
   name text not null,
-  birth_year integer,
-  death_year integer,
+  -- Staged as text and cast on insert. The CSV writer quotes every field, and a
+  -- quoted empty string is an empty string rather than NULL, so an integer
+  -- column would reject an unknown year outright.
+  birth_year text,
+  death_year text,
   birth_raw text,
   death_raw text,
   birth_precision text,
@@ -297,7 +300,8 @@ create temporary table staged_person_links (
 -- never mistaken for a day-precise one.
 insert into public.people (slug, name, birth_year, death_year, date_note, trust_level, status)
 select
-  sp.slug, sp.name, sp.birth_year, sp.death_year,
+  sp.slug, sp.name,
+  nullif(sp.birth_year, '')::integer, nullif(sp.death_year, '')::integer,
   nullif(concat_ws(' ',
     case when sp.birth_raw <> '' then 'born ' || sp.birth_raw || ' (' || sp.birth_precision || ' precision)' end,
     case when sp.death_raw <> '' then 'died ' || sp.death_raw || ' (' || sp.death_precision || ' precision)' end
