@@ -12,7 +12,8 @@
     "scale:capture": "tsx scale/capture.ts",
     "scale:run": "tsx scale/run-tier.ts",
     "scale:seed": "tsx scale/db-seed.ts",
-    "scale:commons": "tsx scale/commons-throughput.ts"
+    "scale:commons": "tsx scale/commons-throughput.ts",
+    "scale:equivalence": "tsx scale/equivalence.ts"
   },
   "dependencies": {
     "@whilom/database": "workspace:*",

@@ -46,3 +46,5 @@ db-results-*.json
 plans-*.txt
 tier-*.log
 commons-throughput.json
+scale-equivalence-*.json
+scale-oracle-*.json
