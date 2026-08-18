@@ -3191,6 +3191,17 @@ export type Database = {
           place_count: number
         }[]
       }
+      person_by_slug: {
+        Args: { p_slug: string }
+        Returns: {
+          context: string
+          detail: string
+          display_name: string
+          id: string
+          kind: string
+          slug: string
+        }[]
+      }
       person_life_dates: {
         Args: { p_birth: number; p_death: number }
         Returns: string
