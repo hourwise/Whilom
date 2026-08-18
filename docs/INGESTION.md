@@ -510,6 +510,73 @@ the matcher stopped proposing merges that were never real questions.
 
 See [SCALE.md](SCALE.md) for the full results and the readiness verdict.
 
+## The regional product dataset
+
+The scale experiments built a **benchmark corpus**. This is a **product dataset**,
+and the distinction is not cosmetic.
+
+| | Benchmark (`ingestion/scale/`) | Product (`ingestion/regional/`) |
+| --- | --- | --- |
+| Selection | first N by list entry, per-layer quotas | every record inside the boundary |
+| Purpose | measure behaviour as a corpus grows | be the dataset a user searches |
+| Nested tiers | yes, 1k to 25k | no, one region |
+| Coverage inside scope | partial by design | complete |
+| Ends at | metrics | canonical places, facts, provenance, review queue |
+
+"The first 3,603 listed buildings by list entry number" is exactly right for
+measuring how matching scales and exactly wrong for a map: a quota hole is
+indistinguishable, to a user, from heritage that does not exist.
+
+### WHILOM_REGION_YORKSHIRE_V1
+
+A 145 km x 90 km British National Grid band, `(400000, 420000)` to
+`(545000, 510000)` in EPSG:27700, running from the Pennine watershed east to the
+North Sea coast. 23,315 records across all six NHLE layers.
+
+The boundary was chosen by measurement, not taste. Four candidate envelopes were
+probed for record count and designation coverage; this is the tightest coherent
+one that both lands inside the 20,000-25,000 range already proven safe and still
+contains every designation type — a narrower western box holds no protected
+wreck at all, and a region that silently drops a designation type is not
+representative of the register.
+
+Reproducibility lives in `regional-dataset-manifest.json`: boundary, coordinate
+system, exact query, exclusion rules, retrieval timestamp, importer and policy
+versions, checksum, and all 23,315 list entry numbers. Payloads are not
+committed.
+
+### Publication policy
+
+Declared and committed before the activation ran, and it invents nothing — only
+the two states the production contract already treats as safe may publish:
+
+| Matcher outcome | Class | Publishes |
+| --- | --- | --- |
+| `NEW_CANONICAL` | `AUTO_SAFE` | yes, as a new place |
+| `MATCH_CONFIDENT` | `AUTO_SAFE` | yes, attached to the existing place |
+| `MATCH_REVIEW` | `REVIEW_REQUIRED` | no |
+| `CONFLICT_REVIEW` | `REVIEW_REQUIRED` | no |
+| `REJECT_INVALID` | `REJECTED` | never becomes a candidate |
+
+Coverage is subordinate to correctness. There is no target percentage, and no
+threshold was loosened to raise one.
+
+### Governed publication
+
+`review_import_candidate()` records the reviewer's decision, then
+`publish_import_candidate()` creates the canonical row, its source record,
+designations, facts and relationships in one transaction. Nothing writes to
+`places` directly — a bulk path would demonstrate that bulk insertion works, not
+that the contract does, and the contract is what carries provenance, atomicity,
+idempotency and audit.
+
+Batches of 500 with a subtransaction per candidate: the batch bounds the blast
+radius, the subtransaction bounds the damage. A replay skips the review step for
+anything already published, because the contract correctly refuses to re-review
+a published candidate.
+
+See [SCALE.md](SCALE.md) for the activation results.
+
 ## Real-data proof: what is still missing
 
 Phase 0B is **not** met by the above. Outstanding:

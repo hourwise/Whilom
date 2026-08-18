@@ -123,6 +123,25 @@ not yet gated.** What remains undemonstrated is behaviour when a corpus grows by
 area rather than density, and the in-memory candidate index would need to become
 the SQL lookups it was designed to mirror once publication is incremental.
 
+### Phase 2C — Regional dataset activation ✅ (WHILOM_REGION_YORKSHIRE_V1)
+
+The first dataset built to be *used* rather than measured. 23,315 real Historic
+England records across a 145km x 90km band of Yorkshire, taken through the
+production pipeline into canonical, searchable, fully attributed places.
+
+- 23,171 published (99.38% of valid records), 143 left in review, 0 failures
+- every publication through `publish_import_candidate()`; nothing written to
+  `places` directly
+- all 24 automatic merges audited, all correct
+- replay published 0 and changed no row count — the dataset is rebuildable
+- worst product query p95 15.4 ms against a 300 ms gate
+- a bounded map read contract exists; **no map is built**
+
+Results in [SCALE.md](SCALE.md). Phase 2 can now be described as *regional
+canonical data pipeline proven at useful product scale*. National-scale
+readiness remains a separate, unmet gate — expanding-area behaviour, incremental
+SQL candidate generation and national query orchestration are all untested.
+
 ## Phase 3 — Website MVP 🟡
 
 Home, discover, search, filters, place page, sign-up/login, wishlist, visits,

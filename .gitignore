@@ -48,3 +48,16 @@ tier-*.log
 commons-throughput.json
 scale-equivalence-*.json
 scale-oracle-*.json
+
+# Regional dataset cache (regenerate with `pnpm --filter @whilom/ingestion regional:capture`)
+ingestion/.regional-cache/
+# Generated activation payloads: rebuilt from the manifest, never committed.
+regional-candidates.csv
+regional-conflicts.csv
+regional-approved.csv
+regional-activation-*.json
+regional-verification*.json
+regional-audit.json
+regional-gates.json
+activation-raw.txt
+regional-*.sql

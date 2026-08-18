@@ -1,0 +1,294 @@
+name: Regional dataset
+
+# Builds WHILOM_REGION_YORKSHIRE_V1 end to end on a throwaway database:
+#
+#   fetch the region -> ingest -> match -> governed publish -> verify -> replay
+#
+# Deliberately separate from ordinary PR CI. This ingests 23,000 records and
+# publishes them one governed transaction at a time; running that on every push
+# would add a quarter of an hour to every review for a measurement that only
+# changes when the dataset, the pipeline or the publication contract does.
+#
+# Everything is local to the runner and destroyed with it. No hosted Supabase
+# project, no link, no secrets — the same footing as the database job in ci.yml.
+on:
+  workflow_dispatch:
+    inputs:
+      replay:
+        description: 'Run the activation twice to prove idempotency'
+        default: true
+        type: boolean
+  schedule:
+    # Sunday 05:00 UTC, after the scale ladder.
+    - cron: '0 5 * * 0'
+  pull_request:
+    paths:
+      - 'ingestion/regional/**'
+      - 'supabase/regional/**'
+      - 'supabase/migrations/**'
+      - 'ingestion/matching/**'
+      - 'ingestion/pipeline/**'
+      - 'ingestion/transforms/**'
+      - '.github/workflows/regional-dataset.yml'
+
+concurrency:
+  group: regional-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  activate:
+    name: activate
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Payloads are not committed. The manifest pins the boundary, the query
+      # and every list entry number; this rebuilds the records from it.
+      - name: Restore regional dataset
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ingestion/.regional-cache
+          key: whilom-region-${{ hashFiles('ingestion/regional/regional-dataset-manifest.json') }}
+
+      - name: Capture regional dataset
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @whilom/ingestion regional:capture
+
+      - name: Ingest, match and classify
+        working-directory: ingestion
+        run: pnpm exec tsx regional/activate.ts
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start ephemeral Supabase stack
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector
+
+      # The activation must land on a schema built from the committed migrations
+      # alone, not on whatever `supabase start` happened to leave behind.
+      - name: Replay migrations from empty
+        run: supabase db reset
+
+      - name: Database tests (pgTAP)
+        run: supabase test db
+
+      # --- First activation -------------------------------------------------
+      - name: Governed publication
+        working-directory: ingestion
+        run: |
+          set -o pipefail
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -t -A -f ../supabase/regional/activate.sql \
+            | tee activation-raw.txt | tail -n 1 > regional-activation-result.json
+          jq -e . regional-activation-result.json > /dev/null
+          jq -r '"considered \(.candidatesConsidered)  published \(.published)  no-op \(.idempotentNoOps)  refused \(.refused)  failed \(.failed)"' \
+            regional-activation-result.json
+          jq -r '"publish p50 \(.publishLatencyMs.p50)ms  p95 \(.publishLatencyMs.p95)ms  \(.recordsPerSecond)/s"' \
+            regional-activation-result.json
+
+      - name: Fail on publication failures
+        working-directory: ingestion
+        run: |
+          failed=$(jq -r '.failed' regional-activation-result.json)
+          if [ "$failed" != "0" ]; then
+            echo "::error::${failed} candidate(s) failed to publish"
+            jq -r '.failures[]?' regional-activation-result.json
+            exit 1
+          fi
+
+      - name: Verify
+        working-directory: ingestion
+        run: |
+          set -o pipefail
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -t -A -f ../supabase/regional/verify.sql \
+            | tail -n 1 > regional-verification.json
+          jq -e . regional-verification.json > /dev/null
+          jq -r '.rowCounts' regional-verification.json
+          jq -r '.queries[] | "  \(.id)  p50 \(.p50Ms)ms  p95 \(.p95Ms)ms  rows \(.rows)"' regional-verification.json
+
+      - name: Quality audit
+        working-directory: ingestion
+        run: |
+          set -o pipefail
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -t -A -f ../supabase/regional/audit.sql \
+            | tail -n 1 > regional-audit.json
+          jq -e . regional-audit.json > /dev/null
+          jq -r '"automatic merges: \(.automaticMerges.total)"' regional-audit.json
+          jq -r '.provenance' regional-audit.json
+
+      # --- Replay -----------------------------------------------------------
+      # The dataset has to be rebuildable, and the only convincing evidence is
+      # running it again and finding nothing changed.
+      # Runs everywhere except a manual dispatch that explicitly opts out.
+      # `inputs.replay` is empty on a pull_request event, and the earlier
+      # `inputs.replay != false` therefore evaluated to false and silently
+      # skipped the blocking idempotency gate — the run went green without
+      # proving the one thing the gate exists for.
+      - name: Replay activation (idempotency)
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.replay }}
+        working-directory: ingestion
+        run: |
+          set -o pipefail
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -t -A -f ../supabase/regional/activate.sql \
+            | tail -n 1 > regional-activation-replay.json
+          jq -e . regional-activation-replay.json > /dev/null
+          jq -r '"replay: published \(.published)  no-op \(.idempotentNoOps)  refused \(.refused)  failed \(.failed)"' \
+            regional-activation-replay.json
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -t -A -f ../supabase/regional/verify.sql \
+            | tail -n 1 > regional-verification-replay.json
+
+      - name: Assert idempotency
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.replay }}
+        working-directory: ingestion
+        run: |
+          node -e '
+            const fs = require("fs");
+            const before = JSON.parse(fs.readFileSync("regional-verification.json", "utf8")).rowCounts;
+            const after  = JSON.parse(fs.readFileSync("regional-verification-replay.json", "utf8")).rowCounts;
+            const watch = ["places","place_designations","source_records","facts",
+                           "entity_relationships","import_candidates","import_conflicts"];
+            let bad = 0;
+            for (const key of watch) {
+              const delta = after[key] - before[key];
+              console.log(`${key.padEnd(22)} ${before[key]} -> ${after[key]} (${delta >= 0 ? "+" : ""}${delta})`);
+              if (delta !== 0) bad++;
+            }
+            const replay = JSON.parse(fs.readFileSync("regional-activation-replay.json", "utf8"));
+            if (replay.published !== 0) {
+              console.error(`::error::replay published ${replay.published} candidates; activation is not idempotent`);
+              bad++;
+            }
+            if (bad) { console.error("::error::G7 idempotency gate failed"); process.exit(1); }
+            console.log("G7 idempotency: no canonical data was multiplied by a repeat activation.");
+          '
+
+      # --- Gates ------------------------------------------------------------
+      - name: Evaluate activation gates
+        working-directory: ingestion
+        run: |
+          node -e '
+            const fs = require("fs");
+            const v = JSON.parse(fs.readFileSync("regional-verification.json", "utf8"));
+            const a = JSON.parse(fs.readFileSync("regional-audit.json", "utf8"));
+
+            // G7 is blocking, and a blocking gate that can be skipped is not a
+            // gate. If the replay evidence is missing, say so here rather than
+            // letting the run go green without it.
+            const replayRan = fs.existsSync("regional-verification-replay.json");
+            const g = v.gates;
+            const rows = [];
+            const add = (id, passed, observed, blocking = true) =>
+              rows.push({ id, passed, observed, blocking });
+
+            add("G4-provenance", g.G4_provenance.passed,
+              `${g.G4_provenance.publishedPlaces} published, ${g.G4_provenance.withoutSourceRecord} without a source record`);
+            add("G5-review-integrity", g.G5_review_integrity.passed,
+              `${g.G5_review_integrity.needsReviewWithEntity} review rows carry a published entity`);
+            add("G6-publication-integrity", g.G6_publication_integrity.passed,
+              `orphans: ${g.G6_publication_integrity.orphanFacts} facts, ${g.G6_publication_integrity.orphanSourceRecords} source records, ${g.G6_publication_integrity.orphanRelationships} relationships`);
+            add("G8-query-usability", g.G8_query_usability.passed,
+              `worst p95 ${g.G8_query_usability.worstP95Ms}ms against a 300ms gate`);
+            add("G7-idempotency", replayRan,
+              replayRan
+                ? "replay ran; row counts asserted unchanged in the preceding step"
+                : "REPLAY DID NOT RUN — idempotency is unproven for this activation");
+            add("G9-review-load", true,
+              `${g.G9_review_load.reviewRows} rows, ${(g.G9_review_load.reviewRate * 100).toFixed(2)}% of candidates`, false);
+
+            let failed = 0;
+            for (const r of rows) {
+              const mark = r.passed ? "PASS" : (r.blocking ? "FAIL" : "WARN");
+              console.log(`  ${mark.padEnd(4)} ${r.id.padEnd(26)} ${r.observed}`);
+              if (!r.passed && r.blocking) failed++;
+            }
+            console.log(`\n  automatic merges to audit: ${a.automaticMerges.total}`);
+            fs.writeFileSync("regional-gates.json", JSON.stringify(rows, null, 2) + "\n");
+            if (failed) { console.error(`::error::${failed} blocking activation gate(s) failed`); process.exit(1); }
+          '
+
+      - name: Build activation summary
+        working-directory: ingestion
+        run: |
+          node -e '
+            const fs = require("fs");
+            const read = (f) => JSON.parse(fs.readFileSync(f, "utf8"));
+            const manifest = read("regional/regional-dataset-manifest.json");
+            const summary = {
+              dataset: {
+                id: manifest.datasetId,
+                version: manifest.datasetVersion,
+                geographicScope: manifest.geographicScope,
+                retrievalTimestamp: manifest.retrievalTimestamp,
+                ingestionVersion: manifest.ingestionVersion,
+                publicationPolicyVersion: manifest.publicationPolicyVersion,
+                composition: manifest.composition,
+              },
+              plan: read("regional-activation-plan.json"),
+              activation: read("regional-activation-result.json"),
+              verification: read("regional-verification.json"),
+              audit: read("regional-audit.json"),
+              gates: read("regional-gates.json"),
+              replay: fs.existsSync("regional-activation-replay.json")
+                ? { activation: read("regional-activation-replay.json"),
+                    rowCounts: read("regional-verification-replay.json").rowCounts }
+                : null,
+              builtAt: new Date().toISOString(),
+            };
+            fs.writeFileSync("regional-activation-summary.json", JSON.stringify(summary, null, 2) + "\n");
+            console.log("wrote regional-activation-summary.json");
+          '
+
+      - name: Summarise
+        if: always()
+        working-directory: ingestion
+        run: |
+          {
+            echo "## Regional activation — $(jq -r '.datasetId' regional/regional-dataset-manifest.json)"
+            echo
+            if [ -f regional-verification.json ]; then
+              echo '| table | rows |'
+              echo '|---|---:|'
+              jq -r '.rowCounts | to_entries[] | "| \(.key) | \(.value) |"' regional-verification.json
+              echo
+              echo '| query | p50 ms | p95 ms | rows |'
+              echo '|---|---:|---:|---:|'
+              jq -r '.queries[] | "| \(.id) | \(.p50Ms) | \(.p95Ms) | \(.rows) |"' regional-verification.json
+            fi
+            if [ -f regional-gates.json ]; then
+              echo
+              echo '### Gates'
+              jq -r '.[] | "- " + (if .passed then "✅" else (if .blocking then "❌" else "⚠️" end) end) + " `" + .id + "` " + .observed' regional-gates.json
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload activation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regional-activation
+          path: |
+            ingestion/regional-activation-summary.json
+            ingestion/regional-activation-plan.json
+            ingestion/regional-activation-result.json
+            ingestion/regional-activation-replay.json
+            ingestion/regional-verification.json
+            ingestion/regional-verification-replay.json
+            ingestion/regional-audit.json
+            ingestion/regional-gates.json
+          if-no-files-found: warn
+
+      - name: Stop stack
+        if: always()
+        run: supabase stop --no-backup || true

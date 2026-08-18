@@ -206,3 +206,33 @@ pnpm db:types              # regenerate the committed types
 
 pgTAP is created inside each test's own transaction rather than by a migration,
 so the test framework never reaches a real deployment.
+
+---
+
+## Map discovery contract (0028)
+
+The bounded read shape the future public map consumes. No map exists yet; what
+exists is the contract, so that whoever builds it cannot accidentally write a
+query that asks for a region at once.
+
+`map_places(bbox_sw_lng, bbox_sw_lat, bbox_ne_lng, bbox_ne_lat, place_types, max_rows)`
+
+Three limits are enforced by the function rather than trusted to the caller:
+
+1. **Geography is mandatory.** There is no unbounded form; a null bounding box
+   raises rather than returning everything.
+2. **The viewport is size-capped** at 2.5 x 1.5 degrees. A "viewport" spanning
+   the country is a full scan wearing a bounding box.
+3. **The row limit is capped server-side** at 500. A client asking for 100,000
+   gets the cap, not the region. Results are ordered by content level so a
+   truncated viewport still looks sensible rather than arbitrary.
+
+The projection is deliberately small — id, slug, name, type, coordinates,
+positional accuracy, primary designation, thumbnail — because a map that has to
+load complete place records to draw markers will not stay interactive.
+
+`map_thumbnail_for(place_id)` returns a thumbnail only when stored rights data
+can support attribution for that exact file. A map marker is a publication like
+any other, and "from Wikimedia Commons" is not a licence.
+
+Held by 16 assertions in `supabase/tests/map_contract.test.sql`.

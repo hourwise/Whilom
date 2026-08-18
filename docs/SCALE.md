@@ -567,3 +567,278 @@ the regime a national import actually occupies — and the in-memory index would
 need to become the SQL lookups it was designed to mirror once publication is
 incremental rather than whole-run. National import remains ungated and
 unauthorised.
+
+---
+
+# Regional activation (batch 8)
+
+`WHILOM_REGION_YORKSHIRE_V1` — the first dataset built to be *used* rather than
+measured. 23,315 real Historic England records taken through the production
+pipeline into canonical, searchable, fully attributed places.
+
+**Verdict: `GO_FOR_PUBLIC_MAP`.**
+
+## Dataset
+
+A 145 km x 90 km British National Grid band, `(400000, 420000)` to
+`(545000, 510000)` in EPSG:27700, from the Pennine watershed east to the North
+Sea coast. 13,050 km².
+
+| Designation | Records |
+| --- | ---: |
+| Listed buildings | 21,039 |
+| Scheduled monuments | 2,171 |
+| Parks and gardens | 93 |
+| Battlefields | 7 |
+| World Heritage Sites | 4 |
+| Protected wreck sites | 1 |
+| **Total** | **23,315** |
+
+Chosen by measurement: four candidate envelopes were probed for record count and
+designation coverage, and this is the tightest coherent one that both lands
+inside the proven 20,000-25,000 range and still contains all six designation
+types. A narrower western box holds no protected wreck at all.
+
+Unlike the scale corpus this applies **no quota and no truncation** — every
+protected record inside the boundary is present, because a quota hole is
+indistinguishable, to a user, from heritage that does not exist.
+
+## Ingestion and matching
+
+| | |
+| --- | ---: |
+| Source rows | 23,315 |
+| Valid | 23,314 |
+| Rejected before candidate | 1 (missing easting/northing) |
+| New canonical | 23,146 |
+| Confident match | 25 |
+| Review (identity) | 125 |
+| Review (conflict) | 18 |
+| Candidate pairs | 10,129,479 (434.5/record) |
+| Throughput | ~680 records/second |
+
+## Publication
+
+Every publication went through `review_import_candidate()` then
+`publish_import_candidate()`. Nothing wrote to `places` directly.
+
+| | |
+| --- | ---: |
+| Candidates considered | 23,171 |
+| Published | 23,171 |
+| — attached to an existing place | 25 |
+| — new places created | 23,146 |
+| Refused by the contract | 0 |
+| Failed | 0 |
+| Left in review | 143 |
+| Publish latency p50 / p95 | 13.5 ms / 23.1 ms |
+| Throughput | 76 candidates/second |
+| Batch size | 500 |
+
+**99.38% of valid records published.** That is a measurement, not a target: the
+policy was committed before the run and no threshold was moved to raise it.
+
+Publication is ~9x slower per record than matching, which is the expected shape —
+each publication is a real transaction writing a place, a source record,
+designations and facts, against matching's in-memory comparison. It was not
+optimised, because 5 minutes for a regional import is not a problem worth
+solving yet.
+
+## The bug the audit caught
+
+The first activation published 23,171 places and the quality audit reported
+**zero automatic merges**, where the plan said twenty-five. Both numbers were
+correct, which is what made it worth chasing.
+
+The matcher works in synthetic within-run handles (`run:<id>:<n>`) that mean
+nothing to the database, so `matched_entity_id` was never set on the candidate
+rows. `publish_import_candidate` took the only path left to it and created a
+place — leaving 25 duplicates in a dataset whose entire purpose is not to have
+any.
+
+What travels now is the *source record id* the matcher matched. That record has
+already been published by the time the match needs it, so its `source_records`
+row names the place to attach to; publication is ordered by processing ordinal
+to guarantee that. The activation reports attachments and new places separately,
+so a silent regression to zero merges cannot hide inside a healthy total again.
+
+A second defect, in the workflow rather than the data: `inputs.replay` is empty
+on a `pull_request` event, so `inputs.replay != false` evaluated false and both
+idempotency steps were **silently skipped** — the run went green having never
+executed a blocking gate. Gate evaluation now asserts the replay evidence
+exists, because a blocking gate that can be skipped is not a gate.
+
+## Canonical result
+
+| Table | Rows |
+| --- | ---: |
+| places | 23,151 (23,146 imported + 5 seed) |
+| place_designations | 23,171 |
+| source_records | 23,170 |
+| facts | 67,323 |
+| entity_relationships | 1 |
+| import_candidates | 23,314 |
+| import_conflicts | 18 |
+| review queue | 143 |
+| images | 0 |
+
+`source_records` is one fewer than the 23,171 publications because a repeated
+list entry — the multi-part geometry case — correctly folded onto one row under
+the source-record unique constraint.
+
+Ratios, useful for later national estimation but **not** a national forecast:
+
+| | |
+| --- | ---: |
+| Source records per place | 1.00 |
+| Facts per place | 2.91 |
+| Designations per place | 1.00 |
+| Review rows per 1,000 source records | 6.1 |
+
+Fact predicates published: `designation_reference` (23,171), `first_designated`
+(22,969), `former_name` (19,053), `area_hectares` (2,132).
+
+## Quality
+
+| Gate | Result |
+| --- | --- |
+| G1 database integrity | PASS — migrations replay, pgTAP green, types drift-free |
+| G2 matcher regressions | PASS — 172 ingestion tests |
+| G3 automatic merge correctness | PASS — 24 merged places, all audited, all correct |
+| G4 provenance | PASS — 23,146 published, 0 without a source record |
+| G5 review integrity | PASS — 0 queued rows carry a published entity |
+| G6 publication integrity | PASS — 0 orphan facts, source records or relationships |
+| G7 idempotency | PASS — replay published 0, every row count identical |
+| G8 query usability | PASS — worst p95 15.4 ms against a 300 ms gate |
+| G9 review load | 143 rows, 0.61% of candidates |
+
+Every automatic merge was inspected, not sampled. All 24 are
+scheduled-monument-plus-listed-building pairs for one structure: Bolton Castle,
+Middleham Castle, Helmsley Castle, Richmond Bridge, Kildwick Bridge, Stanley
+Ferry Aqueduct, the Swine Cross, and so on. **24 audited, 24 correct, 0
+incorrect, 0 uncertain.**
+
+Other checks: 0 invalid coordinates, 0 places outside the declared boundary,
+every imported place carries a designation, a licence and an attribution.
+Positional accuracy is known for all but the 5 seed rows and is 6 m or better
+for 21,663 of them; 8 places exceed 1 km, all large designated landscapes where
+a centroid genuinely is imprecise.
+
+Classification spans 26 types — castles, abbeys, priories, cathedrals, churches,
+bridges, canal structures, railway and industrial sites, hillforts, pillboxes,
+gardens, landscapes — with `structure` (8,269) and `building` (6,122) as honest
+fallbacks. `unknown` remains preferable to a confident wrong answer.
+
+## Review load
+
+143 rows, 0.61% of candidates, ~4.8 hours at the documented two-minutes-per-
+decision assumption. That is an estimate from a stated assumption, not observed
+reviewer productivity.
+
+| Cause | Count |
+| --- | ---: |
+| One name contains the other | 94 |
+| Landscape designation versus a structure inside it | 18 |
+| Sources disagree on place type | 10 |
+| Names not close enough | 9 |
+| Sources disagree on location | 8 |
+| Name is not distinctive | 2 |
+| Two candidates score alike | 1 |
+| Position outside the agreement radius | 1 |
+
+**Bulk review tooling is not justified.** The dominant class is repetitive in
+shape but not deterministic in answer: "Whitby Abbey" against "Whitby Abbey
+Cross" needs a person precisely because no rule distinguishes it from "Wressle
+Castle" against "Ruins of Wressle Castle". Automating it would re-introduce the
+false merges the 25,000-record audit removed, to save five hours.
+
+## Product queries
+
+| Query | p50 | p95 | rows |
+| --- | ---: | ---: | ---: |
+| Place detail | 0.09 ms | 0.28 ms | 6 |
+| Nearest (1 km) | 0.37 ms | 0.59 ms | 20 |
+| Nearby (2 km) | 0.73 ms | 1.21 ms | 10 |
+| Text + bbox | 2.09 ms | 3.38 ms | 100 |
+| Review queue | 3.65 ms | 3.96 ms | 143 |
+| Filtered bbox | 2.22 ms | 3.97 ms | 100 |
+| Radius (5 km) | 2.50 ms | 4.14 ms | 100 |
+| Bbox | 3.10 ms | 5.70 ms | 100 |
+| Type filter | 5.96 ms | 9.02 ms | 100 |
+| Text search | 6.63 ms | 9.16 ms | 100 |
+| Map viewport | 9.92 ms | 15.41 ms | 250 |
+
+Worst reading is 15.4 ms against the 300 ms gate — about 20x headroom. No query
+tuning was applied and no index was added, because nothing in the measurements
+asked for either.
+
+## Map-data contract
+
+`map_places()` establishes the shape and, more importantly, the limits:
+
+- **geography is mandatory** — a null bounding box raises rather than returning
+  the region;
+- **the viewport is size-capped** at 2.5 x 1.5 degrees, because a "viewport"
+  spanning the country is a full scan wearing a bounding box;
+- **the row cap is server-side** at 500 — a client asking for 100,000 gets the
+  cap;
+- results order by content level, so a truncated viewport still looks sensible
+  rather than arbitrary;
+- thumbnails appear only when stored rights data supports attribution for that
+  exact file.
+
+The projection is id, slug, name, type, coordinates, positional accuracy,
+primary designation and thumbnail. Nothing that belongs on a place page, because
+a map that loads complete records to draw markers will not stay interactive.
+16 pgTAP assertions hold those limits. **No map was built.**
+
+## Storage
+
+248.5 MB total for the region.
+
+| Table | Total | Indexes |
+| --- | ---: | ---: |
+| import_candidates | 137.0 MB | 3.9 MB |
+| source_records | 52.8 MB | 3.9 MB |
+| facts | 29.3 MB | 15.9 MB |
+| places | 14.1 MB | 7.7 MB |
+| place_designations | 5.7 MB | 2.1 MB |
+
+The staging table is the largest object in the database — nearly ten times the
+canonical `places` table — because it retains the full normalised JSON for every
+candidate including those still in review. That is the audit trail working as
+intended, but it is the row worth watching first at national scale, and a
+retention policy for published candidates will be needed long before the
+canonical data becomes expensive.
+
+## Media
+
+No mass Commons enrichment was performed, and none was attempted. The regional
+dataset contains no images, which does not block activation: the rights gate,
+the attribution builder and the map contract's rights check are all exercised by
+their own tests, and the map contract will return a thumbnail only when stored
+rights support attribution for that file.
+
+## This does not prove national readiness
+
+Explicitly unresolved:
+
+- **expanding-area behaviour** — this region densifies a fixed envelope; a
+  national import grows the area too, which is the regime locality-bounded
+  candidate generation was designed for and has never been measured in;
+- **persistent SQL / incremental candidate generation** — candidate discovery is
+  in memory because the pipeline decides identity before anything is written.
+  Incremental publication against an existing corpus needs the `ST_DWithin` and
+  identifier lookups the design mirrors, and those do not exist yet;
+- **national source-query orchestration** — one envelope and six layers is not
+  40 counties;
+- **very large table and index behaviour** — 23,000 places is 14 MB; the shape at
+  400,000 is untested;
+- **long-term media enrichment rate** — measured at ~14 requests/minute against
+  Commons, unchanged by this batch;
+- **reviewer workload beyond regional scale** — 0.61% is comfortable at 23,000
+  and is a different proposition at 400,000;
+- **hosted deployment behaviour** — everything here ran on ephemeral CI Postgres.
+
+Phase 2 may now be described as: *regional canonical data pipeline proven at
+useful product scale; national-scale readiness remains a separate gate.*

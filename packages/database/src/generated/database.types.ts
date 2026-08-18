@@ -2944,6 +2944,28 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_editor: { Args: never; Returns: boolean }
       is_moderator: { Args: never; Returns: boolean }
+      map_places: {
+        Args: {
+          bbox_ne_lat: number
+          bbox_ne_lng: number
+          bbox_sw_lat: number
+          bbox_sw_lng: number
+          max_rows?: number
+          place_types?: string[]
+        }
+        Returns: {
+          id: string
+          lat: number
+          lng: number
+          location_accuracy_m: number
+          name: string
+          place_type: string
+          primary_designation: string
+          slug: string
+          thumbnail_url: string
+        }[]
+      }
+      map_thumbnail_for: { Args: { p_place_id: string }; Returns: string }
       place_is_public: { Args: { p_place_id: string }; Returns: boolean }
       preview_import_candidate: {
         Args: { p_candidate_id: string }
