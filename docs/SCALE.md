@@ -163,6 +163,19 @@ Against a 300 ms gate, the worst reading is 1.57 ms. **G6 passes with roughly
 Bytes per place *falls* as the corpus grows, because fixed per-table overhead is
 amortised. Growth is linear with a small constant.
 
+### Cost of running the experiment
+
+| Lane | Duration |
+| --- | ---: |
+| Pipeline ladder (all three tiers) | 29 s |
+| Queries, tier 1,000 | 4 m 28 s |
+| Queries, tier 2,500 | 2 m 37 s |
+| Queries, tier 5,000 | 2 m 58 s |
+
+The pipeline lane is cheap enough to run on any change; the query lanes are
+dominated by starting an ephemeral Supabase stack, not by the measurement. This
+is why the workflow is path-filtered rather than attached to every pull request.
+
 ### Media lane (Wikimedia Commons)
 
 A bounded live probe over eight real Yorkshire categories, 64 files. Two runs
@@ -263,8 +276,10 @@ signature. It is fast today because the table is small.
 That left the question that actually matters unanswered, so `plans.sql` re-runs
 the same queries with sequential scans disabled. At 5,000 records the planner
 then chooses a Bitmap Index Scan on `places_search_gin`, returning all 447
-matches for "church" in 1.29 ms. **The index is present, usable and correct**;
-the planner is simply right not to use it yet. Nothing needs building here — it
+matches for "church" in 1.29 ms — the same 447 rows that recomputing the
+tsvector from scratch finds, so the index is not merely usable but in agreement
+with the data it indexes. **The index is present, usable and correct**; the
+planner is simply right not to use it yet. Nothing needs building here — it
 needs re-checking once the corpus is large enough for the crossover.
 
 **Other limits of this experiment**, stated plainly:
