@@ -313,6 +313,36 @@ export type Database = {
           },
         ]
       }
+      coverage_regions: {
+        Row: {
+          activated_at: string | null
+          area: unknown
+          created_at: string
+          dataset_version: string | null
+          display_name: string
+          id: string
+          note: string | null
+        }
+        Insert: {
+          activated_at?: string | null
+          area: unknown
+          created_at?: string
+          dataset_version?: string | null
+          display_name: string
+          id: string
+          note?: string | null
+        }
+        Update: {
+          activated_at?: string | null
+          area?: unknown
+          created_at?: string
+          dataset_version?: string | null
+          display_name?: string
+          id?: string
+          note?: string | null
+        }
+        Relationships: []
+      }
       entity_relationships: {
         Row: {
           confidence: number | null
@@ -3050,6 +3080,19 @@ export type Database = {
         Args: { p_collection_id: string }
         Returns: boolean
       }
+      coverage_for_viewport: {
+        Args: {
+          bbox_ne_lat: number
+          bbox_ne_lng: number
+          bbox_sw_lat: number
+          bbox_sw_lng: number
+        }
+        Returns: {
+          covered_fraction: number
+          region_ids: string[]
+          region_names: string[]
+        }[]
+      }
       current_app_role: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
@@ -3061,6 +3104,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      format_historical_year: { Args: { p_year: number }; Returns: string }
       image_is_visible: { Args: { p_image_id: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_editor: { Args: never; Returns: boolean }
@@ -3071,18 +3115,24 @@ export type Database = {
           bbox_ne_lng: number
           bbox_sw_lat: number
           bbox_sw_lng: number
+          categories?: string[]
           cell_degrees?: number
           designations?: string[]
           from_year?: number
           max_cells?: number
           period_id?: string
+          person_id?: string
           place_types?: string[]
           q?: string
           require_image?: boolean
+          selected_year?: number
+          time_mode?: string
           to_year?: number
         }
         Returns: {
+          category_count: number
           cell_key: string
+          dominant_category: string
           lat: number
           lng: number
           place_count: number
@@ -3096,16 +3146,21 @@ export type Database = {
           bbox_ne_lng: number
           bbox_sw_lat: number
           bbox_sw_lng: number
+          categories?: string[]
           designations?: string[]
           from_year?: number
           max_rows?: number
           period_id?: string
+          person_id?: string
           place_types?: string[]
           q?: string
           require_image?: boolean
+          selected_year?: number
+          time_mode?: string
           to_year?: number
         }
         Returns: {
+          display_category: string
           id: string
           lat: number
           lng: number
@@ -3120,10 +3175,71 @@ export type Database = {
         }[]
       }
       map_thumbnail_for: { Args: { p_place_id: string }; Returns: string }
+      period_counts_for_viewport: {
+        Args: {
+          bbox_ne_lat: number
+          bbox_ne_lng: number
+          bbox_sw_lat: number
+          bbox_sw_lng: number
+          place_types?: string[]
+          q?: string
+        }
+        Returns: {
+          display_name: string
+          display_order: number
+          period_id: string
+          place_count: number
+        }[]
+      }
+      person_life_dates: {
+        Args: { p_birth: number; p_death: number }
+        Returns: string
+      }
+      person_places: {
+        Args: { max_rows?: number; p_person_id: string }
+        Returns: {
+          display_category: string
+          in_coverage: boolean
+          lat: number
+          lng: number
+          name: string
+          place_id: string
+          place_type: string
+          predicate: string
+          relationship_note: string
+          slug: string
+        }[]
+      }
+      place_display_category: {
+        Args: { p_place_type: Database["public"]["Enums"]["place_type"] }
+        Returns: Database["public"]["Enums"]["map_display_category"]
+      }
       place_is_public: { Args: { p_place_id: string }; Returns: boolean }
       place_matches_period: {
         Args: { p_period_id: string; p_place_id: string }
         Returns: boolean
+      }
+      place_matches_time: {
+        Args: {
+          p_from_year?: number
+          p_mode: string
+          p_period_id?: string
+          p_place_id: string
+          p_to_year?: number
+          p_year: number
+        }
+        Returns: boolean
+      }
+      place_people: {
+        Args: { max_rows?: number; p_place_id: string }
+        Returns: {
+          life_dates: string
+          name: string
+          person_id: string
+          predicate: string
+          relationship_note: string
+          slug: string
+        }[]
       }
       preview_import_candidate: {
         Args: { p_candidate_id: string }
@@ -3136,6 +3252,18 @@ export type Database = {
       publish_media_candidate: {
         Args: { p_candidate_id: string; p_note?: string }
         Returns: string
+      }
+      related_people: {
+        Args: { max_rows?: number; p_person_id: string }
+        Returns: {
+          life_dates: string
+          name: string
+          person_id: string
+          relation_detail: string
+          relation_kind: string
+          shared_places: number
+          slug: string
+        }[]
       }
       resolve_import_conflict: {
         Args: {
@@ -3167,6 +3295,20 @@ export type Database = {
         Returns: undefined
       }
       route_is_public: { Args: { p_route_id: string }; Returns: boolean }
+      search_discovery: {
+        Args: { max_rows?: number; q: string }
+        Returns: {
+          context: string
+          detail: string
+          display_name: string
+          id: string
+          kind: string
+          lat: number
+          lng: number
+          rank: number
+          slug: string
+        }[]
+      }
       search_places: {
         Args: {
           bbox_ne_lat?: number
@@ -3301,6 +3443,17 @@ export type Database = {
         | "manual"
         | "approximate"
         | "unknown"
+      map_display_category:
+        | "building"
+        | "religious"
+        | "fortification"
+        | "monument"
+        | "ruin"
+        | "archaeology"
+        | "industrial"
+        | "military"
+        | "landscape"
+        | "other"
       media_association_outcome:
         | "media_match_confident"
         | "media_match_review"
@@ -3671,6 +3824,18 @@ export const Constants = {
         "manual",
         "approximate",
         "unknown",
+      ],
+      map_display_category: [
+        "building",
+        "religious",
+        "fortification",
+        "monument",
+        "ruin",
+        "archaeology",
+        "industrial",
+        "military",
+        "landscape",
+        "other",
       ],
       media_association_outcome: [
         "media_match_confident",
