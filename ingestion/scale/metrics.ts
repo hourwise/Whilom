@@ -33,6 +33,8 @@ export interface MatchWorkStats extends TimingStats {
   vetoedByName: number;
   /** Comparisons discarded because one source's register lists them separately. */
   vetoedByRegister: number;
+  /** Comparisons beyond the plausible-distance limit: the spatial pre-filter prize. */
+  beyondMaxDistance: number;
 }
 
 export interface ReviewPressure {

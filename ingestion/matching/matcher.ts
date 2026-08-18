@@ -69,6 +69,16 @@ export interface MatchStats {
   vetoedByName: number;
   /** Comparisons discarded because one source's register lists them separately. */
   vetoedByRegister: number;
+  /**
+   * Comparisons where the two records are beyond the plausible-distance limit,
+   * counted independently of which veto actually rejected them.
+   *
+   * This is the size of the prize for a spatial pre-filter: every one of these
+   * is a comparison a locality-bounded candidate set would never have made, and
+   * discarding them cannot change an outcome, because the matcher already
+   * refuses to match at this distance.
+   */
+  beyondMaxDistance: number;
 }
 
 /**
@@ -395,8 +405,9 @@ export function matchCandidate(
       const match = scoreAgainst(candidate, existing);
       if (stats) {
         stats.comparisons += 1;
+        const meters = distanceMeters(candidate.location, existing.location);
+        if (meters > THRESHOLDS.maxPlausibleDistanceMeters) stats.beyondMaxDistance += 1;
         if (match === null) {
-          const meters = distanceMeters(candidate.location, existing.location);
           if (sameRegisterDifferentEntries(candidate, existing)) stats.vetoedByRegister += 1;
           else if (meters > THRESHOLDS.maxPlausibleDistanceMeters) stats.vetoedByDistance += 1;
           else stats.vetoedByName += 1;

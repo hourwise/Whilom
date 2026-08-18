@@ -153,7 +153,7 @@ export async function runTier(tier: number): Promise<TierMetrics> {
   const fixture = buildTierFixture(tier);
   const startedAt = new Date();
 
-  const matchStats: MatchStats = { comparisons: 0, vetoedByDistance: 0, vetoedByName: 0, vetoedByRegister: 0 };
+  const matchStats: MatchStats = { comparisons: 0, vetoedByDistance: 0, vetoedByName: 0, vetoedByRegister: 0, beyondMaxDistance: 0 };
   const normaliseSamples: number[] = [];
   const validateSamples: number[] = [];
   const matchSamples: number[] = [];
@@ -247,6 +247,7 @@ export async function runTier(tier: number): Promise<TierMetrics> {
         vetoedByDistance: matchStats.vetoedByDistance,
         vetoedByName: matchStats.vetoedByName,
         vetoedByRegister: matchStats.vetoedByRegister,
+        beyondMaxDistance: matchStats.beyondMaxDistance,
       },
       conflictFields: [...conflictFields.entries()]
         .map(([field, count]) => ({ field, count }))
