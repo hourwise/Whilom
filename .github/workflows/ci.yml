@@ -37,6 +37,12 @@ jobs:
       - name: Validate workflows
         run: node scripts/check-workflows.mjs
 
+      # A miscounted pgTAP plan reports the surplus assertions as failures, so a
+      # correct test file goes red for a reason unrelated to the code. Counting
+      # here costs milliseconds; diagnosing it from a CI log costs a database.
+      - name: Validate pgTAP plans
+        run: node scripts/check-pgtap-plans.mjs
+
       - name: Typecheck
         run: pnpm typecheck
 
