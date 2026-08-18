@@ -136,7 +136,8 @@ jobs:
         working-directory: ingestion
         run: |
           set -o pipefail
-          psql "$DB_URL" -v ON_ERROR_STOP=1 -t -A -f ../supabase/regional/discovery.sql             | tail -n 1 > regional-discovery.json
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -t -A -f ../supabase/regional/discovery.sql \
+            | tail -n 1 > regional-discovery.json
           jq -e . regional-discovery.json > /dev/null
 
           jq -r '"published places: \(.publishedPlaces)"' regional-discovery.json
@@ -159,8 +160,7 @@ jobs:
             // The rule the temporal model exists to hold.
             check("D4-no-designation-dates", r.temporal.derivedFromDesignationDate === 0,
               `${r.temporal.derivedFromDesignationDate} claims derived from a designation date`);
-            console.log(`
-  temporal coverage: ${(r.temporal.coverageRate * 100).toFixed(2)}% of published places`);
+            console.log(`\n  temporal coverage: ${(r.temporal.coverageRate * 100).toFixed(2)}% of published places`);
             if (failed) { console.error(`::error::${failed} discovery gate(s) failed`); process.exit(1); }
           '
 
