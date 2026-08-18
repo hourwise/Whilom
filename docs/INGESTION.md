@@ -599,3 +599,16 @@ Phase 0B is **not** met by the above. Outstanding:
   confirms this from the other direction: across 5,000 single-source records
   only 4 conflicts arise, all from cross-designation matches. Conflict detection
   is exercised by the two-source tests, not by corpus size.
+
+## Temporal extraction
+
+The regional dataset's published facts are `designation_reference`,
+`first_designated`, `former_name` and `area_hectares`. None of them is a
+construction date, and `first_designated` is the listing date — which must never
+masquerade as one.
+
+`transforms/temporal.ts` therefore reads only period language from the source's
+own description, retains the original text and derivation, and returns nothing
+far more often than not. Coverage across the region is about 1%. That is a fact
+about the National Heritage List rather than a shortcoming of the extractor, and
+it is reported as such. See [DISCOVERY.md](DISCOVERY.md).

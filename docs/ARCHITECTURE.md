@@ -143,3 +143,30 @@ source -> normalise -> validate -> candidates -> match -> metrics
 
 Only the product path writes canonical data, and it does so exclusively through
 the governed publication contract.
+
+---
+
+## Discovery
+
+```
+published canonical places
+        |
+        v
+map_clusters / map_places        bounded, filtered, SECURITY INVOKER
+        |
+        v
+/explore  (map + period + filters + preview)
+/discover (server-rendered list, no map code)
+        |
+        v
+/place/[slug]                    depth lives here, not in the map drawer
+```
+
+The map is discovery; the place page is depth. A preview shows only what the
+marker payload already carries, so selecting a place costs no extra query and
+cannot grow into a second, competing place page.
+
+Directions leave Whilom entirely: coordinates are handed to an external
+provider. Discovery and navigation are separate concerns.
+
+See [DISCOVERY.md](DISCOVERY.md).

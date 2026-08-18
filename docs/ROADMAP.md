@@ -142,6 +142,27 @@ canonical data pipeline proven at useful product scale*. National-scale
 readiness remains a separate, unmet gate — expanding-area behaviour, incremental
 SQL candidate generation and national query orchestration are all untested.
 
+### Phase 2D — Public discovery ✅ (map, time and identity)
+
+The first batch whose deliverable is a product rather than an architecture
+experiment. `/explore` reads published canonical data through bounded,
+density-aware queries; the homepage explains what "whilom" means; and time is a
+first-class control rather than a filter buried in a panel.
+
+- broad views aggregate in the database — the region arrives as a few hundred
+  cells, never 23,171 points
+- a 21-stop period registry, signed years with no year zero, prehistory to today
+- temporal claims are provenance-backed and derived only from the source's own
+  period language; **designation dates are structurally forbidden** as historic
+  dates, asserted by a CI gate
+- temporal coverage is ~1% of published places, reported rather than hidden, and
+  the empty state distinguishes "no records in Whilom" from "nothing existed here"
+- an accessible list path that renders without any map code
+- no first-party routing; directions hand off to an external provider
+
+See [DISCOVERY.md](DISCOVERY.md). National ingestion remains a separate, unmet
+gate.
+
 ## Phase 3 — Website MVP 🟡
 
 Home, discover, search, filters, place page, sign-up/login, wishlist, visits,
