@@ -37,3 +37,7 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Scale-experiment cache (regenerate with `pnpm --filter @whilom/ingestion scale:capture`)
+ingestion/.scale-cache/
+scale-results-*.json

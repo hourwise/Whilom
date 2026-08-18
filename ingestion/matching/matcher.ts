@@ -54,6 +54,20 @@ export const THRESHOLDS = {
 } as const;
 
 /**
+ * Optional sink for how much work a match actually cost.
+ *
+ * Matching compares each candidate against the canonical records it is given,
+ * so the honest measure of scalability is not wall-clock time but how many
+ * comparisons each record provokes and how many the distance veto discards
+ * before scoring. Callers that do not care pass nothing and the matcher
+ * behaves identically.
+ */
+export interface MatchStats {
+  comparisons: number;
+  vetoedByDistance: number;
+}
+
+/**
  * The distance at which two records' positions still count as agreeing.
  *
  * Widened by the less precise of the two records — comparing a 6 m survey point
@@ -232,6 +246,7 @@ function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): S
 export function matchCandidate(
   candidate: PlaceCandidate,
   existingPlaces: readonly CanonicalPlaceRef[],
+  stats?: MatchStats,
 ): MatchDecision {
   // --- Deterministic identity ----------------------------------------------
   for (const existing of existingPlaces) {
@@ -266,7 +281,14 @@ export function matchCandidate(
 
   // --- Scored comparison ----------------------------------------------------
   const scored = existingPlaces
-    .map((existing) => scoreAgainst(candidate, existing))
+    .map((existing) => {
+      const match = scoreAgainst(candidate, existing);
+      if (stats) {
+        stats.comparisons += 1;
+        if (match === null) stats.vetoedByDistance += 1;
+      }
+      return match;
+    })
     .filter((m): m is ScoredMatch => m !== null)
     .sort((a, b) => b.score - a.score);
 

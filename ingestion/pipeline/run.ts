@@ -3,6 +3,7 @@ import type { EnrichmentSource } from '../enrichment/enrichment-source';
 import { ENRICHMENT_COORDINATE_TOLERANCE_METERS } from '../enrichment/enrichment-source';
 import { applyEnrichment } from '../enrichment/wikidata';
 import { matchCandidate } from '../matching/matcher';
+import type { MatchStats } from '../matching/matcher';
 import { ComparisonOutcome, compareSources } from '../matching/compare';
 import type { SourceComparison } from '../matching/compare';
 import type { RawPlaceRecord, SourceAdapter } from '../sources/source-adapter';
@@ -47,6 +48,21 @@ export interface SourceSpec {
   normalise: (raw: RawPlaceRecord, importRunId: string) => NormaliseResult;
 }
 
+/**
+ * Optional measurement taps.
+ *
+ * Added for the staged scale experiment, but deliberately general: knowing
+ * where time goes and how many comparisons a record provokes is what you want
+ * from any real import, not just a benchmark. When absent the runner behaves
+ * exactly as before.
+ */
+export interface RunObserver {
+  /** Accumulates matcher work across the whole run. */
+  matchStats?: MatchStats;
+  /** Called once per record that reached the matcher. */
+  onRecord?(timings: { normaliseMs: number; validateMs: number; matchMs: number }): void;
+}
+
 export interface RunOptions {
   importRunId: string;
   /** Sources are processed in order, so the first to describe a place wins it. */
@@ -57,6 +73,8 @@ export interface RunOptions {
   enrichmentSource?: EnrichmentSource;
   /** Cap on source rows processed, so a run stays bounded. */
   maxRecords?: number;
+  /** Measurement taps; see `RunObserver`. */
+  observer?: RunObserver;
 }
 
 export interface DecidedCandidate {
@@ -144,7 +162,7 @@ export function candidateAsCanonical(candidate: PlaceCandidate, id: string): Can
 }
 
 export async function runIngestion(options: RunOptions): Promise<RunReport> {
-  const { importRunId, sources, enrichmentSource, maxRecords } = options;
+  const { importRunId, sources, enrichmentSource, maxRecords, observer } = options;
   const startedAt = new Date();
 
   const report: RunReport = {
@@ -182,7 +200,9 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
     report.sourceRows += 1;
 
     // --- NORMALISE ----------------------------------------------------------
+    const normaliseStart = performance.now();
     const normalised = source.normalise(raw, importRunId);
+    const normaliseMs = performance.now() - normaliseStart;
     if (!normalised.ok) {
       report.rejected += 1;
       report.rejections.push(normalised.rejected);
@@ -191,7 +211,9 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
     }
 
     // --- VALIDATE -----------------------------------------------------------
+    const validateStart = performance.now();
     const parsed = placeCandidateSchema.safeParse(normalised.candidate);
+    const validateMs = performance.now() - validateStart;
     if (!parsed.success) {
       report.rejected += 1;
       report.rejections.push({
@@ -227,7 +249,10 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
     }
 
     // --- MATCH / DEDUPE -----------------------------------------------------
-    const decision = matchCandidate(candidate, existing);
+    const matchStart = performance.now();
+    const decision = matchCandidate(candidate, existing, observer?.matchStats);
+    const matchMs = performance.now() - matchStart;
+    observer?.onRecord?.({ normaliseMs, validateMs, matchMs });
     const withinRun =
       decision.matchedPlaceId !== undefined && !preexistingIds.has(decision.matchedPlaceId);
 

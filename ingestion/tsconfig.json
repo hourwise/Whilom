@@ -4,6 +4,6 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["sources/**/*.ts", "transforms/**/*.ts", "matching/**/*.ts", "enrichment/**/*.ts", "pipeline/**/*.ts"],
+  "include": ["sources/**/*.ts", "transforms/**/*.ts", "matching/**/*.ts", "enrichment/**/*.ts", "pipeline/**/*.ts", "scale/**/*.ts"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }
