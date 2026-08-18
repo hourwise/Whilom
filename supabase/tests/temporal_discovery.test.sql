@@ -159,7 +159,9 @@ select is(
 
 select is(
   (select count(*) from public.map_places(-1.6, 53.9, -1.4, 54.1, null, 250, 'roman')),
-  1::bigint, 'selecting Roman narrows to the place with a Roman claim');
+  -- Two: the villa, and the hillfort whose "late Iron Age into the Roman
+  -- period" span reaches forward into it. Overlap is the point.
+  2::bigint, 'selecting Roman narrows to the places with a claim reaching it');
 
 select is(
   (select count(*) from public.map_places(-1.6, 53.9, -1.4, 54.1, null, 250, 'victorian')),
