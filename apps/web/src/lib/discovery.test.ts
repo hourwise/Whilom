@@ -39,16 +39,34 @@ describe('the period vocabulary', () => {
   });
 
   it('stays in step with the database registry', () => {
-    // Drift here would mean the scrubber offers boundaries the map does not use.
-    const sql = readFileSync(
-      fileURLToPath(new URL('../../../../supabase/migrations/0029_temporal_discovery.sql', import.meta.url)),
-      'utf8',
+    // Drift here would mean the ruler offers boundaries the map does not use.
+    // Both migrations are read: 0029 inserts the registry and 0034 corrects the
+    // Iron Age boundary. Reading only the insert would compare against a value
+    // the database no longer holds — which is exactly how that bug survived a
+    // parity test that looked green.
+    const files = ['0029_temporal_discovery.sql', '0034_iron_age_boundary.sql'].map((f) =>
+      readFileSync(
+        fileURLToPath(new URL(`../../../../supabase/migrations/${f}`, import.meta.url)),
+        'utf8',
+      ),
     );
+    const registry = new Map<string, { start: number; end: number }>();
+    for (const sql of files) {
+      for (const m of sql.matchAll(/\('([a-z0-9_]+)',\s*'[^']*',\s*(-?\d+),\s*(-?\d+)/g)) {
+        registry.set(m[1]!, { start: Number(m[2]), end: Number(m[3]) });
+      }
+      for (const m of sql.matchAll(
+        /update public\.historical_periods\s+set\s+end_year\s*=\s*(-?\d+)[\s\S]*?where id = '([a-z0-9_]+)'/g,
+      )) {
+        const existing = registry.get(m[2]!);
+        if (existing) registry.set(m[2]!, { start: existing.start, end: Number(m[1]) });
+      }
+    }
     for (const period of PERIODS) {
-      const row = new RegExp(`\\('${period.id}',\\s*'[^']*',\\s*(-?\\d+),\\s*(-?\\d+)`).exec(sql);
-      expect(row, `period ${period.id} is missing from the migration`).not.toBeNull();
-      expect(Number(row![1]), `${period.id} start`).toBe(period.startYear);
-      expect(Number(row![2]), `${period.id} end`).toBe(period.endYear);
+      const row = registry.get(period.id);
+      expect(row, `period ${period.id} is missing from the migrations`).toBeDefined();
+      expect(row!.start, `${period.id} start`).toBe(period.startYear);
+      expect(row!.end, `${period.id} end`).toBe(period.endYear);
     }
   });
 });
@@ -70,7 +88,9 @@ describe('showing years to people', () => {
 
   it('spans a period across the BCE/CE boundary without a year zero', () => {
     const ironAge = periodById('iron_age')!;
-    expect(formatPeriodSpan(ironAge)).toBe('800 BC – 43 BC');
+    // The Iron Age ends the year before the Roman invasion of AD 43, so its
+    // span genuinely crosses the boundary — and does so without a year zero.
+    expect(formatPeriodSpan(ironAge)).toBe('800 BC – AD 42');
     const roman = periodById('roman')!;
     expect(formatPeriodSpan(roman)).toBe('AD 43 – AD 409');
   });

@@ -35,7 +35,7 @@ export const PERIODS: readonly Period[] = [
   { id: 'mesolithic', name: 'Mesolithic', startYear: -10_000, endYear: -4_001, parentId: 'prehistory', note: 'Middle Stone Age.' },
   { id: 'neolithic', name: 'Neolithic', startYear: -4_000, endYear: -2_201, parentId: 'prehistory', note: 'New Stone Age; first farming.' },
   { id: 'bronze_age', name: 'Bronze Age', startYear: -2_200, endYear: -801, parentId: 'prehistory' },
-  { id: 'iron_age', name: 'Iron Age', startYear: -800, endYear: -43, parentId: 'prehistory', note: 'Ends conventionally at the Roman invasion.' },
+  { id: 'iron_age', name: 'Iron Age', startYear: -800, endYear: 42, parentId: 'prehistory', note: 'Ends conventionally at the Roman invasion of AD 43.' },
   { id: 'roman', name: 'Roman Britain', startYear: 43, endYear: 409 },
   { id: 'early_medieval', name: 'Anglo-Saxon & Viking', startYear: 410, endYear: 1065, note: 'Also called the Early Medieval period.' },
   { id: 'norman', name: 'Norman', startYear: 1066, endYear: 1153, note: 'From the Conquest.' },
@@ -113,6 +113,33 @@ export const MODE_TYPES: Record<DiscoveryMode, string[] | null> = {
   monuments: ['monument', 'garden', 'historic_landscape'],
 };
 
+/**
+ * How a selected year is applied.
+ *
+ *   all    no temporal restriction
+ *   at     records overlapping the selected year
+ *   until  records that had begun by then
+ *   from   records still running at or after it
+ *
+ * The names are the semantics. A record with no dates matches none of the
+ * three restrictive modes, because an undated thing must not acquire relevance
+ * to a year somebody happened to choose.
+ */
+export const TIME_MODES = {
+  All: 'all',
+  At: 'at',
+  Until: 'until',
+  From: 'from',
+} as const;
+export type TimeMode = (typeof TIME_MODES)[keyof typeof TIME_MODES];
+
+export const TIME_MODE_LABELS: Record<TimeMode, { label: string; hint: string }> = {
+  all: { label: 'All time', hint: 'No date restriction' },
+  at: { label: 'At this time', hint: 'Records spanning the selected year' },
+  until: { label: 'Up to this time', hint: 'Records that had begun by then' },
+  from: { label: 'From this time', hint: 'Records still standing after then' },
+};
+
 export interface DiscoveryState {
   /** Map centre and zoom. */
   lng: number;
@@ -122,32 +149,45 @@ export interface DiscoveryState {
   periodId: string | null;
   fromYear: number | null;
   toYear: number | null;
+  timeMode: TimeMode;
+  /** Signed year. Historical convention: no year zero. */
+  selectedYear: number | null;
   mode: DiscoveryMode;
   types: string[];
+  /** Display categories from the legend. */
+  categories: string[];
   requireImage: boolean;
   /** Slug of the place whose preview is open. */
   selected: string | null;
+  /** Slug of the person being followed. */
+  personSlug: string | null;
 }
 
 /**
- * Where a first-time visitor lands.
+ * Where a first-time visitor lands: the United Kingdom.
  *
- * Central Yorkshire at a zoom that shows the region as clusters, because the
- * honest first impression of Whilom is density — thousands of protected things
- * most people walk past — rather than a handful of famous pins.
+ * Not Yorkshire, even though Yorkshire is what is currently activated. The
+ * product's scope is the UK, and opening on the one region that happens to hold
+ * data would quietly redefine the product as a Yorkshire app. The coverage
+ * layer is what keeps that honest — the map says "here is the UK, and here is
+ * how far Whilom has got" rather than pretending the two are the same.
  */
 export const DEFAULT_STATE: DiscoveryState = {
-  lng: -1.55,
-  lat: 53.96,
-  zoom: 8,
+  lng: -2.9,
+  lat: 54.4,
+  zoom: 5.1,
   q: '',
   periodId: null,
   fromYear: null,
   toYear: null,
+  timeMode: 'all',
+  selectedYear: null,
   mode: DISCOVERY_MODES.Everything,
   types: [],
+  categories: [],
   requireImage: false,
   selected: null,
+  personSlug: null,
 };
 
 /** Below this the map asks for clusters; at or above it, individual places. */
@@ -181,10 +221,16 @@ export function stateFromParams(params: URLSearchParams): DiscoveryState {
     periodId: periodById(params.get('period')) ? params.get('period') : null,
     fromYear: parseOptionalYear(params.get('from')),
     toYear: parseOptionalYear(params.get('to')),
+    timeMode: (['all', 'at', 'until', 'from'] as string[]).includes(params.get('timeMode') ?? '')
+      ? (params.get('timeMode') as TimeMode)
+      : 'all',
+    selectedYear: parseOptionalYear(params.get('year')),
     mode,
     types: (params.get('types') ?? '').split(',').filter(Boolean),
+    categories: (params.get('cat') ?? '').split(',').filter(Boolean),
     requireImage: params.get('image') === '1',
     selected: params.get('place'),
+    personSlug: params.get('person'),
   };
 }
 
@@ -201,10 +247,14 @@ export function paramsFromState(state: DiscoveryState): URLSearchParams {
   if (state.periodId) params.set('period', state.periodId);
   if (state.fromYear !== null) params.set('from', String(state.fromYear));
   if (state.toYear !== null) params.set('to', String(state.toYear));
+  if (state.timeMode !== 'all') params.set('timeMode', state.timeMode);
+  if (state.selectedYear !== null) params.set('year', String(state.selectedYear));
   if (state.mode !== DEFAULT_STATE.mode) params.set('mode', state.mode);
   if (state.types.length) params.set('types', state.types.join(','));
+  if (state.categories.length) params.set('cat', state.categories.join(','));
   if (state.requireImage) params.set('image', '1');
   if (state.selected) params.set('place', state.selected);
+  if (state.personSlug) params.set('person', state.personSlug);
   return params;
 }
 
@@ -238,6 +288,7 @@ export interface MapPlace {
   thumbnail_url: string | null;
   survival_status: string | null;
   period_summary: string | null;
+  display_category: string;
 }
 
 export interface MapCluster {
@@ -247,6 +298,8 @@ export interface MapCluster {
   lat: number;
   sample_place_id: string;
   sample_name: string;
+  dominant_category: string | null;
+  category_count: number;
 }
 
 function temporalArgs(state: DiscoveryState) {
@@ -254,7 +307,26 @@ function temporalArgs(state: DiscoveryState) {
     period_id: state.periodId,
     from_year: state.fromYear,
     to_year: state.toYear,
+    time_mode: state.timeMode,
+    // Only sent when the mode actually uses it, so "All time" cannot be
+    // narrowed by a year left behind from an earlier selection.
+    selected_year: state.timeMode === 'all' ? null : state.selectedYear,
   };
+}
+
+/** True when anything is narrowing the results beyond the viewport. */
+export function hasActiveFilters(state: DiscoveryState): boolean {
+  return Boolean(
+    state.q ||
+      state.periodId ||
+      state.fromYear !== null ||
+      state.toYear !== null ||
+      (state.timeMode !== 'all' && state.selectedYear !== null) ||
+      state.types.length ||
+      state.categories.length ||
+      state.requireImage ||
+      state.personSlug,
+  );
 }
 
 /**
@@ -275,6 +347,7 @@ export async function fetchClusters(
   supabase: SupabaseClient,
   bounds: MapBounds,
   state: DiscoveryState,
+  personId?: string | null,
 ): Promise<MapCluster[]> {
   const { data, error } = await supabase.rpc('map_clusters', {
     bbox_sw_lng: bounds.swLng,
@@ -283,9 +356,11 @@ export async function fetchClusters(
     bbox_ne_lat: bounds.neLat,
     cell_degrees: cellDegreesForZoom(state.zoom),
     place_types: effectiveTypes(state),
+    categories: state.categories.length ? state.categories : null,
     q: state.q || null,
     require_image: state.requireImage,
     max_cells: 400,
+    person_id: personId ?? null,
     ...temporalArgs(state),
   });
   if (error) throw new Error(error.message);
@@ -296,6 +371,7 @@ export async function fetchPlaces(
   supabase: SupabaseClient,
   bounds: MapBounds,
   state: DiscoveryState,
+  personId?: string | null,
 ): Promise<MapPlace[]> {
   const { data, error } = await supabase.rpc('map_places', {
     bbox_sw_lng: bounds.swLng,
@@ -303,9 +379,11 @@ export async function fetchPlaces(
     bbox_ne_lng: bounds.neLng,
     bbox_ne_lat: bounds.neLat,
     place_types: effectiveTypes(state),
+    categories: state.categories.length ? state.categories : null,
     max_rows: 250,
     q: state.q || null,
     require_image: state.requireImage,
+    person_id: personId ?? null,
     ...temporalArgs(state),
   });
   if (error) throw new Error(error.message);
@@ -354,4 +432,223 @@ export function emptyStateMessage(state: DiscoveryState): { title: string; detai
       'Whilom currently covers Yorkshire and the surrounding area. Move the map, zoom out, ' +
       'or clear the filters.',
   };
+}
+
+// ---------------------------------------------------------------------------
+// Display categories and the map key
+// ---------------------------------------------------------------------------
+
+/**
+ * The ten groups the legend shows, mirroring `map_display_category` in 0031.
+ *
+ * Colour is never the only signal. Each group also carries a distinct symbol,
+ * because roughly one in twelve men has some degree of colour-vision deficiency
+ * and a map whose meaning is carried entirely by hue is a map they cannot read.
+ * The palette leans on lightness differences as well as hue for the same reason.
+ *
+ * The direction asked for — reddish buildings, gold monuments, green ruins — is
+ * kept; the exact values are darkened where needed so white text on them stays
+ * legible.
+ */
+export interface DisplayCategory {
+  id: string;
+  label: string;
+  /** Marker fill. Chosen for contrast against a pale basemap. */
+  colour: string;
+  /** Carried in the marker and the legend, so shape survives without colour. */
+  symbol: string;
+  hint: string;
+}
+
+export const DISPLAY_CATEGORIES: readonly DisplayCategory[] = [
+  { id: 'building', label: 'Buildings', colour: '#b3402f', symbol: '■', hint: 'Houses, halls, mills, stations' },
+  { id: 'religious', label: 'Religious', colour: '#6b4c9a', symbol: '✚', hint: 'Churches, chapels, abbeys, priories' },
+  { id: 'fortification', label: 'Castles & forts', colour: '#3f5d8c', symbol: '⬟', hint: 'Castles, forts, hillforts' },
+  { id: 'monument', label: 'Monuments', colour: '#c08a1e', symbol: '▲', hint: 'Crosses, memorials, statues' },
+  { id: 'ruin', label: 'Ruins & lost', colour: '#3f7a4a', symbol: '◗', hint: 'Ruined and lost structures' },
+  { id: 'archaeology', label: 'Archaeology', colour: '#8a6a3d', symbol: '◈', hint: 'Sites, barrows, villas, battlefields' },
+  { id: 'industrial', label: 'Industrial', colour: '#5c6970', symbol: '⚙', hint: 'Works, canals, railways' },
+  { id: 'military', label: 'Military', colour: '#4a5a35', symbol: '⬢', hint: 'Pillboxes, bunkers, airfields' },
+  { id: 'landscape', label: 'Landscape', colour: '#2f7d6f', symbol: '❦', hint: 'Parks, gardens, designed landscapes' },
+  { id: 'other', label: 'Other & unknown', colour: '#6f6f6f', symbol: '●', hint: 'Structures Whilom cannot yet classify' },
+];
+
+const CATEGORY_BY_ID = new Map(DISPLAY_CATEGORIES.map((c) => [c.id, c]));
+
+export function displayCategory(id: string | null | undefined): DisplayCategory {
+  return (id && CATEGORY_BY_ID.get(id)) || CATEGORY_BY_ID.get('other')!;
+}
+
+// ---------------------------------------------------------------------------
+// Coverage
+// ---------------------------------------------------------------------------
+
+export interface Coverage {
+  coveredFraction: number;
+  regionNames: string[];
+}
+
+/**
+ * What to say about coverage in this viewport.
+ *
+ * The distinction being protected: an empty map outside the activated region
+ * means Whilom has not got there yet. It does not mean the place has no
+ * history, and saying so — even by implication — would be false about somewhere
+ * people live.
+ */
+export function coverageMessage(coverage: Coverage | null): { level: 'none' | 'partial' | 'full'; text: string } | null {
+  if (!coverage) return null;
+  const f = coverage.coveredFraction;
+  if (f >= 0.98) return null; // Fully covered: say nothing, the map speaks.
+  if (f <= 0.02) {
+    return {
+      level: 'none',
+      text: 'Whilom has not activated detailed coverage here yet — this area has plenty of history, we just have not mapped it.',
+    };
+  }
+  return {
+    level: 'partial',
+    text: `Part of this view is outside Whilom's detailed coverage${
+      coverage.regionNames.length ? ` (currently ${coverage.regionNames.join(', ')})` : ''
+    }. Heritage beyond it has not been mapped yet.`,
+  };
+}
+
+export async function fetchCoverage(
+  supabase: SupabaseClient,
+  bounds: MapBounds,
+): Promise<Coverage | null> {
+  const { data, error } = await supabase.rpc('coverage_for_viewport', {
+    bbox_sw_lng: bounds.swLng,
+    bbox_sw_lat: bounds.swLat,
+    bbox_ne_lng: bounds.neLng,
+    bbox_ne_lat: bounds.neLat,
+  });
+  if (error) return null;
+  const row = (data as { covered_fraction: number; region_names: string[] }[] | null)?.[0];
+  if (!row) return null;
+  return { coveredFraction: row.covered_fraction ?? 0, regionNames: row.region_names ?? [] };
+}
+
+// ---------------------------------------------------------------------------
+// Period counts
+// ---------------------------------------------------------------------------
+
+export interface PeriodCount {
+  period_id: string;
+  display_name: string;
+  display_order: number;
+  place_count: number;
+}
+
+/**
+ * How many records Whilom associates with each period in this view.
+ *
+ * Emphatically NOT how many places existed then. With dated coverage around 1%
+ * of the corpus the two numbers differ by orders of magnitude, and the UI has
+ * to keep saying so.
+ */
+export async function fetchPeriodCounts(
+  supabase: SupabaseClient,
+  bounds: MapBounds,
+  state: DiscoveryState,
+): Promise<PeriodCount[]> {
+  const { data, error } = await supabase.rpc('period_counts_for_viewport', {
+    bbox_sw_lng: bounds.swLng,
+    bbox_sw_lat: bounds.swLat,
+    bbox_ne_lng: bounds.neLng,
+    bbox_ne_lat: bounds.neLat,
+    place_types: effectiveTypes(state),
+    q: state.q || null,
+  });
+  if (error) return [];
+  return (data ?? []) as PeriodCount[];
+}
+
+// ---------------------------------------------------------------------------
+// Search
+// ---------------------------------------------------------------------------
+
+export interface SearchResult {
+  kind: 'place' | 'person';
+  id: string;
+  slug: string;
+  display_name: string;
+  detail: string | null;
+  context: string | null;
+  lng: number | null;
+  lat: number | null;
+  rank: number;
+}
+
+export async function searchDiscovery(
+  supabase: SupabaseClient,
+  q: string,
+  maxRows = 12,
+): Promise<SearchResult[]> {
+  if (!q.trim()) return [];
+  const { data, error } = await supabase.rpc('search_discovery', { q, max_rows: maxRows });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as SearchResult[];
+}
+
+// ---------------------------------------------------------------------------
+// People
+// ---------------------------------------------------------------------------
+
+export interface PersonPlace {
+  place_id: string;
+  slug: string;
+  name: string;
+  place_type: string;
+  display_category: string;
+  lng: number;
+  lat: number;
+  predicate: string;
+  relationship_note: string | null;
+  in_coverage: boolean;
+}
+
+export interface RelatedPerson {
+  person_id: string;
+  slug: string;
+  name: string;
+  life_dates: string | null;
+  relation_kind: 'direct' | 'place';
+  relation_detail: string;
+  shared_places: number;
+}
+
+/** Predicate to the phrase a reader would use. */
+export function relationshipLabel(predicate: string): string {
+  const labels: Record<string, string> = {
+    built_by: 'designed or built',
+    owned_by: 'owned',
+    owned: 'owned',
+    lived_at: 'lived at',
+    born_at: 'born at',
+    died_at: 'died at',
+    buried_at: 'buried at',
+    participated_in: 'took part at',
+    associated_with: 'associated with',
+  };
+  return labels[predicate] ?? predicate.replace(/_/g, ' ');
+}
+
+export async function fetchPersonPlaces(
+  supabase: SupabaseClient,
+  personId: string,
+): Promise<PersonPlace[]> {
+  const { data, error } = await supabase.rpc('person_places', { p_person_id: personId, max_rows: 200 });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as PersonPlace[];
+}
+
+export async function fetchRelatedPeople(
+  supabase: SupabaseClient,
+  personId: string,
+): Promise<RelatedPerson[]> {
+  const { data, error } = await supabase.rpc('related_people', { p_person_id: personId, max_rows: 12 });
+  if (error) return [];
+  return (data ?? []) as RelatedPerson[];
 }

@@ -85,9 +85,15 @@ describe('named periods', () => {
   });
 
   it('produces negative years for prehistory', () => {
-    const [claim] = extractTemporalClaims('Iron Age hillfort');
-    expect(claim?.startYear).toBeLessThan(0);
-    expect(claim?.endYear).toBeLessThan(0);
+    // The Iron Age starts deep in BCE but ends at AD 42, the year before the
+    // Roman invasion — so its span legitimately crosses the boundary.
+    const [ironAge] = extractTemporalClaims('Iron Age hillfort');
+    expect(ironAge?.startYear).toBeLessThan(0);
+
+    // A period wholly before the common era stays negative at both ends.
+    const [bronzeAge] = extractTemporalClaims('Bronze Age round barrow');
+    expect(bronzeAge?.startYear).toBeLessThan(0);
+    expect(bronzeAge?.endYear).toBeLessThan(0);
   });
 
   it('never produces year zero', () => {
@@ -148,19 +154,51 @@ describe('things that look like periods and are not', () => {
   });
 });
 
-describe('the registry matches the migration', () => {
-  it('uses the same spans the database does', () => {
-    // Drift here would mean the map filters by one set of boundaries and the
-    // extractor writes years against another.
-    const sql = readFileSync(
-      fileURLToPath(new URL('../../supabase/migrations/0029_temporal_discovery.sql', import.meta.url)),
-      'utf8',
+describe('the registry matches the migrations', () => {
+  /**
+   * The registry as the database ends up holding it.
+   *
+   * Reading only the 0029 insert would compare against a value later migrations
+   * have corrected — which is precisely how an Iron Age ending at 43 BC instead
+   * of AD 42 survived a parity test that looked green.
+   */
+  const effectiveRegistry = (files: string[]) => {
+    const registry = new Map<string, { start: number; end: number }>();
+    for (const sql of files) {
+      for (const m of sql.matchAll(/\('([a-z0-9_]+)',\s*'[^']*',\s*(-?\d+),\s*(-?\d+)/g)) {
+        registry.set(m[1]!, { start: Number(m[2]), end: Number(m[3]) });
+      }
+      for (const m of sql.matchAll(
+        /update public\.historical_periods\s+set\s+end_year\s*=\s*(-?\d+)[\s\S]*?where id = '([a-z0-9_]+)'/g,
+      )) {
+        const existing = registry.get(m[2]!);
+        if (existing) registry.set(m[2]!, { start: existing.start, end: Number(m[1]) });
+      }
+    }
+    return registry;
+  };
+
+  it('uses the same spans the database ends up with', () => {
+    const files = ['0029_temporal_discovery.sql', '0034_iron_age_boundary.sql'].map((f) =>
+      readFileSync(fileURLToPath(new URL(`../../supabase/migrations/${f}`, import.meta.url)), 'utf8'),
     );
+    const registry = effectiveRegistry(files);
     for (const [id, span] of Object.entries(PERIOD_SPANS)) {
-      const row = new RegExp(`\\('${id}',\\s*'[^']*',\\s*(-?\\d+),\\s*(-?\\d+)`).exec(sql);
-      expect(row, `period ${id} missing from the migration`).not.toBeNull();
-      expect(Number(row![1]), `${id} start`).toBe(span.start);
-      expect(Number(row![2]), `${id} end`).toBe(span.end);
+      const row = registry.get(id);
+      expect(row, `period ${id} missing from the migrations`).toBeDefined();
+      expect(row!.start, `${id} start`).toBe(span.start);
+      expect(row!.end, `${id} end`).toBe(span.end);
+    }
+  });
+
+  it('leaves no year unclaimed between consecutive periods', () => {
+    // Not hypothetical: an Iron Age ending at 43 BC when Roman Britain begins at
+    // AD 43 left 84 years belonging to no period, invisible to every filter.
+    const ids = Object.keys(PERIOD_SPANS);
+    for (let i = 1; i < ids.length; i += 1) {
+      const previous = PERIOD_SPANS[ids[i - 1]!]!;
+      const current = PERIOD_SPANS[ids[i]!]!;
+      expect(current.start, `${ids[i]} should start where ${ids[i - 1]} ends`).toBe(previous.end + 1);
     }
   });
 });

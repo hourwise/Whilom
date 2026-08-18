@@ -49,7 +49,7 @@ export const PERIOD_SPANS: Record<string, { start: number; end: number }> = {
   mesolithic: { start: -10_000, end: -4_001 },
   neolithic: { start: -4_000, end: -2_201 },
   bronze_age: { start: -2_200, end: -801 },
-  iron_age: { start: -800, end: -43 },
+  iron_age: { start: -800, end: 42 },
   roman: { start: 43, end: 409 },
   early_medieval: { start: 410, end: 1065 },
   norman: { start: 1066, end: 1153 },
