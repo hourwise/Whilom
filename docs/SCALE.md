@@ -499,6 +499,49 @@ gate. **Bulk approval is not warranted**: six hours of review for a
 25,000-record regional import is not the bottleneck, and the whole queue is
 identity judgements a reviewer should actually make.
 
+## Query performance and storage
+
+Measured on ephemeral Supabase in CI, p50/p95 over 25 runs after warmup.
+
+| Query (p95, ms) | 1,000 | 5,000 | 25,000 |
+| --- | ---: | ---: | ---: |
+| Detail by slug | 0.035 | 0.054 | 0.101 |
+| Map pan (bounded area) | 0.275 | 0.828 | 2.267 |
+| Radius (5 km) | 0.298 | 0.525 | 1.928 |
+| Text search | 0.288 | 1.497 | 7.255 |
+| Text + type filter | 0.269 | 1.295 | 7.478 |
+
+Against the 300 ms gate the worst reading at 25,000 records is 7.5 ms, roughly
+40x of headroom. The spatial GiST index carries the map and radius queries as
+intended.
+
+| Storage | 1,000 | 5,000 | 25,000 |
+| --- | ---: | ---: | ---: |
+| `places` table | 713 KB | 3,129 KB | 15,237 KB |
+| Bytes per place | 710 | 629 | 615 |
+| Index bytes | 426 KB | 1,778 KB | 8,446 KB |
+
+Bytes per place *falls* as fixed overhead amortises. Growth is linear.
+
+### No tuning was applied, on purpose
+
+Full-text search is still not index-backed: at 25,000 rows the planner estimates
+a sequential scan (cost 1,249) marginally cheaper than the GIN index (cost
+1,208 plus heap access) and chooses it. Forcing the index gives 6.7 ms against
+the planner's 9.9 ms, so the crossover is close — but at 7 ms p95 against a
+300 ms gate this is not a performance problem, and changing the plan to win
+3 ms would be tuning against a number nobody is waiting on.
+
+The check that matters is that the index remains correct and usable: forced, it
+returns 2,076 rows for "church", exactly matching a from-scratch recomputation
+of the tsvector. Worth re-measuring at the next capacity gate, where the
+crossover will likely have passed.
+
+**No index was added in this batch.** The two candidate lookups map onto
+`places_location_gix` (already present) and an equality lookup on external
+identifiers, which is not yet needed because candidate generation runs in memory
+before anything is written.
+
 ## Same-source and cross-source, permanently separated
 
 `matching/source-relation.ts` now owns the distinction as a named, testable gate
