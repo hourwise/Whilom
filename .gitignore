@@ -48,3 +48,8 @@ tier-*.log
 commons-throughput.json
 scale-equivalence-*.json
 scale-oracle-*.json
+
+# Regional dataset cache (regenerate with `pnpm --filter @whilom/ingestion regional:capture`)
+ingestion/.regional-cache/
+regional-activation-*.json
+regional-*.sql
