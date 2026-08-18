@@ -254,14 +254,14 @@ describe("a person's places as markers", () => {
   };
 
   it('carries the identity and category the map needs to draw them', () => {
-    const [place] = personPlacesAsMapPlaces([row]);
+    const place = personPlacesAsMapPlaces([row])[0]!;
     expect(place.id).toBe('p1');
     expect(place.slug).toBe('st-marys');
     expect(place.display_category).toBe('religious');
   });
 
   it('leaves what the person projection does not carry as null rather than inventing it', () => {
-    const [place] = personPlacesAsMapPlaces([row]);
+    const place = personPlacesAsMapPlaces([row])[0]!;
     expect(place.thumbnail_url).toBeNull();
     expect(place.period_summary).toBeNull();
     expect(place.primary_designation).toBeNull();
