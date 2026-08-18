@@ -15,10 +15,14 @@ import {
   fetchClusters,
   fetchCoverage,
   fetchPeriodCounts,
+  fetchPersonBySlug,
+  fetchPersonPlaces,
   fetchPlaces,
   hasActiveFilters,
   paramsFromState,
   periodById,
+  personPlacesAsMapPlaces,
+  viewportForPlaces,
 } from '@/lib/discovery';
 import type {
   Coverage,
@@ -93,6 +97,8 @@ export function ExploreClient({
   const [showFilters, setShowFilters] = useState(false);
   const [flyToken, setFlyToken] = useState(0);
   const requestId = useRef(0);
+  /** The person the map has already been framed around. */
+  const framedPerson = useRef<string | null>(null);
 
   const showingPlaces = state.zoom >= PLACE_ZOOM_THRESHOLD || person !== null;
 
@@ -113,6 +119,38 @@ export function ExploreClient({
     window.history.replaceState(null, '', `${path}?${params.toString()}`);
   }, [state, immersive]);
 
+  // --- A shared link ---------------------------------------------------------
+  // ?person=<slug> arrives with no meaning attached. Resolve it once on mount
+  // so a link somebody sent opens on the person it was sent about, rather than
+  // restoring the parameter and quietly ignoring it.
+  useEffect(() => {
+    const slug = initial.personSlug;
+    if (!slug) return;
+    let cancelled = false;
+    void (async () => {
+      const found = await fetchPersonBySlug(supabase, slug);
+      if (cancelled) return;
+      if (found) {
+        setPerson({
+          slug: found.slug,
+          id: found.id,
+          name: found.display_name,
+          detail: found.detail,
+          context: found.context,
+        });
+      } else {
+        // A stale or edited link drops the person and leaves a working map.
+        patch({ personSlug: null });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Mount only: this restores the link the page was opened with, and must not
+    // re-run when the user later chooses somebody else.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // --- Results --------------------------------------------------------------
   useEffect(() => {
     if (!bounds) return;
@@ -122,16 +160,29 @@ export function ExploreClient({
 
     void (async () => {
       try {
-        // A person's places are a set, not a viewport: following someone should
-        // show everywhere they appear rather than only what is on screen.
-        if (showingPlaces) {
-          const rows = await fetchPlaces(supabase, bounds, state, person?.id ?? null);
+        // A person is a set of places, not a region. Asking map_places for them
+        // inside the current viewport would show only the part of a life that
+        // happened to be on screen — and at the default UK view it would exceed
+        // the bounding-box limit outright and fail. So following someone leaves
+        // the viewport query behind entirely.
+        if (person) {
+          const rows = await fetchPersonPlaces(supabase, person.id);
+          if (id !== requestId.current) return;
+          setPlaces(personPlacesAsMapPlaces(rows));
+          setClusters([]);
+          // Frame them, once, when the person changes rather than on every
+          // subsequent pan — otherwise the map would fight the user.
+          if (person.id !== framedPerson.current) {
+            framedPerson.current = person.id;
+            const view = viewportForPlaces(rows);
+            if (view) flyTo(view.lng, view.lat, view.zoom);
+          }
+        } else if (showingPlaces) {
+          const rows = await fetchPlaces(supabase, bounds, state, null);
           if (id !== requestId.current) return;
           setPlaces(rows);
           setClusters([]);
         } else {
-          // Following a person always shows individual places, so this branch
-          // is only reached with no person selected.
           const rows = await fetchClusters(supabase, bounds, state, null);
           if (id !== requestId.current) return;
           setClusters(rows);
@@ -144,7 +195,7 @@ export function ExploreClient({
         if (id === requestId.current) setLoading(false);
       }
     })();
-  }, [bounds, state, showingPlaces, supabase, person]);
+  }, [bounds, state, showingPlaces, supabase, person, flyTo]);
 
   // Coverage and period counts move with the viewport but not with every filter
   // keystroke, so they are fetched separately and less often.

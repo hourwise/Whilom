@@ -14,7 +14,9 @@ import {
   formatYear,
   paramsFromState,
   periodById,
+  personPlacesAsMapPlaces,
   stateFromParams,
+  viewportForPlaces,
 } from './discovery';
 
 describe('the period vocabulary', () => {
@@ -203,5 +205,65 @@ describe('empty results are explained honestly', () => {
   it('says where Whilom actually has coverage when nothing else is filtered', () => {
     const message = emptyStateMessage(DEFAULT_STATE);
     expect(message.detail).toMatch(/Yorkshire/);
+  });
+});
+
+describe('framing a person', () => {
+  const at = (lng: number, lat: number) => ({ lng, lat });
+
+  it('has nothing to frame when a person has no published places', () => {
+    expect(viewportForPlaces([])).toBeNull();
+  });
+
+  it('centres on the places it was given', () => {
+    const view = viewportForPlaces([at(-1.6, 53.9), at(-1.4, 54.1)]);
+    expect(view?.lng).toBeCloseTo(-1.5, 6);
+    expect(view?.lat).toBeCloseTo(54.0, 6);
+  });
+
+  it('zooms in close on a single building rather than leaving it in an empty map', () => {
+    const view = viewportForPlaces([at(-1.08, 53.96)]);
+    expect(view?.zoom).toBeGreaterThan(12);
+  });
+
+  it('pulls back for a life spread across a county', () => {
+    const wide = viewportForPlaces([at(-2.4, 53.4), at(-0.4, 54.6)]);
+    const narrow = viewportForPlaces([at(-1.09, 53.95), at(-1.07, 53.97)]);
+    expect(wide!.zoom).toBeLessThan(narrow!.zoom);
+  });
+
+  it('never zooms past the whole-country view or past a single street', () => {
+    const view = viewportForPlaces([at(-8, 50), at(2, 60)]);
+    expect(view!.zoom).toBeGreaterThanOrEqual(5);
+    expect(view!.zoom).toBeLessThanOrEqual(15);
+  });
+});
+
+describe("a person's places as markers", () => {
+  const row = {
+    place_id: 'p1',
+    slug: 'st-marys',
+    name: "St Mary's",
+    place_type: 'church',
+    display_category: 'religious',
+    lng: -1.08,
+    lat: 53.96,
+    predicate: 'built_by',
+    relationship_note: null,
+    in_coverage: true,
+  };
+
+  it('carries the identity and category the map needs to draw them', () => {
+    const [place] = personPlacesAsMapPlaces([row]);
+    expect(place.id).toBe('p1');
+    expect(place.slug).toBe('st-marys');
+    expect(place.display_category).toBe('religious');
+  });
+
+  it('leaves what the person projection does not carry as null rather than inventing it', () => {
+    const [place] = personPlacesAsMapPlaces([row]);
+    expect(place.thumbnail_url).toBeNull();
+    expect(place.period_summary).toBeNull();
+    expect(place.primary_designation).toBeNull();
   });
 });

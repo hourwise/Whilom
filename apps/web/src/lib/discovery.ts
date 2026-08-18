@@ -644,6 +644,78 @@ export async function fetchPersonPlaces(
   return (data ?? []) as PersonPlace[];
 }
 
+/**
+ * Turn the slug in a shared link back into a person.
+ *
+ * Returns null rather than throwing when nothing matches: a stale or edited
+ * link should drop the person and leave a working map, not an error screen.
+ */
+export type ResolvedPerson = Pick<
+  SearchResult,
+  'kind' | 'id' | 'slug' | 'display_name' | 'detail' | 'context'
+>;
+
+export async function fetchPersonBySlug(
+  supabase: SupabaseClient,
+  slug: string,
+): Promise<ResolvedPerson | null> {
+  const { data, error } = await supabase.rpc('person_by_slug', { p_slug: slug });
+  if (error) return null;
+  const row = (data ?? [])[0] as ResolvedPerson | undefined;
+  return row ?? null;
+}
+
+/**
+ * A person's places as map markers.
+ *
+ * Deliberately not `fetchPlaces` with a person filter: that is bounded by the
+ * viewport, so following someone would show only the part of their life that
+ * happened to be on screen — and at the default UK view it would exceed the
+ * bounding-box limit outright. A person is a set of places, not a region.
+ */
+export function personPlacesAsMapPlaces(rows: PersonPlace[]): MapPlace[] {
+  return rows.map((r) => ({
+    id: r.place_id,
+    slug: r.slug,
+    name: r.name,
+    place_type: r.place_type,
+    lng: r.lng,
+    lat: r.lat,
+    display_category: r.display_category,
+    // Not carried by the person projection. Null is the honest value; the
+    // place preview fetches the full record when one is opened.
+    location_accuracy_m: null,
+    primary_designation: null,
+    thumbnail_url: null,
+    survival_status: null,
+    period_summary: null,
+  }));
+}
+
+/**
+ * A viewport that contains every one of a person's places.
+ *
+ * Zoom is derived from the widest span so that someone with one building and
+ * someone who worked across a county both end up framed rather than either
+ * being lost in an empty map or cropped.
+ */
+export function viewportForPlaces(
+  rows: { lng: number; lat: number }[],
+): { lng: number; lat: number; zoom: number } | null {
+  if (rows.length === 0) return null;
+  const lngs = rows.map((r) => r.lng);
+  const lats = rows.map((r) => r.lat);
+  const west = Math.min(...lngs);
+  const east = Math.max(...lngs);
+  const south = Math.min(...lats);
+  const north = Math.max(...lats);
+  // Longitude degrees are narrower than latitude degrees at UK latitudes, so
+  // compare them on a common footing before picking a zoom.
+  const span = Math.max((east - west) * Math.cos((north + south) / 2 * Math.PI / 180), north - south);
+  const zoom = span <= 0.005 ? 15 : Math.max(5, Math.min(15, Math.log2(180 / span) - 1.2));
+  return { lng: (west + east) / 2, lat: (south + north) / 2, zoom };
+}
+
 export async function fetchRelatedPeople(
   supabase: SupabaseClient,
   personId: string,

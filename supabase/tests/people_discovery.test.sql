@@ -6,7 +6,7 @@
 
 begin;
 create extension if not exists pgtap;
-select plan(34);
+select plan(36);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'user@example.test'),
@@ -95,6 +95,15 @@ select is(
 select ok(
   (select count(*) from public.search_discovery('Jane', 3)) <= 6,
   'results are capped per kind');
+
+-- A shared link carries a slug and nothing else, so the slug has to be enough.
+select is(
+  (select display_name from public.person_by_slug('jane-smith-q9')),
+  'Jane Smith', 'a link opens on the person it was sent about');
+
+select is(
+  (select count(*) from public.person_by_slug('draft-person-q8')),
+  0::bigint, 'and a link to an unpublished person resolves to nothing at all');
 
 -- ---------------------------------------------------------------------------
 -- A person's places
