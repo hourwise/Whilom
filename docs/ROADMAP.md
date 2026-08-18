@@ -87,12 +87,27 @@ required for CI correctness. There is no hosted Supabase environment.
 
 ## Phase 2 — Data MVP 🟡
 
-Blocked on Phase 0B for anything national; the bounded POC is under way. First
-ingest connectors (Historic England / NHLE, Wikidata, OSM…), each a modular
-adapter under `ingestion/sources`. Populate places, categories, coordinates,
-designations, source records, basic dates/periods, initial imagery and
-relationships. Build the duplicate matcher, conflict queue and manual review
-tool. See [INGESTION.md](INGESTION.md).
+First ingest connectors (Historic England / NHLE, Wikidata, Wikimedia Commons,
+OSM…), each a modular adapter under `ingestion/sources`. Populate places,
+categories, coordinates, designations, source records, basic dates/periods,
+initial imagery and relationships. Build the duplicate matcher, conflict queue
+and manual review tool. See [INGESTION.md](INGESTION.md).
+
+### Phase 2A — Scale gate ✅ (staged experiment to 5,000 records)
+
+Before any regional import, the pipeline was run against **1,000 → 2,500 →
+5,000 real NHLE records** with health gates declared and committed *before the
+first tier ran*. The experiment found — and the batch fixed — a class of false
+merge that was structurally invisible at POC scale: at 5,000 records, 17 of 20
+audited automatic matches were wrong, because the statutory list names curtilage
+structures after the buildings they stand beside and only becomes dense enough
+to produce the collision at a few thousand records in one region.
+
+Full results and the readiness verdict are in [SCALE.md](SCALE.md). The standing
+consequence for this phase is that **a regional import is supportable and a
+national one is not yet**: matching compares each candidate against the whole
+accumulated corpus, which is quadratic and will not survive another order of
+magnitude without spatial blocking.
 
 ## Phase 3 — Website MVP 🟡
 
