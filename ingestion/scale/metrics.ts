@@ -29,6 +29,10 @@ export interface MatchWorkStats extends TimingStats {
   totalComparisons: number;
   /** Comparisons the 5km distance veto discarded before scoring. */
   vetoedByDistance: number;
+  /** Comparisons discarded because the names denote different things. */
+  vetoedByName: number;
+  /** Comparisons discarded because one source's register lists them separately. */
+  vetoedByRegister: number;
 }
 
 export interface ReviewPressure {
@@ -102,6 +106,8 @@ export interface TierMetrics {
     outcomes: Record<MatchOutcome, number>;
     comparisons: Record<ComparisonOutcome, number>;
     duplicatesWithinRun: number;
+    /** Matches where both records came from the same source. */
+    withinSourceMatches: number;
     conflicts: number;
     conflictRate: number;
     autoMatchRate: number;

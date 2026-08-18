@@ -107,6 +107,13 @@ export interface RunReport {
   outcomes: Record<MatchOutcome, number>;
   /** Matches (confident or review) against another record in the same run. */
   duplicatesWithinRun: number;
+  /**
+   * Matches where both records came from the same source. These are one
+   * source's overlapping records — a duplicate, or two designations over the
+   * same ground — not a disagreement between sources, so they are counted
+   * here and deliberately kept out of `comparisons` and `conflicts`.
+   */
+  withinSourceMatches: number;
   /** Total field-level disagreements raised. */
   conflicts: number;
   /**
@@ -155,6 +162,11 @@ export function candidateAsCanonical(candidate: PlaceCandidate, id: string): Can
     designationReferences: candidate.designations
       .map((d) => d.reference)
       .filter((r): r is string => typeof r === 'string'),
+    sourceIdentity: {
+      sourceId: candidate.provenance.sourceId,
+      sourceRecordId: candidate.provenance.sourceRecordId,
+      designations: candidate.designations.map((d) => d.designation).sort(),
+    },
     ...(candidate.postcode ? { postcode: candidate.postcode } : {}),
     ...(candidate.town ? { town: candidate.town } : {}),
     ...(candidate.county ? { county: candidate.county } : {}),
@@ -177,6 +189,7 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
     enriched: 0,
     outcomes: emptyOutcomes(),
     duplicatesWithinRun: 0,
+    withinSourceMatches: 0,
     conflicts: 0,
     genericallyTyped: 0,
     comparisons: emptyComparisons(),
@@ -282,13 +295,27 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
     // Only meaningful once we believe two records describe one place. Identity
     // and agreement are separate questions: deciding they are the same site
     // says nothing about whether the sources agree about it.
+    //
+    // And it is only meaningful when there really are two sources. Running the
+    // comparator over two records from the SAME source asks a question that
+    // cannot be answered — Historic England does not disagree with itself, it
+    // holds several designations over overlapping ground, so a listed building
+    // and the scheduled monument around it differ in type and position by
+    // design. The 1,000-record scale tier surfaced this: every one of its 142
+    // "cross-source conflicts" was NHLE compared against NHLE, inflating the
+    // conflict rate to 23.9% and, worse, would have told a reviewer that two
+    // sources disagreed when only one source was ever involved.
     let comparison: SourceComparison | undefined;
     if (decision.matchedPlaceId) {
       const counterpart = candidateById.get(decision.matchedPlaceId);
       if (counterpart) {
-        comparison = compareSources(counterpart, candidate);
-        report.comparisons[comparison.outcome] += 1;
-        report.conflicts += comparison.conflicts.length;
+        if (counterpart.provenance.sourceId === candidate.provenance.sourceId) {
+          report.withinSourceMatches += 1;
+        } else {
+          comparison = compareSources(counterpart, candidate);
+          report.comparisons[comparison.outcome] += 1;
+          report.conflicts += comparison.conflicts.length;
+        }
       }
     }
     if (decision.outcome === MatchOutcome.MatchReview && !comparison) {

@@ -45,14 +45,29 @@ export function buildTierFixture(size: number): TierFixture {
   }
 
   const cache = JSON.parse(readFileSync(CACHE_FILE, 'utf8')) as CacheFile;
-  const included = new Set(manifest.order.slice(0, size));
+
+  // Tier membership is a MULTISET, not a set. The NHLE FeatureServer returns
+  // one row per geometry part, so a multi-part designation arrives more than
+  // once under a single ListEntry — Saltaire and Studley Royal both do, being
+  // World Heritage Sites with separate core and buffer polygons. Those repeats
+  // are real rows a production import would receive, and deduplicating them is
+  // the matcher's job, so the experiment keeps them rather than quietly
+  // filtering them out and flattering its own duplicate rate.
+  const remaining = new Map<number, number>();
+  for (const listEntry of manifest.order.slice(0, size)) {
+    remaining.set(listEntry, (remaining.get(listEntry) ?? 0) + 1);
+  }
 
   const mix: Record<string, number> = {};
   const layers = cache.layers
     .map((layer) => {
       const features = layer.features.filter((feature) => {
         const listEntry = feature.attributes['ListEntry'];
-        return typeof listEntry === 'number' && included.has(listEntry);
+        if (typeof listEntry !== 'number') return false;
+        const left = remaining.get(listEntry) ?? 0;
+        if (left === 0) return false;
+        remaining.set(listEntry, left - 1);
+        return true;
       });
       if (features.length > 0) mix[layer.layerName] = features.length;
       return { ...layer, features };

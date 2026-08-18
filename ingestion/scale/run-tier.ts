@@ -14,7 +14,7 @@
  */
 
 import { cpus } from 'node:os';
-import { writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HistoricEnglandNhleAdapter } from '../sources/historic-england/nhle-adapter';
@@ -25,7 +25,7 @@ import { MatchOutcome } from '../pipeline/candidate';
 import type { MatchStats } from '../matching/matcher';
 import { GATES, mayProceed } from './gates';
 import type { GateResult } from './gates';
-import { buildTierFixture, isTierSize } from './tier';
+import { TIER_SIZES, buildTierFixture, isTierSize } from './tier';
 import { evenSample, round, timingStats } from './metrics';
 import type { QualitySample, ReviewPressure, TierMetrics } from './metrics';
 
@@ -55,6 +55,7 @@ function reviewCause(decided: DecidedCandidate): string {
     return `sources disagree on ${fields || 'an unnamed field'}`;
   }
   const why = decision.rationale.split('needs review: ')[1] ?? decision.rationale;
+  if (why.includes('protects a landscape')) return 'landscape designation versus a structure inside it';
   if (why.includes('the name is not distinctive')) return 'name is not distinctive';
   if (why.includes('scores almost as well')) return 'two candidates score alike';
   if (why.includes('outside the')) return 'position outside the agreement radius';
@@ -131,11 +132,28 @@ function sampleFor(
   };
 }
 
+/**
+ * Load the tier immediately below this one, if it has already been run.
+ *
+ * G5 asks how matching cost GROWS, which no single tier can answer. Rather
+ * than re-running the smaller tier, the ladder reads the result it already
+ * wrote — and if that file is absent the gate reports itself unevaluated
+ * rather than quietly passing.
+ */
+function loadPreviousTier(tier: number): TierMetrics | undefined {
+  const index = TIER_SIZES.indexOf(tier as (typeof TIER_SIZES)[number]);
+  const previousTier = index > 0 ? TIER_SIZES[index - 1] : undefined;
+  if (previousTier === undefined) return undefined;
+  const path = resolve(process.cwd(), `scale-results-${previousTier}.json`);
+  if (!existsSync(path)) return undefined;
+  return JSON.parse(readFileSync(path, 'utf8')) as TierMetrics;
+}
+
 export async function runTier(tier: number): Promise<TierMetrics> {
   const fixture = buildTierFixture(tier);
   const startedAt = new Date();
 
-  const matchStats: MatchStats = { comparisons: 0, vetoedByDistance: 0 };
+  const matchStats: MatchStats = { comparisons: 0, vetoedByDistance: 0, vetoedByName: 0, vetoedByRegister: 0 };
   const normaliseSamples: number[] = [];
   const validateSamples: number[] = [];
   const matchSamples: number[] = [];
@@ -215,6 +233,7 @@ export async function runTier(tier: number): Promise<TierMetrics> {
       outcomes,
       comparisons: report.comparisons,
       duplicatesWithinRun: report.duplicatesWithinRun,
+      withinSourceMatches: report.withinSourceMatches,
       conflicts: report.conflicts,
       conflictRate: valid > 0 ? round(report.conflicts / valid, 5) : 0,
       autoMatchRate: valid > 0 ? round(autoMatched / valid, 5) : 0,
@@ -226,6 +245,8 @@ export async function runTier(tier: number): Promise<TierMetrics> {
         ),
         totalComparisons: matchStats.comparisons,
         vetoedByDistance: matchStats.vetoedByDistance,
+        vetoedByName: matchStats.vetoedByName,
+        vetoedByRegister: matchStats.vetoedByRegister,
       },
       conflictFields: [...conflictFields.entries()]
         .map(([field, count]) => ({ field, count }))
@@ -254,7 +275,7 @@ export async function runTier(tier: number): Promise<TierMetrics> {
     proceeded: false,
   };
 
-  metrics.gates = evaluateGates(metrics);
+  metrics.gates = evaluateGates(metrics, loadPreviousTier(tier));
   metrics.proceeded = mayProceed(metrics.gates);
   return metrics;
 }
