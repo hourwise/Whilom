@@ -30,7 +30,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               <small>History, where it happened.</small>
             </Link>
             <nav className="nav">
-              <Link href="/discover">Discover</Link>
+              <Link href="/explore">Explore</Link>
+              <Link href="/discover">Browse</Link>
               {user ? (
                 <>
                   <Link href="/account">Account</Link>

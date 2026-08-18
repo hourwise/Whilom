@@ -580,6 +580,44 @@ export type Database = {
           },
         ]
       }
+      historical_periods: {
+        Row: {
+          display_name: string
+          display_order: number
+          end_year: number
+          id: string
+          note: string | null
+          parent_id: string | null
+          start_year: number
+        }
+        Insert: {
+          display_name: string
+          display_order: number
+          end_year: number
+          id: string
+          note?: string | null
+          parent_id?: string | null
+          start_year: number
+        }
+        Update: {
+          display_name?: string
+          display_order?: number
+          end_year?: number
+          id?: string
+          note?: string | null
+          parent_id?: string | null
+          start_year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historical_periods_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "historical_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       image_rights: {
         Row: {
           attribution: string | null
@@ -1804,6 +1842,7 @@ export type Database = {
           slug: string
           status: Database["public"]["Enums"]["moderation_state"]
           summary: string | null
+          survival_status: Database["public"]["Enums"]["survival_status"] | null
           town: string | null
           trust_level: Database["public"]["Enums"]["trust_level"]
           updated_at: string
@@ -1833,6 +1872,9 @@ export type Database = {
           slug: string
           status?: Database["public"]["Enums"]["moderation_state"]
           summary?: string | null
+          survival_status?:
+            | Database["public"]["Enums"]["survival_status"]
+            | null
           town?: string | null
           trust_level?: Database["public"]["Enums"]["trust_level"]
           updated_at?: string
@@ -1862,6 +1904,9 @@ export type Database = {
           slug?: string
           status?: Database["public"]["Enums"]["moderation_state"]
           summary?: string | null
+          survival_status?:
+            | Database["public"]["Enums"]["survival_status"]
+            | null
           town?: string | null
           trust_level?: Database["public"]["Enums"]["trust_level"]
           updated_at?: string
@@ -2304,6 +2349,82 @@ export type Database = {
           url?: string | null
         }
         Relationships: []
+      }
+      temporal_associations: {
+        Row: {
+          association_type: Database["public"]["Enums"]["temporal_association_type"]
+          confidence: number | null
+          created_at: string
+          derivation: string | null
+          end_year: number | null
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          id: string
+          original_text: string | null
+          period_id: string | null
+          precision: Database["public"]["Enums"]["temporal_precision"]
+          source_id: string | null
+          source_record_id: string | null
+          start_year: number | null
+          status: Database["public"]["Enums"]["moderation_state"]
+        }
+        Insert: {
+          association_type: Database["public"]["Enums"]["temporal_association_type"]
+          confidence?: number | null
+          created_at?: string
+          derivation?: string | null
+          end_year?: number | null
+          entity_id: string
+          entity_type?: Database["public"]["Enums"]["entity_type"]
+          id?: string
+          original_text?: string | null
+          period_id?: string | null
+          precision?: Database["public"]["Enums"]["temporal_precision"]
+          source_id?: string | null
+          source_record_id?: string | null
+          start_year?: number | null
+          status?: Database["public"]["Enums"]["moderation_state"]
+        }
+        Update: {
+          association_type?: Database["public"]["Enums"]["temporal_association_type"]
+          confidence?: number | null
+          created_at?: string
+          derivation?: string | null
+          end_year?: number | null
+          entity_id?: string
+          entity_type?: Database["public"]["Enums"]["entity_type"]
+          id?: string
+          original_text?: string | null
+          period_id?: string | null
+          precision?: Database["public"]["Enums"]["temporal_precision"]
+          source_id?: string | null
+          source_record_id?: string | null
+          start_year?: number | null
+          status?: Database["public"]["Enums"]["moderation_state"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "temporal_associations_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "historical_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temporal_associations_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temporal_associations_source_record_id_fkey"
+            columns: ["source_record_id"]
+            isOneToOne: false
+            referencedRelation: "source_records"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tips: {
         Row: {
@@ -2944,14 +3065,45 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_editor: { Args: never; Returns: boolean }
       is_moderator: { Args: never; Returns: boolean }
+      map_clusters: {
+        Args: {
+          bbox_ne_lat: number
+          bbox_ne_lng: number
+          bbox_sw_lat: number
+          bbox_sw_lng: number
+          cell_degrees?: number
+          designations?: string[]
+          from_year?: number
+          max_cells?: number
+          period_id?: string
+          place_types?: string[]
+          q?: string
+          require_image?: boolean
+          to_year?: number
+        }
+        Returns: {
+          cell_key: string
+          lat: number
+          lng: number
+          place_count: number
+          sample_name: string
+          sample_place_id: string
+        }[]
+      }
       map_places: {
         Args: {
           bbox_ne_lat: number
           bbox_ne_lng: number
           bbox_sw_lat: number
           bbox_sw_lng: number
+          designations?: string[]
+          from_year?: number
           max_rows?: number
+          period_id?: string
           place_types?: string[]
+          q?: string
+          require_image?: boolean
+          to_year?: number
         }
         Returns: {
           id: string
@@ -2959,14 +3111,20 @@ export type Database = {
           lng: number
           location_accuracy_m: number
           name: string
+          period_summary: string
           place_type: string
           primary_designation: string
           slug: string
+          survival_status: string
           thumbnail_url: string
         }[]
       }
       map_thumbnail_for: { Args: { p_place_id: string }; Returns: string }
       place_is_public: { Args: { p_place_id: string }; Returns: boolean }
+      place_matches_period: {
+        Args: { p_period_id: string; p_place_id: string }
+        Returns: boolean
+      }
       preview_import_candidate: {
         Args: { p_candidate_id: string }
         Returns: Json
@@ -3240,6 +3398,32 @@ export type Database = {
         | "museum"
         | "archive"
         | "editorial"
+      survival_status:
+        | "surviving"
+        | "partial"
+        | "ruined"
+        | "demolished"
+        | "lost"
+        | "archaeological"
+        | "unknown"
+      temporal_association_type:
+        | "built"
+        | "existed"
+        | "altered"
+        | "used_as"
+        | "event"
+        | "lost"
+        | "associated"
+      temporal_precision:
+        | "exact_year"
+        | "circa"
+        | "decade"
+        | "century"
+        | "period"
+        | "range"
+        | "before"
+        | "after"
+        | "unknown"
       transport_mode: "walking" | "cycling" | "driving" | "public_transport"
       trust_level:
         | "official_source"
@@ -3593,6 +3777,35 @@ export const Constants = {
         "museum",
         "archive",
         "editorial",
+      ],
+      survival_status: [
+        "surviving",
+        "partial",
+        "ruined",
+        "demolished",
+        "lost",
+        "archaeological",
+        "unknown",
+      ],
+      temporal_association_type: [
+        "built",
+        "existed",
+        "altered",
+        "used_as",
+        "event",
+        "lost",
+        "associated",
+      ],
+      temporal_precision: [
+        "exact_year",
+        "circa",
+        "decade",
+        "century",
+        "period",
+        "range",
+        "before",
+        "after",
+        "unknown",
       ],
       transport_mode: ["walking", "cycling", "driving", "public_transport"],
       trust_level: [

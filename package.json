@@ -2,7 +2,7 @@
   "name": "whilom",
   "version": "0.0.0",
   "private": true,
-  "description": "UK heritage discovery, research and travel platform — web + mobile companion on a shared Supabase backend.",
+  "description": "UK heritage discovery, research and travel platform \u2014 web + mobile companion on a shared Supabase backend.",
   "packageManager": "pnpm@9.12.0",
   "engines": {
     "node": ">=20.11.0"
@@ -17,7 +17,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "web": "turbo run dev --filter=@whilom/web",
     "mobile": "turbo run dev --filter=@whilom/mobile",
-    "db:types": "supabase gen types typescript --local > packages/database/src/generated/database.types.ts"
+    "db:types": "supabase gen types typescript --local > packages/database/src/generated/database.types.ts",
+    "check:workflows": "node scripts/check-workflows.mjs"
   },
   "pnpm": {
     "comment": "Single React version across the workspace (Expo 52 needs 18.3.x; Next 15 supports it) to avoid duplicate-React runtime errors.",

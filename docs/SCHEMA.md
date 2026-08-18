@@ -236,3 +236,31 @@ can support attribution for that exact file. A map marker is a publication like
 any other, and "from Wikimedia Commons" is not a licence.
 
 Held by 16 assertions in `supabase/tests/map_contract.test.sql`.
+
+---
+
+## Temporal discovery (0029) and map v2 (0030)
+
+`historical_periods` is a navigation vocabulary — 21 stops from the Palaeolithic
+to today. Boundaries are UI conventions, deliberately approximate, and never
+overwrite what a source claimed.
+
+`temporal_associations` holds provenance-backed claims about when an entity
+relates to time: signed years on the historical convention (no year zero,
+enforced by check constraint), a `temporal_precision` that can honestly say
+`period` or `century`, the source's own words, and a stated derivation so a
+claim can be audited or withdrawn. Association types keep *what was here then*
+(`built`, `existed`) apart from *what happened then* (`event`, `used_as`), which
+is what lets those become separate discovery modes later.
+
+`places.survival_status` is the lost-places seam. NULL for every current record,
+because the sources do not say and a guessed "surviving" would be invented.
+
+0030 adds `map_clusters` for server-side density aggregation and extends
+`map_places` with temporal, text, designation and image filters. Both are
+SECURITY INVOKER, both revoke EXECUTE from PUBLIC before granting it explicitly,
+and filters apply before aggregation so a cluster count always describes what
+was asked for.
+
+Held by 48 assertions across `map_contract`, `map_clusters` and
+`temporal_discovery`.

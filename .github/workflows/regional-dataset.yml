@@ -128,6 +128,42 @@ jobs:
           jq -r '"automatic merges: \(.automaticMerges.total)"' regional-audit.json
           jq -r '.provenance' regional-audit.json
 
+      # --- Discovery readiness ---------------------------------------------
+      # The map has to survive the real dataset, not a fixture. Gates declared
+      # here before the run: no query may hand over the corpus, and the worst
+      # p95 must stay under the same 300ms used for every earlier query gate.
+      - name: Discovery readiness
+        working-directory: ingestion
+        run: |
+          set -o pipefail
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -t -A -f ../supabase/regional/discovery.sql \
+            | tail -n 1 > regional-discovery.json
+          jq -e . regional-discovery.json > /dev/null
+
+          jq -r '"published places: \(.publishedPlaces)"' regional-discovery.json
+          jq -r '"temporal: \(.temporal.placesWithTemporal) places (\(.temporal.coverageRate * 100 | . * 100 | round / 100)%), \(.temporal.associations) claims"' regional-discovery.json
+          jq -r '.scenarios[] | "  \(.scenario)/\(.queryKind)  p50 \(.p50Ms)ms  p95 \(.p95Ms)ms  rows \(.rowsReturned)  places \(.placesRepresented)  \(.payloadBytes)B"' regional-discovery.json
+
+          node -e '
+            const r = JSON.parse(require("fs").readFileSync("regional-discovery.json", "utf8"));
+            let failed = 0;
+            const check = (id, ok, observed) => {
+              console.log(`  ${ok ? "PASS" : "FAIL"} ${id.padEnd(34)} ${observed}`);
+              if (!ok) failed++;
+            };
+            check("D1-no-query-returns-corpus", r.gates.noQueryReturnsTheCorpus === true,
+              `largest result ${r.gates.regionClusterRows} rows for ${r.gates.regionPlacesRepresented} places`);
+            check("D2-query-latency", r.gates.worstP95Ms <= 300,
+              `worst p95 ${r.gates.worstP95Ms}ms against a 300ms gate`);
+            check("D3-payload-bounded", r.gates.largestPayloadBytes <= 512 * 1024,
+              `largest payload ${(r.gates.largestPayloadBytes / 1024).toFixed(1)} kB`);
+            // The rule the temporal model exists to hold.
+            check("D4-no-designation-dates", r.temporal.derivedFromDesignationDate === 0,
+              `${r.temporal.derivedFromDesignationDate} claims derived from a designation date`);
+            console.log(`\n  temporal coverage: ${(r.temporal.coverageRate * 100).toFixed(2)}% of published places`);
+            if (failed) { console.error(`::error::${failed} discovery gate(s) failed`); process.exit(1); }
+          '
+
       # --- Replay -----------------------------------------------------------
       # The dataset has to be rebuildable, and the only convincing evidence is
       # running it again and finding nothing changed.
@@ -266,6 +302,16 @@ jobs:
               echo '|---|---:|---:|---:|'
               jq -r '.queries[] | "| \(.id) | \(.p50Ms) | \(.p95Ms) | \(.rows) |"' regional-verification.json
             fi
+            if [ -f regional-discovery.json ]; then
+              echo
+              echo '### Discovery at regional density'
+              echo
+              echo '| viewport | query | p50 ms | p95 ms | rows | places | payload |'
+              echo '|---|---|---:|---:|---:|---:|---:|'
+              jq -r '.scenarios[] | "| \(.scenario) | \(.queryKind) | \(.p50Ms) | \(.p95Ms) | \(.rowsReturned) | \(.placesRepresented) | \((.payloadBytes/1024*10|round)/10) kB |"' regional-discovery.json
+              echo
+              jq -r '"Temporal coverage: \(.temporal.placesWithTemporal) of \(.publishedPlaces) published places."' regional-discovery.json
+            fi
             if [ -f regional-gates.json ]; then
               echo
               echo '### Gates'
@@ -287,6 +333,7 @@ jobs:
             ingestion/regional-verification-replay.json
             ingestion/regional-audit.json
             ingestion/regional-gates.json
+            ingestion/regional-discovery.json
           if-no-files-found: warn
 
       - name: Stop stack

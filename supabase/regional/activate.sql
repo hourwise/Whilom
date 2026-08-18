@@ -214,6 +214,47 @@ begin
 end;
 $$;
 
+-- ---------------------------------------------------------------------------
+-- Temporal associations
+-- ---------------------------------------------------------------------------
+-- Loaded after publication, because a temporal claim attaches to a canonical
+-- place and those only exist once published.
+--
+-- The claims themselves come only from period language in the source's own
+-- description. NHLE's six date fields all record when protection was conferred
+-- and none of them is a historic date, so none is used here; see
+-- ingestion/transforms/temporal.ts.
+create temporary table staged_temporal (
+  source_record_id text not null,
+  association_type text not null,
+  start_year integer,
+  end_year integer,
+  precision text not null,
+  period_id text,
+  original_text text,
+  derivation text
+);
+
+\copy staged_temporal (source_record_id, association_type, start_year, end_year, precision, period_id, original_text, derivation) from 'regional-temporal.csv' with (format csv)
+
+insert into public.temporal_associations (
+  entity_type, entity_id, association_type, start_year, end_year, precision,
+  period_id, source_id, source_record_id, confidence, original_text, derivation, status)
+select
+  'place', sr.entity_id, t.association_type::public.temporal_association_type,
+  t.start_year, t.end_year, t.precision::public.temporal_precision,
+  t.period_id, sr.source_id, sr.id,
+  -- Not a probability. A period read from the source's own words is a strong
+  -- claim about what the source said, and a weaker one about the world.
+  0.700,
+  t.original_text, t.derivation, 'approved'
+from staged_temporal t
+join public.source_records sr
+  on sr.external_id = t.source_record_id
+ and sr.source_id = 'b0000000-0000-4000-8000-000000000001'
+ and sr.entity_type = 'place'
+on conflict do nothing;
+
 update public.import_runs
    set status = 'succeeded', finished_at = now(),
        stats = (select jsonb_object_agg(outcome, n)
@@ -226,6 +267,8 @@ update public.import_runs
 select json_build_object(
   'candidatesConsidered', (select count(*) from staged_candidates where publication_class = 'AUTO_SAFE'),
   'reviewQueued',         (select count(*) from staged_candidates where publication_class = 'REVIEW_REQUIRED'),
+  'temporalAssociations', (select count(*) from public.temporal_associations),
+  'placesWithTemporal',   (select count(distinct entity_id) from public.temporal_associations where entity_type = 'place'),
   'published',            (select count(*) from publication_log where outcome = 'published'),
   'attachedToExisting',   (select count(*) from staged_candidates s
                              join publication_log l on l.candidate_id = s.id

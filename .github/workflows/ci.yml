@@ -32,6 +32,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # A malformed workflow produces a run with zero jobs and a log that does
+      # not exist, which is a miserable thing to diagnose from the outside.
+      - name: Validate workflows
+        run: node scripts/check-workflows.mjs
+
       - name: Typecheck
         run: pnpm typecheck
 
