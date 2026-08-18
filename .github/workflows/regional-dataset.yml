@@ -131,8 +131,13 @@ jobs:
       # --- Replay -----------------------------------------------------------
       # The dataset has to be rebuildable, and the only convincing evidence is
       # running it again and finding nothing changed.
+      # Runs everywhere except a manual dispatch that explicitly opts out.
+      # `inputs.replay` is empty on a pull_request event, and the earlier
+      # `inputs.replay != false` therefore evaluated to false and silently
+      # skipped the blocking idempotency gate — the run went green without
+      # proving the one thing the gate exists for.
       - name: Replay activation (idempotency)
-        if: ${{ inputs.replay != false }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.replay }}
         working-directory: ingestion
         run: |
           set -o pipefail
@@ -145,7 +150,7 @@ jobs:
             | tail -n 1 > regional-verification-replay.json
 
       - name: Assert idempotency
-        if: ${{ inputs.replay != false }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.replay }}
         working-directory: ingestion
         run: |
           node -e '
@@ -177,6 +182,11 @@ jobs:
             const fs = require("fs");
             const v = JSON.parse(fs.readFileSync("regional-verification.json", "utf8"));
             const a = JSON.parse(fs.readFileSync("regional-audit.json", "utf8"));
+
+            // G7 is blocking, and a blocking gate that can be skipped is not a
+            // gate. If the replay evidence is missing, say so here rather than
+            // letting the run go green without it.
+            const replayRan = fs.existsSync("regional-verification-replay.json");
             const g = v.gates;
             const rows = [];
             const add = (id, passed, observed, blocking = true) =>
@@ -190,6 +200,10 @@ jobs:
               `orphans: ${g.G6_publication_integrity.orphanFacts} facts, ${g.G6_publication_integrity.orphanSourceRecords} source records, ${g.G6_publication_integrity.orphanRelationships} relationships`);
             add("G8-query-usability", g.G8_query_usability.passed,
               `worst p95 ${g.G8_query_usability.worstP95Ms}ms against a 300ms gate`);
+            add("G7-idempotency", replayRan,
+              replayRan
+                ? "replay ran; row counts asserted unchanged in the preceding step"
+                : "REPLAY DID NOT RUN — idempotency is unproven for this activation");
             add("G9-review-load", true,
               `${g.G9_review_load.reviewRows} rows, ${(g.G9_review_load.reviewRate * 100).toFixed(2)}% of candidates`, false);
 
