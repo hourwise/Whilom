@@ -1,0 +1,245 @@
+name: Scale test
+
+# The staged scale experiment (1,000 -> 2,500 -> 5,000 real NHLE records).
+#
+# Kept out of the ordinary pull-request CI. Ingesting 5,000 records and
+# benchmarking three databases on every push would add twenty minutes to every
+# review for a measurement that only means anything when something has changed
+# about ingestion or the schema. So it runs on demand, weekly so drift is
+# noticed without anyone having to remember, and on pull requests only when a
+# path that could plausibly change scale behaviour has been touched.
+on:
+  workflow_dispatch:
+    inputs:
+      tiers:
+        description: 'Tiers to run, in order, comma-separated'
+        default: '1000,2500,5000'
+        type: string
+      stop_on_gate_failure:
+        description: 'Stop the ladder when a blocking gate fails'
+        default: true
+        type: boolean
+  schedule:
+    # Sunday 03:00 UTC.
+    - cron: '0 3 * * 0'
+  # Path-filtered so that the ladder runs when something that could plausibly
+  # change scale behaviour changes, and never on an ordinary pull request. A
+  # matcher tweak that quietly doubles review pressure is exactly the kind of
+  # regression this exists to catch, and it is far cheaper to catch it in review
+  # than after a regional import.
+  pull_request:
+    paths:
+      - 'ingestion/**'
+      - 'packages/domain/**'
+      - 'packages/validation/**'
+      - 'supabase/migrations/**'
+      - 'supabase/scale/**'
+      - '.github/workflows/scale-test.yml'
+
+concurrency:
+  group: scale-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Lane 1 — ingestion, matching and review pressure.
+  #
+  # The heritage pipeline is pure TypeScript, so this needs no database. Tiers
+  # run in order in one job because each reads the previous tier's result file
+  # to answer the matcher-scaling gate, and because a blocking failure must stop
+  # the ladder rather than let the next tier start in parallel.
+  # ---------------------------------------------------------------------------
+  pipeline:
+    name: pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The payloads are not committed; the manifest pins exactly which records
+      # the experiment uses and this rebuilds them. Cached on the manifest's own
+      # checksum, so a re-run does not re-query Historic England.
+      - name: Restore captured NHLE records
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ingestion/.scale-cache
+          key: nhle-scale-${{ hashFiles('ingestion/scale/manifest.json') }}
+
+      - name: Capture NHLE records
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @whilom/ingestion scale:capture
+
+      - name: Run the tier ladder
+        id: ladder
+        working-directory: ingestion
+        run: |
+          set -o pipefail
+          IFS=',' read -ra TIERS <<< "${{ inputs.tiers || '1000,2500,5000' }}"
+          stopped=''
+          for tier in "${TIERS[@]}"; do
+            echo "::group::tier ${tier}"
+            if pnpm exec tsx scale/run-tier.ts --tier "${tier}" 2>&1 | tee "tier-${tier}.log"; then
+              echo "::endgroup::"
+            else
+              echo "::endgroup::"
+              echo "::error::Tier ${tier} failed a blocking health gate."
+              stopped="${tier}"
+              break
+            fi
+          done
+          echo "stopped_at=${stopped}" >> "$GITHUB_OUTPUT"
+          if [ -n "${stopped}" ] && [ "${{ inputs.stop_on_gate_failure || 'true' }}" = 'true' ]; then
+            exit 1
+          fi
+
+      - name: Summarise
+        if: always()
+        working-directory: ingestion
+        run: |
+          {
+            echo '## Scale ladder'
+            echo
+            echo '| tier | valid | rejected | new | auto | review | conflict | rec/s | ms/rec | comparisons/rec | queue |'
+            echo '|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|'
+            for f in scale-results-*.json; do
+              [ -e "$f" ] || continue
+              jq -r '"| \(.tier) | \(.ingestion.valid) | \(.ingestion.rejected) | \(.matching.outcomes.NEW_CANONICAL) | \(.matching.outcomes.MATCH_CONFIDENT) | \(.matching.outcomes.MATCH_REVIEW) | \(.matching.outcomes.CONFLICT_REVIEW) | \(.ingestion.recordsPerSecond) | \(.matching.work.meanMsPerRecord) | \(.matching.work.meanComparisonsPerRecord) | \(.review.totalForReview) (\(.review.shareOfValid * 10000 | round / 100)%) |"' "$f"
+            done
+            echo
+            echo '### Gates'
+            for f in scale-results-*.json; do
+              [ -e "$f" ] || continue
+              echo
+              jq -r '"**tier \(.tier)**", "", (.gates[] | "- " + (if .notEvaluated then "—" elif .passed then "✅" else "❌" end) + " `" + .id + "` " + .observed)' "$f"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload tier results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scale-results
+          path: |
+            ingestion/scale-results-*.json
+            ingestion/tier-*.log
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------------------
+  # Lane 2 — query latency and storage growth.
+  #
+  # Answers the two gates the pipeline lane structurally cannot: how the product
+  # read paths behave once the canonical table holds a tier's worth of rows, and
+  # whether storage grows linearly with records.
+  #
+  # As with the database job in ci.yml, everything is local to the runner and
+  # destroyed with it. No hosted Supabase project, no secrets.
+  # ---------------------------------------------------------------------------
+  queries:
+    name: queries
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      # Each tier gets a clean database. Sequential so the runners are not
+      # competing for CPU while latency is being measured.
+      max-parallel: 1
+      matrix:
+        tier: [1000, 2500, 5000]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Restore captured NHLE records
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ingestion/.scale-cache
+          key: nhle-scale-${{ hashFiles('ingestion/scale/manifest.json') }}
+
+      - name: Capture NHLE records
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @whilom/ingestion scale:capture
+
+      - name: Build the canonical seed for tier ${{ matrix.tier }}
+        working-directory: ingestion
+        run: pnpm exec tsx scale/db-seed.ts --tier ${{ matrix.tier }}
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start ephemeral Supabase stack
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector
+
+      - name: Load the tier
+        run: |
+          /usr/bin/time -f 'load wall time: %e s' \
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "ingestion/scale-seed-${{ matrix.tier }}.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -t -c 'select count(*) from public.places;'
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+      - name: Capture query plans
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/scale/plans.sql \
+            > "plans-${{ matrix.tier }}.txt"
+          cat "plans-${{ matrix.tier }}.txt"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+      - name: Benchmark
+        run: |
+          set -o pipefail
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -t -A -f supabase/scale/benchmark.sql             | tail -n 1 > "db-results-${{ matrix.tier }}.json"
+          jq -e . "db-results-${{ matrix.tier }}.json" > /dev/null
+
+          echo "places: $(jq -r .places "db-results-${{ matrix.tier }}.json")"
+          jq -r '.queries[] | "  \(.id)  p50 \(.p50Ms)ms  p95 \(.p95Ms)ms  rows \(.rows)"'             "db-results-${{ matrix.tier }}.json"
+          jq -r '"storage: \(.storage.totalBytes) bytes total, \((.storage.totalBytes / .places) | round) bytes/record"'             "db-results-${{ matrix.tier }}.json"
+
+          {
+            echo "### tier ${{ matrix.tier }} — queries"
+            echo
+            echo '| query | p50 ms | p95 ms | rows |'
+            echo '|---|---:|---:|---:|'
+            jq -r '.queries[] | "| \(.id) | \(.p50Ms) | \(.p95Ms) | \(.rows) |"' "db-results-${{ matrix.tier }}.json"
+            echo
+            jq -r '"Storage: \(.storage.totalBytes) bytes over \(.places) places (\((.storage.totalBytes / .places) | round) bytes/record)."'               "db-results-${{ matrix.tier }}.json"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # G6: no product read path may exceed 300ms at p95.
+          slow=$(jq -r '[.queries[] | select(.p95Ms > 300) | "\(.id) p95 \(.p95Ms)ms"] | join(", ")'             "db-results-${{ matrix.tier }}.json")
+          if [ -n "$slow" ]; then
+            echo "::error::G6 query-latency gate failed at tier ${{ matrix.tier }}: $slow"
+            exit 1
+          fi
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+      - name: Upload database results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scale-db-results-${{ matrix.tier }}
+          path: |
+            db-results-${{ matrix.tier }}.json
+            plans-${{ matrix.tier }}.txt
+          if-no-files-found: warn
+
+      - name: Stop stack
+        if: always()
+        run: supabase stop --no-backup || true

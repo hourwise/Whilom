@@ -41,3 +41,7 @@ Thumbs.db
 # Scale-experiment cache (regenerate with `pnpm --filter @whilom/ingestion scale:capture`)
 ingestion/.scale-cache/
 scale-results-*.json
+scale-seed-*.sql
+db-results-*.json
+plans-*.txt
+tier-*.log

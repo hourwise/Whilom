@@ -10,7 +10,8 @@
     "test": "vitest run",
     "clean": "rimraf dist .turbo *.tsbuildinfo",
     "scale:capture": "tsx scale/capture.ts",
-    "scale:run": "tsx scale/run-tier.ts"
+    "scale:run": "tsx scale/run-tier.ts",
+    "scale:seed": "tsx scale/db-seed.ts"
   },
   "dependencies": {
     "@whilom/database": "workspace:*",
