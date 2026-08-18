@@ -40,7 +40,7 @@ values ('lonely', 'Lonely Barn', 'building',
 -- Not published. Must never reach the public map by any route.
 insert into public.places (id, slug, name, place_type, location, status)
 values ('bbbbbbbb-0000-0000-0000-000000000001', 'draft-hall', 'Draft Hall', 'country_house',
-  extensions.st_setsrid(extensions.st_makepoint(-1.501, 54.001), 4326)::extensions.geography, 'pending');
+  extensions.st_setsrid(extensions.st_makepoint(-1.501, 54.001), 4326)::extensions.geography, 'needs_review');
 
 -- ---------------------------------------------------------------------------
 -- Aggregation

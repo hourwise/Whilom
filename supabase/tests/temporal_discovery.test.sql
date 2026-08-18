@@ -25,7 +25,7 @@ values
   ('aaaaaaaa-0000-0000-0000-000000000003', 'undated-barn', 'A barn', 'building',
    extensions.st_setsrid(extensions.st_makepoint(-1.52, 54.02), 4326)::extensions.geography, 'approved'),
   ('aaaaaaaa-0000-0000-0000-000000000004', 'hidden-place', 'Hidden', 'building',
-   extensions.st_setsrid(extensions.st_makepoint(-1.53, 54.03), 4326)::extensions.geography, 'pending');
+   extensions.st_setsrid(extensions.st_makepoint(-1.53, 54.03), 4326)::extensions.geography, 'needs_review');
 
 -- ---------------------------------------------------------------------------
 -- The period registry is a navigation vocabulary
