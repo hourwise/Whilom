@@ -6,7 +6,7 @@
 
 begin;
 create extension if not exists pgtap;
-select plan(32);
+select plan(34);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'user@example.test'),
@@ -128,6 +128,18 @@ select is(
   (select in_coverage from public.person_places('c0000000-0000-0000-0000-000000000001')
     where slug = 'moot-hall'),
   true, 'and one inside it is marked as covered');
+
+-- A person drives the map. 0035 hoisted this filter out of the row predicate,
+-- so it is worth stating plainly that hoisting did not change the answer.
+select is(
+  (select count(*) from public.map_places(-1.6, 53.9, -1.4, 54.1, null, 250, null, null, null,
+    null, null, false, 'all', null, 'c0000000-0000-0000-0000-000000000001')),
+  2::bigint, 'the map shows the two of this architect''s buildings inside the view');
+
+select is(
+  (select count(*) from public.map_places(-1.6, 53.9, -1.4, 54.1, null, 250, null, null, null,
+    null, null, false, 'all', null, 'c0000000-0000-0000-0000-000000000004')),
+  0::bigint, 'and a person with no places moves the map to nothing, not to everything');
 
 -- ---------------------------------------------------------------------------
 -- The reciprocal direction
