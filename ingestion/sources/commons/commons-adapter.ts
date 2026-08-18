@@ -69,6 +69,28 @@ export type CommonsFetchMode =
   | { kind: 'file'; path: string }
   | { kind: 'api'; endpoint?: string; categories: { category: string; qid: string; label: string }[]; perCategory?: number };
 
+/** One call to the MediaWiki API, as it actually behaved. */
+export interface CommonsRequestRecord {
+  params: string;
+  status: number;
+  durationMs: number;
+  /** Retries spent on this call before it succeeded. */
+  retries: number;
+  rateLimited: boolean;
+}
+
+/**
+ * Optional tap on the adapter's network behaviour.
+ *
+ * Commons is a shared public service with its own rate limits, so the question
+ * "how fast can we import media" is answered by their throttling, not by our
+ * code. Recording status codes and retries is the only way to find the real
+ * ceiling without guessing at it. Absent, the adapter behaves identically.
+ */
+export interface CommonsObserver {
+  onRequest(record: CommonsRequestRecord): void;
+}
+
 /** A raw media record, before normalisation or any rights decision. */
 export interface RawMediaRecord {
   provenance: {
@@ -85,7 +107,10 @@ export class WikimediaCommonsAdapter {
   readonly id = COMMONS_SOURCE_ID;
   readonly displayName = 'Wikimedia Commons';
 
-  constructor(private readonly mode: CommonsFetchMode) {}
+  constructor(
+    private readonly mode: CommonsFetchMode,
+    private readonly observer?: CommonsObserver,
+  ) {}
 
   async *fetch(): AsyncIterable<RawMediaRecord> {
     const { files, retrievedAt } =
@@ -179,23 +204,34 @@ export class WikimediaCommonsAdapter {
 
   /** Serialised with a pause; the anonymous API 429s on bursts. */
   private async call(endpoint: string, params: Record<string, string>): Promise<unknown> {
+    const query = new URLSearchParams({ format: 'json', ...params });
+    let rateLimited = false;
     for (let attempt = 0; ; attempt += 1) {
-      const response = await globalThis.fetch(
-        `${endpoint}?${new URLSearchParams({ format: 'json', ...params })}`,
-        {
-          headers: {
-            'User-Agent': `Whilom/${COMMONS_IMPORTER_VERSION} (heritage media ingestion)`,
-            Accept: 'application/json',
-          },
+      const started = performance.now();
+      const response = await globalThis.fetch(`${endpoint}?${query}`, {
+        headers: {
+          'User-Agent': `Whilom/${COMMONS_IMPORTER_VERSION} (heritage media ingestion)`,
+          Accept: 'application/json',
         },
-      );
+      });
+      const durationMs = performance.now() - started;
+      this.observer?.onRequest({
+        params: params['list'] ?? params['prop'] ?? params['action'] ?? 'query',
+        status: response.status,
+        durationMs,
+        retries: attempt,
+        rateLimited: response.status === 429,
+      });
       if (response.status === 429 && attempt < 4) {
+        rateLimited = true;
         await new Promise((resolve) => setTimeout(resolve, 5000 * (attempt + 1)));
         continue;
       }
       if (!response.ok) throw new Error(`Commons API failed: HTTP ${response.status}`);
       const body: unknown = await response.json();
-      await new Promise((resolve) => setTimeout(resolve, 1200));
+      // Deliberate courtesy delay. Commons is a shared public service and the
+      // import is never urgent; see README.md in this directory.
+      await new Promise((resolve) => setTimeout(resolve, rateLimited ? 3000 : 1200));
       return body;
     }
   }

@@ -119,18 +119,23 @@ select json_build_object(
     ) grouped
   ),
   'storage', (
+    -- Row counts come from pg_class.reltuples rather than the stats collector:
+    -- the seed runs ANALYZE, so reltuples is populated, whereas n_live_tup can
+    -- still be zero immediately after a bulk insert and would silently drop
+    -- every table out of this report.
     select json_build_object(
-      'totalBytes', sum(pg_total_relation_size(c.oid)),
-      'tables', json_agg(json_build_object(
-        'table', relname,
-        'rows', n_live_tup,
+      'totalBytes', coalesce(sum(pg_total_relation_size(c.oid)), 0),
+      'tables', coalesce(json_agg(json_build_object(
+        'table', c.relname,
+        'rows', greatest(c.reltuples::bigint, 0),
         'totalBytes', pg_total_relation_size(c.oid),
         'indexBytes', pg_indexes_size(c.oid)
-      ) order by pg_total_relation_size(c.oid) desc)
+      ) order by pg_total_relation_size(c.oid) desc), '[]'::json)
     )
     from pg_class c
     join pg_namespace n on n.oid = c.relnamespace
-    join pg_stat_user_tables s on s.relid = c.oid
-    where n.nspname = 'public' and c.relkind = 'r' and n_live_tup > 0
+    where n.nspname = 'public'
+      and c.relkind = 'r'
+      and pg_total_relation_size(c.oid) > 0
   )
 ) as result;

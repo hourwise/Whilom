@@ -45,3 +45,4 @@ scale-seed-*.sql
 db-results-*.json
 plans-*.txt
 tier-*.log
+commons-throughput.json

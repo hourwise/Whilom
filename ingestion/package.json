@@ -11,7 +11,8 @@
     "clean": "rimraf dist .turbo *.tsbuildinfo",
     "scale:capture": "tsx scale/capture.ts",
     "scale:run": "tsx scale/run-tier.ts",
-    "scale:seed": "tsx scale/db-seed.ts"
+    "scale:seed": "tsx scale/db-seed.ts",
+    "scale:commons": "tsx scale/commons-throughput.ts"
   },
   "dependencies": {
     "@whilom/database": "workspace:*",
