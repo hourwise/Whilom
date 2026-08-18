@@ -255,6 +255,97 @@ join public.source_records sr
  and sr.entity_type = 'place'
 on conflict do nothing;
 
+-- ---------------------------------------------------------------------------
+-- People
+-- ---------------------------------------------------------------------------
+-- Bounded enrichment from Wikidata, an already-approved source. Only people
+-- already attached to a place this region published: nobody is imported for
+-- being famous, which is why the cast is country-house architects rather than
+-- monarchs.
+--
+-- Structured claims only. No biography prose is ingested from anywhere.
+insert into public.sources (id, kind, name, publisher, url, licence, attribution, trust_level)
+values (
+  'b0000000-0000-4000-8000-000000000002', 'open_data', 'Wikidata', 'Wikimedia Foundation',
+  'https://www.wikidata.org', 'CC0-1.0', 'Wikidata contributors, CC0 1.0', 'open_data_source')
+on conflict (id) do nothing;
+
+create temporary table staged_people (
+  qid text primary key,
+  slug text not null,
+  name text not null,
+  birth_year integer,
+  death_year integer,
+  birth_raw text,
+  death_raw text,
+  birth_precision text,
+  death_precision text
+);
+
+create temporary table staged_person_links (
+  qid text not null,
+  source_record_id text not null,
+  predicate text not null,
+  role text not null
+);
+
+\copy staged_people (qid, slug, name, birth_year, death_year, birth_raw, death_raw, birth_precision, death_precision) from 'regional-people.csv' with (format csv)
+\copy staged_person_links (qid, source_record_id, predicate, role) from 'regional-person-links.csv' with (format csv)
+
+-- `date_note` keeps the source's own value and how precise it was, so a year
+-- shown as "1827" can still be traced to a full date, and a year-only claim is
+-- never mistaken for a day-precise one.
+insert into public.people (slug, name, birth_year, death_year, date_note, trust_level, status)
+select
+  sp.slug, sp.name, sp.birth_year, sp.death_year,
+  nullif(concat_ws(' ',
+    case when sp.birth_raw <> '' then 'born ' || sp.birth_raw || ' (' || sp.birth_precision || ' precision)' end,
+    case when sp.death_raw <> '' then 'died ' || sp.death_raw || ' (' || sp.death_precision || ' precision)' end
+  ), ''),
+  'open_data_source', 'approved'
+from staged_people sp
+on conflict (slug) do nothing;
+
+-- Provenance: every imported person traces to the Wikidata item that supplied
+-- the claim, exactly as an imported place traces to its list entry.
+insert into public.source_records (
+  source_id, external_id, url, licence, attribution, retrieved_at, importer_version,
+  raw, entity_type, entity_id, review_status)
+select
+  'b0000000-0000-4000-8000-000000000002', sp.qid,
+  'https://www.wikidata.org/wiki/' || sp.qid, 'CC0-1.0', 'Wikidata contributors, CC0 1.0',
+  now(), '0.1.0',
+  jsonb_build_object(
+    'qid', sp.qid, 'name', sp.name,
+    'birthRaw', nullif(sp.birth_raw, ''), 'deathRaw', nullif(sp.death_raw, ''),
+    'birthPrecision', sp.birth_precision, 'deathPrecision', sp.death_precision),
+  'person', pe.id, 'approved'
+from staged_people sp
+join public.people pe on pe.slug = sp.slug
+on conflict (source_id, external_id, entity_type, entity_id) do update
+  set retrieved_at = excluded.retrieved_at, raw = excluded.raw;
+
+-- The person-to-place edges, carrying the source's own word for the role so
+-- that mapping onto a broader predicate loses no nuance.
+insert into public.entity_relationships (
+  subject_type, subject_id, predicate, object_type, object_id,
+  note, source_id, source_record_id, confidence, status)
+select
+  'person', pe.id, spl.predicate, 'place', sr.entity_id,
+  'source role: ' || spl.role,
+  'b0000000-0000-4000-8000-000000000002',
+  (select x.id from public.source_records x
+    where x.source_id = 'b0000000-0000-4000-8000-000000000002'
+      and x.external_id = spl.qid and x.entity_type = 'person' limit 1),
+  0.800, 'approved'
+from staged_person_links spl
+join public.people pe on pe.slug = (select sp.slug from staged_people sp where sp.qid = spl.qid)
+join public.source_records sr
+  on sr.external_id = spl.source_record_id
+ and sr.source_id = 'b0000000-0000-4000-8000-000000000001'
+ and sr.entity_type = 'place'
+on conflict (subject_type, subject_id, predicate, object_type, object_id) do nothing;
+
 update public.import_runs
    set status = 'succeeded', finished_at = now(),
        stats = (select jsonb_object_agg(outcome, n)
@@ -268,6 +359,11 @@ select json_build_object(
   'candidatesConsidered', (select count(*) from staged_candidates where publication_class = 'AUTO_SAFE'),
   'reviewQueued',         (select count(*) from staged_candidates where publication_class = 'REVIEW_REQUIRED'),
   'temporalAssociations', (select count(*) from public.temporal_associations),
+  'people',               (select count(*) from public.people),
+  'personPlaceLinks',     (select count(*) from public.entity_relationships
+                             where subject_type = 'person' and object_type = 'place'),
+  'peopleWithDates',      (select count(*) from public.people
+                             where birth_year is not null or death_year is not null),
   'placesWithTemporal',   (select count(distinct entity_id) from public.temporal_associations where entity_type = 'place'),
   'published',            (select count(*) from publication_log where outcome = 'published'),
   'attachedToExisting',   (select count(*) from staged_candidates s

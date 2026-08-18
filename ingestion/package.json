@@ -15,7 +15,8 @@
     "scale:commons": "tsx scale/commons-throughput.ts",
     "scale:equivalence": "tsx scale/equivalence.ts",
     "regional:capture": "tsx regional/capture.ts",
-    "regional:activate": "tsx regional/activate.ts"
+    "regional:activate": "tsx regional/activate.ts",
+    "regional:people": "tsx regional/people.ts"
   },
   "dependencies": {
     "@whilom/database": "workspace:*",

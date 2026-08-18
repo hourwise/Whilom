@@ -59,7 +59,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ingestion/.regional-cache
-          key: whilom-region-${{ hashFiles('ingestion/regional/regional-dataset-manifest.json') }}
+          key: whilom-region-${{ hashFiles('ingestion/regional/regional-dataset-manifest.json', 'ingestion/regional/people.ts') }}
 
       - name: Capture regional dataset
         if: steps.cache.outputs.cache-hit != 'true'
@@ -68,6 +68,12 @@ jobs:
       - name: Ingest, match and classify
         working-directory: ingestion
         run: pnpm exec tsx regional/activate.ts
+
+      # Bounded people enrichment via the already-approved Wikidata source.
+      # Only people already attached to a published regional place.
+      - name: Enrich people
+        working-directory: ingestion
+        run: pnpm exec tsx regional/people.ts
 
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v1

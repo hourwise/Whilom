@@ -61,3 +61,5 @@ regional-audit.json
 regional-gates.json
 activation-raw.txt
 regional-*.sql
+regional-people.csv
+regional-person-links.csv
