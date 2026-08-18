@@ -69,6 +69,31 @@ function candidateUuid(sourceRecordId: string, ordinal: number): string {
   return `${hex}-0000-4000-8000-${tail}`;
 }
 
+/**
+ * Why one record is in the queue.
+ *
+ * Grouping on the reason rather than the sentence turns "143 records need
+ * review" into a list of things a person could actually act on.
+ */
+function reviewCause(
+  outcome: MatchOutcome,
+  rationale: string,
+  conflicts: readonly { field: string }[],
+): string {
+  if (outcome === MatchOutcome.ConflictReview) {
+    const fields = conflicts.map((c) => c.field).sort().join(' + ');
+    return `sources disagree on ${fields || 'an unnamed field'}`;
+  }
+  const why = rationale.split('needs review: ')[1] ?? rationale;
+  if (why.includes('association rather than identity')) return 'one name contains the other';
+  if (why.includes('protects a landscape')) return 'landscape designation versus a structure inside it';
+  if (why.includes('the name is not distinctive')) return 'name is not distinctive';
+  if (why.includes('scores almost as well')) return 'two candidates score alike';
+  if (why.includes('outside the')) return 'position outside the agreement radius';
+  if (why.includes('names are not close enough')) return 'names not close enough';
+  return 'score below the confident threshold';
+}
+
 export interface ActivationPlan {
   datasetId: string;
   datasetVersion: string;
@@ -102,6 +127,9 @@ export interface ActivationPlan {
   placeTypes: Record<string, number>;
   designations: Record<string, number>;
   genericallyTyped: number;
+  /** Why records are queued, grouped so the queue reads as causes not rows. */
+  reviewCauses: { cause: string; count: number; share: number; example: string }[];
+  reviewMinutesEstimate: number;
   report: RunReport;
 }
 
@@ -208,6 +236,27 @@ export async function buildActivation(outDir: string): Promise<ActivationPlan> {
   writeFileSync(resolve(outDir, 'regional-conflicts.csv'), conflictRows.join('\n') + (conflictRows.length ? '\n' : ''));
   writeFileSync(resolve(outDir, 'regional-approved.csv'), approved.map((id) => csvField(id)).join('\n') + '\n');
 
+  // --- Review causes --------------------------------------------------------
+  const causeGroups = new Map<string, { count: number; example: string }>();
+  for (const decided of report.decided) {
+    if (classifyDecision(decided.decision.outcome).publicationClass !== PublicationClass.ReviewRequired) {
+      continue;
+    }
+    const cause = reviewCause(decided.decision.outcome, decided.decision.rationale, decided.decision.conflicts);
+    const entry = causeGroups.get(cause);
+    if (entry) entry.count += 1;
+    else causeGroups.set(cause, { count: 1, example: `${decided.candidate.name} — ${decided.decision.rationale}` });
+  }
+  const queued = counts[PublicationClass.ReviewRequired];
+  const reviewCauses = [...causeGroups.entries()]
+    .map(([cause, v]) => ({
+      cause,
+      count: v.count,
+      share: Math.round((v.count / Math.max(1, queued)) * 10000) / 10000,
+      example: v.example,
+    }))
+    .sort((a, b) => b.count - a.count);
+
   const matchMs = matchSamples.reduce((a, b) => a + b, 0);
 
   const plan: ActivationPlan = {
@@ -244,6 +293,10 @@ export async function buildActivation(outDir: string): Promise<ActivationPlan> {
     placeTypes,
     designations,
     genericallyTyped: report.genericallyTyped,
+    reviewCauses,
+    // Two minutes per decision, the figure used throughout the scale work. An
+    // estimate from a documented assumption, not observed reviewer productivity.
+    reviewMinutesEstimate: counts[PublicationClass.ReviewRequired] * 2,
     report,
   };
 
@@ -278,6 +331,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       console.log(`ingestion        ${plan.ingestionMs}ms (${plan.recordsPerSecond} rec/s)`);
       console.log(`place types      ${Object.keys(plan.placeTypes).length} distinct`);
       console.log(`batch size       ${PUBLISH_BATCH_SIZE}`);
+      console.log(`review causes    ${plan.reviewCauses.map((c) => `${c.cause} (${c.count})`).join('; ')}`);
+      console.log(`review estimate  ~${Math.round(plan.reviewMinutesEstimate / 6) / 10}h`);
     })
     .catch((error: unknown) => {
       console.error(error);
