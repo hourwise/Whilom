@@ -23,6 +23,8 @@ import { runIngestion } from '../pipeline/run';
 import type { DecidedCandidate } from '../pipeline/run';
 import { MatchOutcome } from '../pipeline/candidate';
 import type { MatchStats } from '../matching/matcher';
+import { CandidateMode, emptyCandidateStats } from '../matching/candidates';
+import type { CandidateGenerationStats } from '../matching/candidates';
 import { GATES, mayProceed } from './gates';
 import type { GateResult } from './gates';
 import { TIER_SIZES, buildTierFixture, isTierSize } from './tier';
@@ -36,7 +38,7 @@ function parseTier(argv: readonly string[]): number {
   const raw = index >= 0 ? argv[index + 1] : undefined;
   const tier = Number(raw);
   if (!Number.isFinite(tier) || !isTierSize(tier)) {
-    throw new Error(`--tier must be one of 1000, 2500, 5000 (got ${String(raw)})`);
+    throw new Error(`--tier must be one of ${TIER_SIZES.join(', ')} (got ${String(raw)})`);
   }
   return tier;
 }
@@ -55,6 +57,7 @@ function reviewCause(decided: DecidedCandidate): string {
     return `sources disagree on ${fields || 'an unnamed field'}`;
   }
   const why = decision.rationale.split('needs review: ')[1] ?? decision.rationale;
+  if (why.includes('association rather than identity')) return 'one name contains the other';
   if (why.includes('protects a landscape')) return 'landscape designation versus a structure inside it';
   if (why.includes('the name is not distinctive')) return 'name is not distinctive';
   if (why.includes('scores almost as well')) return 'two candidates score alike';
@@ -149,17 +152,43 @@ function loadPreviousTier(tier: number): TierMetrics | undefined {
   return JSON.parse(readFileSync(path, 'utf8')) as TierMetrics;
 }
 
-export async function runTier(tier: number): Promise<TierMetrics> {
+/** One tier executed under one candidate strategy, with everything measured. */
+export interface TierExecution {
+  fixture: ReturnType<typeof buildTierFixture>;
+  report: Awaited<ReturnType<typeof runIngestion>>;
+  matchStats: MatchStats;
+  candidateStats: CandidateGenerationStats;
+  normaliseSamples: number[];
+  validateSamples: number[];
+  matchSamples: number[];
+  startedAt: Date;
+  finishedAt: Date;
+  wallClockMs: number;
+}
+
+/**
+ * Run one tier through the ordinary pipeline.
+ *
+ * Shared by the tier runner and the equivalence harness so that the two modes
+ * cannot diverge in setup. A benchmark whose "exhaustive" and "bounded" paths
+ * differ in anything but the candidate strategy is not comparing what it claims.
+ */
+export async function executeTier(
+  tier: number,
+  candidateMode: CandidateMode = CandidateMode.Bounded,
+): Promise<TierExecution> {
   const fixture = buildTierFixture(tier);
   const startedAt = new Date();
 
   const matchStats: MatchStats = { comparisons: 0, vetoedByDistance: 0, vetoedByName: 0, vetoedByRegister: 0, beyondMaxDistance: 0 };
+  const candidateStats = emptyCandidateStats();
   const normaliseSamples: number[] = [];
   const validateSamples: number[] = [];
   const matchSamples: number[] = [];
 
   const report = await runIngestion({
     importRunId: `scale-${tier}`,
+    candidateMode,
     sources: [
       {
         adapter: new HistoricEnglandNhleAdapter({ kind: 'file', path: fixture.path }),
@@ -168,6 +197,7 @@ export async function runTier(tier: number): Promise<TierMetrics> {
     ],
     observer: {
       matchStats,
+      candidateStats,
       onRecord: ({ normaliseMs, validateMs, matchMs }) => {
         normaliseSamples.push(normaliseMs);
         validateSamples.push(validateMs);
@@ -177,6 +207,27 @@ export async function runTier(tier: number): Promise<TierMetrics> {
   });
 
   const finishedAt = new Date();
+  return {
+    fixture,
+    report,
+    matchStats,
+    candidateStats,
+    normaliseSamples,
+    validateSamples,
+    matchSamples,
+    startedAt,
+    finishedAt,
+    wallClockMs: finishedAt.getTime() - startedAt.getTime(),
+  };
+}
+
+export async function runTier(
+  tier: number,
+  candidateMode: CandidateMode = CandidateMode.Bounded,
+): Promise<TierMetrics> {
+  const execution = await executeTier(tier, candidateMode);
+  const { fixture, report, matchStats, candidateStats, normaliseSamples, validateSamples, matchSamples, startedAt, finishedAt } =
+    execution;
 
   const rejectionReasons = new Map<string, number>();
   for (const rejection of report.rejections) {
@@ -253,6 +304,22 @@ export async function runTier(tier: number): Promise<TierMetrics> {
         .map(([field, count]) => ({ field, count }))
         .sort((a, b) => b.count - a.count),
     },
+    candidates: {
+      mode: candidateMode,
+      possiblePairs: candidateStats.possiblePairs,
+      candidatePairs: candidateStats.candidatePairs,
+      pairsPruned: candidateStats.possiblePairs - candidateStats.candidatePairs,
+      pruningRate:
+        candidateStats.possiblePairs > 0
+          ? round(1 - candidateStats.candidatePairs / candidateStats.possiblePairs, 5)
+          : 0,
+      candidatePairsPerRecord: round(candidateStats.candidatePairs / Math.max(1, matchSamples.length), 2),
+      fromSpatial: candidateStats.fromSpatial,
+      fromIdentifierOnly: candidateStats.fromIdentifierOnly,
+      cellsInspected: candidateStats.cellsInspected,
+      generationMs: round(candidateStats.generationMs),
+    },
+
     review,
     quality: [
       sampleFor(

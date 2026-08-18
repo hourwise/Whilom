@@ -309,12 +309,33 @@ export function namesDenoteDistinctThings(a: string, b: string): DistinctVerdict
  * positional. Once a name says "…at Ranby Hall", the fact that "Ranby Hall" is
  * contained in it is a statement about location, not about identity.
  */
-export function nameSimilarity(a: string, b: string): number {
+export interface NameSimilarityBreakdown {
+  /** The final score the matcher scores on. */
+  score: number;
+  /** Direct character-level agreement between the two names. */
+  dice: number;
+  /** How completely the shorter name's tokens appear in the longer one. */
+  containment: number;
+  /**
+   * True when the score is carried by containment rather than by the names
+   * actually resembling each other.
+   *
+   * This distinction matters because containment answers a weaker question.
+   * "Marrick Priory" is wholly contained in "Marrick Priory Farmhouse", and a
+   * farmhouse is not a priory; the containment is real, and it is evidence of
+   * association, not of identity.
+   */
+  carriedByContainment: boolean;
+}
+
+export function nameSimilarityBreakdown(a: string, b: string): NameSimilarityBreakdown {
   const left = analyseName(a);
   const right = analyseName(b);
   const tokensA = left.headTokens;
   const tokensB = right.headTokens;
-  if (tokensA.length === 0 || tokensB.length === 0) return 0;
+  if (tokensA.length === 0 || tokensB.length === 0) {
+    return { score: 0, dice: 0, containment: 0, carriedByContainment: false };
+  }
 
   const setA = new Set(tokensA);
   const setB = new Set(tokensB);
@@ -324,7 +345,14 @@ export function nameSimilarity(a: string, b: string): number {
 
   const dice = diceSimilarity(tokensA.join(' '), tokensB.join(' '));
   const positional = left.relation !== null || right.relation !== null;
-  return positional ? Math.max(dice, containment * 0.7) : Math.max(dice, containment * 0.95);
+  const weighted = positional ? containment * 0.7 : containment * 0.95;
+  const score = Math.max(dice, weighted);
+
+  return { score, dice, containment, carriedByContainment: weighted > dice };
+}
+
+export function nameSimilarity(a: string, b: string): number {
+  return nameSimilarityBreakdown(a, b).score;
 }
 
 /** Best similarity across a record's primary name and its alternatives. */
@@ -332,11 +360,19 @@ export function bestNameSimilarity(
   candidateNames: readonly string[],
   existingNames: readonly string[],
 ): number {
-  let best = 0;
+  return bestNameSimilarityBreakdown(candidateNames, existingNames).score;
+}
+
+/** As `bestNameSimilarity`, but keeping how the winning score was reached. */
+export function bestNameSimilarityBreakdown(
+  candidateNames: readonly string[],
+  existingNames: readonly string[],
+): NameSimilarityBreakdown {
+  let best: NameSimilarityBreakdown = { score: 0, dice: 0, containment: 0, carriedByContainment: false };
   for (const a of candidateNames) {
     for (const b of existingNames) {
-      const score = nameSimilarity(a, b);
-      if (score > best) best = score;
+      const breakdown = nameSimilarityBreakdown(a, b);
+      if (breakdown.score > best.score) best = breakdown;
     }
   }
   return best;

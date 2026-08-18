@@ -103,11 +103,25 @@ audited automatic matches were wrong, because the statutory list names curtilage
 structures after the buildings they stand beside and only becomes dense enough
 to produce the collision at a few thousand records in one region.
 
-Full results and the readiness verdict are in [SCALE.md](SCALE.md). The standing
-consequence for this phase is that **a regional import is supportable and a
-national one is not yet**: matching compares each candidate against the whole
-accumulated corpus, which is quadratic and will not survive another order of
-magnitude without spatial blocking.
+Full results and the readiness verdict are in [SCALE.md](SCALE.md).
+
+### Phase 2B — Candidate-generation gate ✅ (bounded matching to 25,000 records)
+
+The quadratic candidate discovery that limited Phase 2A is resolved. Candidate
+discovery is now locality-bounded and proved to reproduce **every** 1,000 /
+2,500 / 5,000 decision exactly — zero differences, identical digests — while
+removing 98% of the comparisons. The ladder now runs to **25,000 real records**,
+where all 33 automatic merges were audited and all 33 are correct.
+
+The audit at that scale also found and fixed two matcher defects that no smaller
+corpus could produce: a *guessed* place type counting as evidence of identity,
+and place type being used to corroborate a name-containment match when NHLE
+types are themselves inferred from the name.
+
+The standing consequence: **a larger regional import is supportable; national is
+not yet gated.** What remains undemonstrated is behaviour when a corpus grows by
+area rather than density, and the in-memory candidate index would need to become
+the SQL lookups it was designed to mirror once publication is incremental.
 
 ## Phase 3 — Website MVP 🟡
 

@@ -237,6 +237,12 @@ Wikidata produce real disagreement, and not by corpus size.
 
 ## What this does not prove
 
+> **Resolved in the following batch.** The quadratic candidate discovery
+> described below was replaced with a locality-bounded generator, proved to
+> reproduce every 1,000 / 2,500 / 5,000 decision exactly. See the
+> candidate-generation section at the end of this document for results at
+> 10,000 and 25,000 records.
+
 **Matching is quadratic, and this is the finding that limits the verdict.**
 Comparisons per record track the corpus exactly — 499 → 1,247 → 2,492 as records
 go 1,000 → 2,500 → 5,000 — because `matchCandidate` compares each candidate
@@ -334,3 +340,230 @@ pnpm --filter @whilom/ingestion scale:commons
 The database lane needs Postgres and therefore CI: run the **Scale test**
 workflow, which also runs weekly and on pull requests that touch ingestion,
 the domain or validation packages, migrations, or the scale harness itself.
+
+---
+
+# Candidate generation (batch 7)
+
+The quadratic blocker above is resolved. Candidate discovery no longer scans the
+corpus; the matcher's scoring, thresholds and decision rules are untouched.
+
+**Verdict: `GO_FOR_LARGER_REGIONAL_DATASET`.**
+
+## Decision equivalence
+
+The optimisation target was candidate discovery, not matcher semantics, so the
+bar was exact equality against the corrected exhaustive matcher.
+
+| | 1,000 | 2,500 | 5,000 |
+| --- | ---: | ---: | ---: |
+| Possible pairs (exhaustive) | 498,501 | 3,119,029 | 12,463,987 |
+| Candidate pairs (bounded) | 25,365 | 118,456 | 317,868 |
+| Pairs pruned | 473,136 | 3,000,573 | 12,146,119 |
+| Pruning rate | 94.91% | 96.20% | 97.45% |
+| **Decision differences** | **0** | **0** | **0** |
+| Match time, exhaustive | 292 ms | 2,146 ms | 9,299 ms |
+| Match time, bounded | 52 ms | 267 ms | 1,095 ms |
+| Candidate generation | 18 ms | 54 ms | 121 ms |
+| Speedup, end to end | 4.2x | 6.7x | 7.7x |
+
+`5K_DECISION_EQUIVALENCE = PASS` — identical decisions and identical digests.
+
+Keying the comparison by processing ordinal rather than source record id matters
+more than it sounds: that id is **not unique**, because the NHLE service returns
+one row per geometry part, so Studley Royal and Saltaire each arrive twice under
+a single list entry. Keying on it collapsed the pair and reported the survivor as
+a difference. It was caught because the digests matched while the diff claimed
+five differences — a harness that can produce a false failure can produce a
+false pass.
+
+## How it works
+
+Two lookups, unioned and returned in insertion order.
+
+**Spatial.** A uniform 0.05 degree grid. The query radius is read from
+`THRESHOLDS.maxPlausibleDistanceMeters` rather than restated, so it cannot drift
+from the matcher's own veto; longitude spans are computed at each candidate's
+latitude and clamped, since the cosine collapses at the poles.
+
+**Identifier.** External identifiers and designation references, looked up
+*regardless of locality*, because the matcher's identity pass has no distance
+bound. This path contributes zero candidates across every tier — with a single
+source, a designation reference is a record's own list entry — so it is covered
+by unit tests instead, including a shared Wikidata QID 200 km away.
+
+**Uncertainty** deliberately does not widen the sweep. It affects the agreement
+radius, which is clamped to 50-150 m and only influences scoring; the hard veto
+is a flat 5 km. A vague record buying a wider search is exactly how a locality
+bound decays back into a full scan, and a test asserts it does not.
+
+Both lookups are in memory because the pipeline decides identity *before*
+anything is written — a record's match determines whether it becomes a canonical
+row at all — so there is nothing in the database to query yet. They map directly
+onto SQL for the day publication becomes incremental: `ST_DWithin` against the
+existing `places_location_gix`, and an equality lookup on external identifiers.
+**No new index was added**, because none was needed.
+
+## Capacity
+
+| | 1,000 | 2,500 | 5,000 | 10,000 | 25,000 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Possible pairs | 498,501 | 3,119,029 | 12,463,987 | 49,914,161 | 312,033,153 |
+| Candidate pairs | 25,365 | 118,456 | 317,868 | 1,390,575 | 6,334,606 |
+| Pruning rate | 94.91% | 96.20% | 97.45% | 97.21% | 97.97% |
+| Candidates per record | 25.4 | 47.4 | 63.6 | 139.1 | 253.4 |
+| Match time per record | 0.068 ms | 0.121 ms | 0.234 ms | 0.529 ms | 0.904 ms |
+| Throughput | 4,202/s | 3,720/s | 2,638/s | 1,461/s | 920/s |
+| Automatic merges | 0 | 2 | 4 | 9 | 33 |
+| Review queue | 0 | 8 | 22 | 46 | 180 |
+| Review rate | 0.00% | 0.32% | 0.44% | 0.46% | 0.72% |
+| Conflicts | 0 | 0 | 4 | 8 | 16 |
+| Rejected | 1 | 1 | 3 | 3 | 5 |
+
+### Observed scaling, stated carefully
+
+Candidates per record still grows roughly with corpus size here — 25 to 253 as
+records go 1,000 to 25,000. That is **not** evidence the bound failed. This
+experiment grows the corpus by densifying a *fixed* geographic envelope, so local
+density is proportional to n by construction, and locality-bounded work is
+O(n · local density). In a fixed region those are the same curve.
+
+What changed is the constant, and it is large: 6.3 million comparisons instead of
+312 million at 25,000 records, and the pruned share *rises* with scale (94.9% to
+98.0%). A national import adds area as well as records, which is the regime where
+locality bounding pays properly — but this experiment cannot demonstrate that,
+and five measurements are not an asymptotic proof.
+
+## Quality
+
+Every automatic merge was inspected at both larger tiers, not a sample.
+
+| | 10,000 | 25,000 |
+| --- | ---: | ---: |
+| Auto-merges audited | 9 of 9 | 33 of 33 |
+| Correct | 9 | 33 |
+| Incorrect | 0 | 0 |
+| Uncertain | 0 | 0 |
+
+Reaching that took two correctness fixes, both found *by* the audit.
+
+**A guessed type was counted as evidence of identity.** `CanonicalPlaceRef` did
+not carry `placeTypeConfidence` at all, so the matcher consulted only the
+candidate's. "Marrick Priory Farmhouse" — typed `monument` at confidence 0.2
+because nothing in its name could be recognised — was contributing positive
+evidence towards merging with an actual priory 50 m away.
+
+**Containment is not identity, at the level of names.** An intermediate fix let
+confidently agreeing place types corroborate a containment match. The 25,000
+audit showed why that fails: NHLE place types are *inferred from the name*, so
+"Whitby Abbey Cross" is typed `abbey` and the cross base beside All Saints is
+typed `church`. The types agreed because they were the same evidence read twice.
+Circular corroboration is not corroboration, so containment now earns review and
+never a merge.
+
+That removed four false merges — a priory into its farmhouse, an abbey into its
+cross, a churchyard cross base into its church, and a village cross group into
+the stocks within it — the last of which is the "church versus churchyard cross"
+case this matcher has been required to protect since batch 6.
+
+### What it cost
+
+The 5,000-record baseline moved: 11 automatic merges became 4, and review rose
+from 15 to 22. The seven that moved are all containment pairs — "Yarm Bridge"
+against "Yarm Bridge Over River Tees", "Wressle Castle" against "Ruins of Wressle
+Castle", "Bishop's Manor House" against "The Bishop's Manor" — and all seven were
+*correct* merges now routed to a human instead.
+
+That is a deliberate trade in the direction this matcher is allowed to be wrong.
+It is worth being explicit that the batch-6 statement "all 11 automatic merges at
+5,000 records are correct" remains true; seven of them are simply no longer
+automatic. Bounded-versus-exhaustive equivalence is unaffected — both strategies
+were re-verified against the corrected matcher and still agree exactly.
+
+## Review load
+
+| | 10,000 | 25,000 |
+| --- | ---: | ---: |
+| Queued | 46 (0.46%) | 180 (0.72%) |
+| Reviewer-minutes per 1,000 records | 9.2 | 14.4 |
+| Estimated clearance | 1.5 h | 6.0 h |
+
+Causes at 25,000: one name contains the other (106, 58.9%), names not close
+enough (27), landscape against a structure inside it (25), type disagreement
+(10), location disagreement (6), non-distinctive name (3), below threshold (2),
+outside the agreement radius (1).
+
+No new pathological class appeared at scale. The dominant cause is the new
+containment rule, which is the expected shape of a deliberately conservative
+gate. **Bulk approval is not warranted**: six hours of review for a
+25,000-record regional import is not the bottleneck, and the whole queue is
+identity judgements a reviewer should actually make.
+
+## Query performance and storage
+
+Measured on ephemeral Supabase in CI, p50/p95 over 25 runs after warmup.
+
+| Query (p95, ms) | 1,000 | 5,000 | 25,000 |
+| --- | ---: | ---: | ---: |
+| Detail by slug | 0.035 | 0.054 | 0.101 |
+| Map pan (bounded area) | 0.275 | 0.828 | 2.267 |
+| Radius (5 km) | 0.298 | 0.525 | 1.928 |
+| Text search | 0.288 | 1.497 | 7.255 |
+| Text + type filter | 0.269 | 1.295 | 7.478 |
+
+Against the 300 ms gate the worst reading at 25,000 records is 7.5 ms, roughly
+40x of headroom. The spatial GiST index carries the map and radius queries as
+intended.
+
+| Storage | 1,000 | 5,000 | 25,000 |
+| --- | ---: | ---: | ---: |
+| `places` table | 713 KB | 3,129 KB | 15,237 KB |
+| Bytes per place | 710 | 629 | 615 |
+| Index bytes | 426 KB | 1,778 KB | 8,446 KB |
+
+Bytes per place *falls* as fixed overhead amortises. Growth is linear.
+
+### No tuning was applied, on purpose
+
+Full-text search is still not index-backed: at 25,000 rows the planner estimates
+a sequential scan (cost 1,249) marginally cheaper than the GIN index (cost
+1,208 plus heap access) and chooses it. Forcing the index gives 6.7 ms against
+the planner's 9.9 ms, so the crossover is close — but at 7 ms p95 against a
+300 ms gate this is not a performance problem, and changing the plan to win
+3 ms would be tuning against a number nobody is waiting on.
+
+The check that matters is that the index remains correct and usable: forced, it
+returns 2,076 rows for "church", exactly matching a from-scratch recomputation
+of the tsvector. Worth re-measuring at the next capacity gate, where the
+crossover will likely have passed.
+
+**No index was added in this batch.** The two candidate lookups map onto
+`places_location_gix` (already present) and an equality lookup on external
+identifiers, which is not yet needed because candidate generation runs in memory
+before anything is written.
+
+## Same-source and cross-source, permanently separated
+
+`matching/source-relation.ts` now owns the distinction as a named, testable gate
+rather than an inline condition. Same-source overlaps are classified
+descriptively — repeated entry, multi-designation, distinct entries — and none of
+that vocabulary asserts an entry is wrong, because none of it is evidence that
+one is.
+
+Making it explicit surfaced a last residue of the batch-6 defect: `MATCH_REVIEW`
+was still incrementing the cross-source `Ambiguous` bucket for same-source pairs,
+so a single-source run reported comparison outcomes for pairs where no comparison
+had been performed. A single-source run now produces zero cross-source
+comparisons, asserted by test. At 25,000 records the register's 213 same-source
+overlaps produce no conflicts at all; the 16 conflicts are matcher-level
+disagreements about type and location.
+
+## National-import gate
+
+**PARTIALLY_RESOLVED.** All-pairs candidate discovery is gone and 98% of the work
+with it, which is what blocked a larger *regional* import. What is not yet
+demonstrated is behaviour when the corpus grows by area rather than density —
+the regime a national import actually occupies — and the in-memory index would
+need to become the SQL lookups it was designed to mirror once publication is
+incremental rather than whole-run. National import remains ungated and
+unauthorised.

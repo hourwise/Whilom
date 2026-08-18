@@ -81,6 +81,22 @@ export interface StorageStats {
   tables: { table: string; rows: number; totalBytes: number; indexBytes: number }[];
 }
 
+/** What candidate generation cost, and what it saved. */
+export interface CandidateMetrics {
+  mode: string;
+  /** Pairs an exhaustive scan would have produced. */
+  possiblePairs: number;
+  /** Pairs actually handed to the matcher. */
+  candidatePairs: number;
+  pairsPruned: number;
+  pruningRate: number;
+  candidatePairsPerRecord: number;
+  fromSpatial: number;
+  fromIdentifierOnly: number;
+  cellsInspected: number;
+  generationMs: number;
+}
+
 export interface TierMetrics {
   tier: number;
   startedAt: string;
@@ -117,6 +133,8 @@ export interface TierMetrics {
     /** Field-level conflict counts, so "conflicts" is not one opaque number. */
     conflictFields: { field: string; count: number }[];
   };
+
+  candidates: CandidateMetrics;
 
   review: ReviewPressure;
 

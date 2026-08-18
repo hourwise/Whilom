@@ -12,7 +12,21 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { CACHE_DIR, CACHE_FILE, readManifest } from './capture';
 
-export const TIER_SIZES = [1000, 2500, 5000] as const;
+export const TIER_SIZES = [1000, 2500, 5000, 10000, 25000] as const;
+
+/**
+ * Tiers for which an exhaustive decision oracle is maintained.
+ *
+ * The oracle exists to prove bounded candidate generation equivalent, and that
+ * proof does not need to be re-run at every size: exhaustive matching at 25,000
+ * records is ~312 million comparisons, which costs minutes to demonstrate
+ * something already established. Above this the bounded path runs alone.
+ */
+export const ORACLE_TIER_SIZES = [1000, 2500, 5000] as const;
+
+export function isOracleTierSize(value: number): value is (typeof ORACLE_TIER_SIZES)[number] {
+  return (ORACLE_TIER_SIZES as readonly number[]).includes(value);
+}
 export type TierSize = (typeof TIER_SIZES)[number];
 
 export function isTierSize(value: number): value is TierSize {
