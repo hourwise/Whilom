@@ -4,6 +4,13 @@ import { ENRICHMENT_COORDINATE_TOLERANCE_METERS } from '../enrichment/enrichment
 import { applyEnrichment } from '../enrichment/wikidata';
 import { matchCandidate } from '../matching/matcher';
 import type { MatchStats } from '../matching/matcher';
+import { CandidateIndex, CandidateMode } from '../matching/candidates';
+import type { CandidateGenerationStats } from '../matching/candidates';
+import {
+  SameSourceOverlap,
+  classifySameSourceOverlap,
+  shouldCompareAcrossSources,
+} from '../matching/source-relation';
 import { ComparisonOutcome, compareSources } from '../matching/compare';
 import type { SourceComparison } from '../matching/compare';
 import type { RawPlaceRecord, SourceAdapter } from '../sources/source-adapter';
@@ -59,6 +66,8 @@ export interface SourceSpec {
 export interface RunObserver {
   /** Accumulates matcher work across the whole run. */
   matchStats?: MatchStats;
+  /** Accumulates candidate-generation work across the whole run. */
+  candidateStats?: CandidateGenerationStats;
   /** Called once per record that reached the matcher. */
   onRecord?(timings: { normaliseMs: number; validateMs: number; matchMs: number }): void;
 }
@@ -75,6 +84,11 @@ export interface RunOptions {
   maxRecords?: number;
   /** Measurement taps; see `RunObserver`. */
   observer?: RunObserver;
+  /**
+   * How the matcher's input set is discovered. Bounded is the production path;
+   * exhaustive exists so bounded can be proved equivalent to it.
+   */
+  candidateMode?: CandidateMode;
 }
 
 export interface DecidedCandidate {
@@ -82,6 +96,16 @@ export interface DecidedCandidate {
   decision: MatchDecision;
   /** True when the match was against a candidate created earlier in this run. */
   withinRun: boolean;
+  /**
+   * The source record id behind `decision.matchedPlaceId`, when it names a
+   * record created in this run.
+   *
+   * `matchedPlaceId` is a synthetic within-run handle, so it cannot be compared
+   * between two runs. The source record id can, which is what lets the
+   * equivalence harness assert that two candidate strategies reached the same
+   * decision about the same pair of real records.
+   */
+  matchedSourceRecordId?: string;
   /**
    * Field-level comparison against the record this matched, when it matched.
    * Absent for a new canonical record — there is nothing to compare against.
@@ -114,6 +138,12 @@ export interface RunReport {
    * here and deliberately kept out of `comparisons` and `conflicts`.
    */
   withinSourceMatches: number;
+  /**
+   * Why those same-source matches overlap. Descriptive, not adjudicative: it
+   * says what kind of overlap one register contains, never that an entry is
+   * wrong. See `matching/source-relation.ts`.
+   */
+  sameSourceOverlaps: Record<SameSourceOverlap, number>;
   /** Total field-level disagreements raised. */
   conflicts: number;
   /**
@@ -175,6 +205,7 @@ export function candidateAsCanonical(candidate: PlaceCandidate, id: string): Can
 
 export async function runIngestion(options: RunOptions): Promise<RunReport> {
   const { importRunId, sources, enrichmentSource, maxRecords, observer } = options;
+  const candidateMode = options.candidateMode ?? CandidateMode.Bounded;
   const startedAt = new Date();
 
   const report: RunReport = {
@@ -190,6 +221,11 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
     outcomes: emptyOutcomes(),
     duplicatesWithinRun: 0,
     withinSourceMatches: 0,
+    sameSourceOverlaps: {
+      [SameSourceOverlap.RepeatedEntry]: 0,
+      [SameSourceOverlap.MultiDesignation]: 0,
+      [SameSourceOverlap.DistinctEntries]: 0,
+    },
     conflicts: 0,
     genericallyTyped: 0,
     comparisons: emptyComparisons(),
@@ -200,8 +236,9 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
   // Places the matcher compares against: what is already canonical, plus what
   // this run has decided to create. Without the second half, two source rows
   // describing one abbey would both be filed as new.
-  const existing: CanonicalPlaceRef[] = [...(options.existingPlaces ?? [])];
-  const preexistingIds = new Set(existing.map((p) => p.id));
+  const existing = new CandidateIndex(candidateMode);
+  for (const place of options.existingPlaces ?? []) existing.add(place);
+  const preexistingIds = new Set((options.existingPlaces ?? []).map((p) => p.id));
   // The candidate behind each record created in this run, so a later source
   // describing the same place can be compared field by field against it.
   const candidateById = new Map<string, PlaceCandidate>();
@@ -262,8 +299,12 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
     }
 
     // --- MATCH / DEDUPE -----------------------------------------------------
+    // --- CANDIDATE GENERATION ----------------------------------------------
+    // Which records the matcher is asked about. Not which records match.
+    const shortlist = existing.candidatesFor(candidate, observer?.candidateStats);
+
     const matchStart = performance.now();
-    const decision = matchCandidate(candidate, existing, observer?.matchStats);
+    const decision = matchCandidate(candidate, shortlist, observer?.matchStats);
     const matchMs = performance.now() - matchStart;
     observer?.onRecord?.({ normaliseMs, validateMs, matchMs });
     const withinRun =
@@ -286,7 +327,7 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
     if (decision.outcome === MatchOutcome.NewCanonical) {
       createdInRun += 1;
       const id = `run:${importRunId}:${createdInRun}`;
-      existing.push(candidateAsCanonical(candidate, id));
+      existing.add(candidateAsCanonical(candidate, id));
       candidateById.set(id, candidate);
       report.comparisons[ComparisonOutcome.NoMatch] += 1;
     }
@@ -309,20 +350,44 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
     if (decision.matchedPlaceId) {
       const counterpart = candidateById.get(decision.matchedPlaceId);
       if (counterpart) {
-        if (counterpart.provenance.sourceId === candidate.provenance.sourceId) {
-          report.withinSourceMatches += 1;
-        } else {
+        if (shouldCompareAcrossSources(counterpart, candidate)) {
           comparison = compareSources(counterpart, candidate);
           report.comparisons[comparison.outcome] += 1;
           report.conflicts += comparison.conflicts.length;
+        } else {
+          // Same source: recorded as an overlap, never as a disagreement.
+          report.withinSourceMatches += 1;
+          const overlap = classifySameSourceOverlap(counterpart, candidate);
+          report.sameSourceOverlaps[overlap] += 1;
         }
       }
     }
+    // A review outcome is ambiguity about IDENTITY, and it belongs in the
+    // comparison histogram only when two sources were actually involved.
+    // Counting it for a same-source pair was the last residue of the Batch 6
+    // defect: a single-source run still reported cross-source comparison
+    // outcomes, for pairs where no comparison was ever performed.
     if (decision.outcome === MatchOutcome.MatchReview && !comparison) {
-      report.comparisons[ComparisonOutcome.Ambiguous] += 1;
+      const counterpart = decision.matchedPlaceId
+        ? candidateById.get(decision.matchedPlaceId)
+        : undefined;
+      if (counterpart && shouldCompareAcrossSources(counterpart, candidate)) {
+        report.comparisons[ComparisonOutcome.Ambiguous] += 1;
+      }
     }
 
-    report.decided.push({ candidate, decision, withinRun, ...(comparison ? { comparison } : {}) });
+    const matchedCandidate = decision.matchedPlaceId
+      ? candidateById.get(decision.matchedPlaceId)
+      : undefined;
+    report.decided.push({
+      candidate,
+      decision,
+      withinRun,
+      ...(matchedCandidate
+        ? { matchedSourceRecordId: matchedCandidate.provenance.sourceRecordId }
+        : {}),
+      ...(comparison ? { comparison } : {}),
+    });
    }
   }
 
