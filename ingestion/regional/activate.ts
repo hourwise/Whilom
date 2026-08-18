@@ -86,6 +86,8 @@ export interface ActivationPlan {
    * records are counted.
    */
   counts: Record<PublicationClass, number>;
+  /** Auto-safe records that should attach to a place another record created. */
+  expectedAttachments: number;
   /** Records dropped before a candidate row could exist. */
   rejectedBeforeCandidate: number;
   rejectionReasons: { reason: string; count: number }[];
@@ -164,8 +166,16 @@ export async function buildActivation(outDir: string): Promise<ActivationPlan> {
     // pipeline produced.
     const normalised = JSON.stringify(candidate);
 
+    // The matcher's `matchedPlaceId` is a synthetic within-run handle and means
+    // nothing to the database. What travels instead is the SOURCE RECORD id of
+    // the record it matched, which the database can resolve to a real place
+    // once that record has been published. Without this the confident-match
+    // path never fires and every match is published as a second place — which
+    // is exactly what the first activation did, silently, until the audit found
+    // zero automatic merges where the plan said twenty-five.
     rows.push(
       [
+        csvField(String(ordinal)),
         csvField(id),
         csvField(normalised),
         csvField(status),
@@ -173,6 +183,7 @@ export async function buildActivation(outDir: string): Promise<ActivationPlan> {
         csvField(classification.publicationClass),
         csvField(classification.reason),
         csvField(decision.rationale),
+        csvField(decided.matchedSourceRecordId ?? ''),
       ].join(','),
     );
 
@@ -208,6 +219,7 @@ export async function buildActivation(outDir: string): Promise<ActivationPlan> {
     valid: report.valid,
     rejected: report.rejected,
     counts,
+    expectedAttachments: report.outcomes[MatchOutcome.MatchConfident],
     rejectedBeforeCandidate: report.rejected,
     rejectionReasons: (() => {
       const grouped = new Map<string, number>();
@@ -260,6 +272,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       console.log(`valid / rejected ${plan.valid} / ${plan.rejected}`);
       console.log(`outcomes         ${JSON.stringify(plan.outcomes)}`);
       console.log(`classes          ${JSON.stringify(plan.counts)}`);
+      console.log(`expected merges  ${plan.expectedAttachments} (attach to an existing place)`);
       console.log(`rejected early   ${plan.rejectedBeforeCandidate} ${JSON.stringify(plan.rejectionReasons)}`);
       console.log(`candidate pairs  ${plan.candidatePairs} (${plan.candidatePairsPerRecord}/record)`);
       console.log(`ingestion        ${plan.ingestionMs}ms (${plan.recordsPerSecond} rec/s)`);

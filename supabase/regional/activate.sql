@@ -58,13 +58,17 @@ on conflict (id) do nothing;
 -- Staging
 -- ---------------------------------------------------------------------------
 create temporary table staged_candidates (
+  ordinal integer not null,
   id uuid primary key,
   normalised jsonb not null,
   status text not null,
   confidence numeric,
   publication_class text not null,
   policy_reason text,
-  matcher_rationale text
+  matcher_rationale text,
+  -- The source record this candidate was matched to, when the matcher was
+  -- confident. Resolved to a real place at publish time; see below.
+  matched_source_record_id text
 );
 
 create temporary table staged_conflicts (
@@ -74,7 +78,7 @@ create temporary table staged_conflicts (
   incoming_value jsonb
 );
 
-\copy staged_candidates (id, normalised, status, confidence, publication_class, policy_reason, matcher_rationale) from 'regional-candidates.csv' with (format csv)
+\copy staged_candidates (ordinal, id, normalised, status, confidence, publication_class, policy_reason, matcher_rationale, matched_source_record_id) from 'regional-candidates.csv' with (format csv)
 \copy staged_conflicts (candidate_id, field, existing_value, incoming_value) from 'regional-conflicts.csv' with (format csv)
 
 -- Candidates are inserted at `needs_review` regardless of class. Approval is a
@@ -122,6 +126,8 @@ declare
   -- subtransaction, so one bad record cannot take the other 499 with it.
   batch_size constant integer := 500;
   v_id uuid;
+  v_matched_source text;
+  v_target uuid;
   v_entity uuid;
   v_started timestamptz;
   v_elapsed double precision;
@@ -132,13 +138,39 @@ begin
   perform set_config('request.jwt.claims',
     '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', false);
 
-  for v_id in
-    select s.id from staged_candidates s
+  -- Processing order, not id order. A confident match always refers to a record
+  -- the matcher saw EARLIER in the run, so publishing in that order guarantees
+  -- the target place exists by the time the match needs it.
+  for v_id, v_matched_source in
+    select s.id, nullif(s.matched_source_record_id, '')
+      from staged_candidates s
      where s.publication_class = 'AUTO_SAFE'
-     order by s.id
+     order by s.ordinal
   loop
     v_started := clock_timestamp();
     begin
+      -- Resolve the match to a real canonical place.
+      --
+      -- The matcher works in synthetic within-run handles, which mean nothing
+      -- here; what it exports is the source record it matched. That record has
+      -- already been published, so its source_records row names the place to
+      -- attach to. Written onto the candidate — where matched_entity_id is the
+      -- matcher's own output, exactly as `normalised` is — and then it is
+      -- publish_import_candidate that decides what to do with it.
+      if v_matched_source is not null then
+        select sr.entity_id into v_target
+          from public.source_records sr
+         where sr.source_id = 'b0000000-0000-4000-8000-000000000001'
+           and sr.external_id = v_matched_source
+           and sr.entity_type = 'place'
+         limit 1;
+
+        if v_target is not null then
+          update public.import_candidates
+             set matched_entity_id = v_target
+           where id = v_id and published_entity_id is null;
+        end if;
+      end if;
       -- Already published by an earlier activation? Then re-reviewing is
       -- correctly refused by the contract — a published candidate is history,
       -- and pretending otherwise would imply canonical data can be retracted by
@@ -195,6 +227,14 @@ select json_build_object(
   'candidatesConsidered', (select count(*) from staged_candidates where publication_class = 'AUTO_SAFE'),
   'reviewQueued',         (select count(*) from staged_candidates where publication_class = 'REVIEW_REQUIRED'),
   'published',            (select count(*) from publication_log where outcome = 'published'),
+  'attachedToExisting',   (select count(*) from staged_candidates s
+                             join publication_log l on l.candidate_id = s.id
+                            where l.outcome = 'published'
+                              and nullif(s.matched_source_record_id, '') is not null),
+  'newPlacesCreated',     (select count(*) from staged_candidates s
+                             join publication_log l on l.candidate_id = s.id
+                            where l.outcome = 'published'
+                              and nullif(s.matched_source_record_id, '') is null),
   'idempotentNoOps',      (select count(*) from publication_log where outcome = 'already_published'),
   'refused',              (select count(*) from publication_log where outcome = 'refused'),
   'failed',               (select count(*) from publication_log where outcome = 'failed'),
