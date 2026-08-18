@@ -49,6 +49,8 @@ declare
   s jsonb;
   p text;
   v_person uuid;
+  v_p_w double precision; v_p_s double precision;
+  v_p_e double precision; v_p_n double precision;
   i integer;
   started timestamptz;
   elapsed double precision;
@@ -64,6 +66,26 @@ begin
    group by r.subject_id
    order by count(*) desc
    limit 1;
+
+  -- The viewport that person actually occupies. Measuring them inside a fixed
+  -- box tests nothing: the best-connected architect here worked around York,
+  -- and a western box returns a truthful, useless zero. Selecting a person in
+  -- the UI fits the map to their places, so the bench does the same.
+  if v_person is not null then
+    select min(pp.lng) - 0.05, min(pp.lat) - 0.05,
+           max(pp.lng) + 0.05, max(pp.lat) + 0.05
+      into v_p_w, v_p_s, v_p_e, v_p_n
+      from public.person_places(v_person) pp;
+    -- map_places refuses a box wider than 2.5 x 1.5 degrees. A person whose
+    -- work is spread wider than that is clamped around its centre rather than
+    -- dropped, so the lane still measures something.
+    if v_p_e - v_p_w > 2.5 then
+      v_p_w := (v_p_w + v_p_e) / 2 - 1.24; v_p_e := v_p_w + 2.48;
+    end if;
+    if v_p_n - v_p_s > 1.5 then
+      v_p_s := (v_p_s + v_p_n) / 2 - 0.74; v_p_n := v_p_s + 1.48;
+    end if;
+  end if;
 
   for i in 1 .. warmups + runs loop
     for s in select * from jsonb_array_elements(scenarios) loop
@@ -199,10 +221,11 @@ begin
         insert into discovery_bench values ('person', 'related', i - warmups, elapsed, n_rows, n_places, n_bytes);
       end if;
 
-      -- WHO + WHERE together.
+      -- WHO + WHERE together, over the person's own extent.
+      if v_p_w is null then continue; end if;
       started := clock_timestamp();
       select count(*), count(*), 0 into n_rows, n_places, n_bytes
-        from public.map_places(-2.6, 53.2, -1.6, 54.2, null, 250, null, null, null,
+        from public.map_places(v_p_w, v_p_s, v_p_e, v_p_n, null, 250, null, null, null,
           null, null, false, 'all', null, v_person) mp;
       elapsed := extract(epoch from clock_timestamp() - started) * 1000;
       if i > warmups then
@@ -259,6 +282,20 @@ select json_build_object(
                              and r.status = 'approved'),
     'personPlaceLinks', (select count(*) from public.entity_relationships
                           where subject_type = 'person' and object_type = 'place'),
+    -- How much of the graph is actually connected person-to-person. Stated as
+    -- a corpus fact so an empty related-people result reads as the shape of
+    -- this dataset rather than a broken query.
+    'withRelatedPeople', (
+      select count(*) from public.people pe
+       where pe.status = 'approved'
+         and exists (select 1 from public.related_people(pe.id))),
+    'sharedPlaces', (
+      select count(*) from (
+        select r.object_id
+          from public.entity_relationships r
+         where r.subject_type = 'person' and r.object_type = 'place'
+           and r.status = 'approved'
+         group by r.object_id having count(distinct r.subject_id) > 1) t),
     'examples', (
       select coalesce(json_agg(row_to_json(t)), '[]'::json) from (
         select pe.name,
