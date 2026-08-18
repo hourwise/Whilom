@@ -48,6 +48,9 @@ declare
 
   s jsonb;
   p text;
+  v_person uuid;
+  v_p_w double precision; v_p_s double precision;
+  v_p_e double precision; v_p_n double precision;
   i integer;
   started timestamptz;
   elapsed double precision;
@@ -55,6 +58,35 @@ declare
   n_places bigint;
   n_bytes bigint;
 begin
+  -- The best-connected person, so the person lane measures a real workload
+  -- rather than somebody with a single building.
+  select r.subject_id into v_person
+    from public.entity_relationships r
+   where r.subject_type = 'person' and r.object_type = 'place' and r.status = 'approved'
+   group by r.subject_id
+   order by count(*) desc
+   limit 1;
+
+  -- The viewport that person actually occupies. Measuring them inside a fixed
+  -- box tests nothing: the best-connected architect here worked around York,
+  -- and a western box returns a truthful, useless zero. Selecting a person in
+  -- the UI fits the map to their places, so the bench does the same.
+  if v_person is not null then
+    select min(pp.lng) - 0.05, min(pp.lat) - 0.05,
+           max(pp.lng) + 0.05, max(pp.lat) + 0.05
+      into v_p_w, v_p_s, v_p_e, v_p_n
+      from public.person_places(v_person) pp;
+    -- map_places refuses a box wider than 2.5 x 1.5 degrees. A person whose
+    -- work is spread wider than that is clamped around its centre rather than
+    -- dropped, so the lane still measures something.
+    if v_p_e - v_p_w > 2.5 then
+      v_p_w := (v_p_w + v_p_e) / 2 - 1.24; v_p_e := v_p_w + 2.48;
+    end if;
+    if v_p_n - v_p_s > 1.5 then
+      v_p_s := (v_p_s + v_p_n) / 2 - 0.74; v_p_n := v_p_s + 1.48;
+    end if;
+  end if;
+
   for i in 1 .. warmups + runs loop
     for s in select * from jsonb_array_elements(scenarios) loop
 
@@ -119,6 +151,88 @@ begin
         ('urban', 'period+type', i - warmups, elapsed, n_rows, n_places, n_bytes);
     end if;
 
+    -- --- Time modes over the dense urban viewport ------------------------
+    foreach p in array array['at', 'until', 'from'] loop
+      started := clock_timestamp();
+      select count(*), coalesce(sum(place_count), 0), 0
+        into n_rows, n_places, n_bytes
+        from public.map_clusters(-1.95, 53.75, -1.45, 53.95, 0.03,
+          null, null, null, null, null, null, false, 400, p, 1850) c;
+      elapsed := extract(epoch from clock_timestamp() - started) * 1000;
+      if i > warmups then
+        insert into discovery_bench values ('urban', 'mode:' || p, i - warmups, elapsed, n_rows, n_places, n_bytes);
+      end if;
+    end loop;
+
+    -- --- Period counts for the timeline ----------------------------------
+    -- One grouped query for all twenty-one epochs, not one query per label.
+    started := clock_timestamp();
+    select count(*), coalesce(sum(place_count), 0), 0
+      into n_rows, n_places, n_bytes
+      from public.period_counts_for_viewport(-1.95, 53.75, -1.45, 53.95) c;
+    elapsed := extract(epoch from clock_timestamp() - started) * 1000;
+    if i > warmups then
+      insert into discovery_bench values ('urban', 'period-counts', i - warmups, elapsed, n_rows, n_places, n_bytes);
+    end if;
+
+    -- --- Coverage for the default UK view ---------------------------------
+    started := clock_timestamp();
+    select count(*), 0, 0 into n_rows, n_places, n_bytes
+      from public.coverage_for_viewport(-8.6, 49.9, 1.8, 60.9) c;
+    elapsed := extract(epoch from clock_timestamp() - started) * 1000;
+    if i > warmups then
+      insert into discovery_bench values ('uk', 'coverage', i - warmups, elapsed, n_rows, n_places, n_bytes);
+    end if;
+
+    -- --- Search: places and people from one box ---------------------------
+    started := clock_timestamp();
+    select count(*), 0, coalesce(octet_length(coalesce(json_agg(sr)::text, '[]')), 0)
+      into n_rows, n_places, n_bytes
+      from public.search_discovery('hall') sr;
+    elapsed := extract(epoch from clock_timestamp() - started) * 1000;
+    if i > warmups then
+      insert into discovery_bench values ('search', 'mixed', i - warmups, elapsed, n_rows, n_places, n_bytes);
+    end if;
+
+    started := clock_timestamp();
+    select count(*), 0, 0 into n_rows, n_places, n_bytes
+      from public.search_discovery('john') sr;
+    elapsed := extract(epoch from clock_timestamp() - started) * 1000;
+    if i > warmups then
+      insert into discovery_bench values ('search', 'person', i - warmups, elapsed, n_rows, n_places, n_bytes);
+    end if;
+
+    -- --- Following a person ------------------------------------------------
+    if v_person is not null then
+      started := clock_timestamp();
+      select count(*), count(*), coalesce(octet_length(coalesce(json_agg(pp)::text, '[]')), 0)
+        into n_rows, n_places, n_bytes
+        from public.person_places(v_person) pp;
+      elapsed := extract(epoch from clock_timestamp() - started) * 1000;
+      if i > warmups then
+        insert into discovery_bench values ('person', 'places', i - warmups, elapsed, n_rows, n_places, n_bytes);
+      end if;
+
+      started := clock_timestamp();
+      select count(*), 0, 0 into n_rows, n_places, n_bytes
+        from public.related_people(v_person) rp;
+      elapsed := extract(epoch from clock_timestamp() - started) * 1000;
+      if i > warmups then
+        insert into discovery_bench values ('person', 'related', i - warmups, elapsed, n_rows, n_places, n_bytes);
+      end if;
+
+      -- WHO + WHERE together, over the person's own extent.
+      if v_p_w is null then continue; end if;
+      started := clock_timestamp();
+      select count(*), count(*), 0 into n_rows, n_places, n_bytes
+        from public.map_places(v_p_w, v_p_s, v_p_e, v_p_n, null, 250, null, null, null,
+          null, null, false, 'all', null, v_person) mp;
+      elapsed := extract(epoch from clock_timestamp() - started) * 1000;
+      if i > warmups then
+        insert into discovery_bench values ('person', 'map', i - warmups, elapsed, n_rows, n_places, n_bytes);
+      end if;
+    end if;
+
     -- --- Explicit date range ---------------------------------------------
     started := clock_timestamp();
     select count(*), coalesce(sum(place_count), 0), 0
@@ -159,6 +273,46 @@ select json_build_object(
       select count(*) from public.temporal_associations
        where derivation ilike '%designat%' or derivation ilike '%listed%')
   ),
+  'people', json_build_object(
+    'total', (select count(*) from public.people),
+    'withDates', (select count(*) from public.people
+                   where birth_year is not null or death_year is not null),
+    'connectedToAPlace', (select count(distinct r.subject_id) from public.entity_relationships r
+                           where r.subject_type = 'person' and r.object_type = 'place'
+                             and r.status = 'approved'),
+    'personPlaceLinks', (select count(*) from public.entity_relationships
+                          where subject_type = 'person' and object_type = 'place'),
+    -- How much of the graph is actually connected person-to-person. Stated as
+    -- a corpus fact so an empty related-people result reads as the shape of
+    -- this dataset rather than a broken query.
+    'withRelatedPeople', (
+      select count(*) from public.people pe
+       where pe.status = 'approved'
+         and exists (select 1 from public.related_people(pe.id))),
+    'sharedPlaces', (
+      select count(*) from (
+        select r.object_id
+          from public.entity_relationships r
+         where r.subject_type = 'person' and r.object_type = 'place'
+           and r.status = 'approved'
+         group by r.object_id having count(distinct r.subject_id) > 1) t),
+    'examples', (
+      select coalesce(json_agg(row_to_json(t)), '[]'::json) from (
+        select pe.name,
+               public.person_life_dates(pe.birth_year, pe.death_year) as life_dates,
+               count(*) as places
+          from public.entity_relationships r
+          join public.people pe on pe.id = r.subject_id
+         where r.subject_type = 'person' and r.object_type = 'place' and r.status = 'approved'
+         group by pe.name, pe.birth_year, pe.death_year
+         order by count(*) desc, pe.name
+         limit 5) t)
+  ),
+  'coverage', (
+    select json_build_object(
+      'ukViewportFraction', round(covered_fraction::numeric, 4),
+      'regions', region_names)
+    from public.coverage_for_viewport(-8.6, 49.9, 1.8, 60.9)),
   'scenarios', (
     select json_agg(row order by row->>'scenario', row->>'queryKind') from (
       select json_build_object(

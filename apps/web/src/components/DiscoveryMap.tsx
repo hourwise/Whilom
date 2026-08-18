@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { AttributionControl, Map as MapLibreMap, Marker, NavigationControl } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { resolveMapStyle } from '@/lib/basemap';
+import { displayCategory } from '@/lib/discovery';
 import type { MapBounds, MapCluster, MapPlace } from '@/lib/discovery';
 
 /**
@@ -26,6 +27,8 @@ interface Props {
   selectedSlug: string | null;
   center: { lng: number; lat: number };
   zoom: number;
+  /** Bumped when the caller wants the map to jump, e.g. after a search. */
+  flyToken?: number;
   onMoved: (bounds: MapBounds, center: { lng: number; lat: number }, zoom: number) => void;
   onSelectPlace: (slug: string) => void;
   onZoomToCluster: (lng: number, lat: number) => void;
@@ -39,19 +42,7 @@ function clusterSize(count: number): number {
   return Math.min(64, 26 + Math.sqrt(count) * 2.2);
 }
 
-/**
- * A restrained shape vocabulary rather than a colour per type.
- *
- * Colour alone would fail anyone who cannot distinguish it, and thirty colours
- * fail everyone. Four families, distinguished by symbol.
- */
-function symbolForType(placeType: string): string {
-  if (/church|cathedral|abbey|priory|chapel/.test(placeType)) return '✝';
-  if (/castle|fort|hillfort|military|bunker|pillbox/.test(placeType)) return '⌂';
-  if (/archaeolog|roman_villa|barrow|monument|battlefield|ruin|lost/.test(placeType)) return '◈';
-  if (/garden|landscape|park/.test(placeType)) return '❦';
-  return '●';
-}
+
 
 export function DiscoveryMap({
   clusters,
@@ -59,6 +50,7 @@ export function DiscoveryMap({
   selectedSlug,
   center,
   zoom,
+  flyToken,
   onMoved,
   onSelectPlace,
   onZoomToCluster,
@@ -116,15 +108,16 @@ export function DiscoveryMap({
 
   }, []);
 
-  // --- Follow external centre changes (search, shared link) -----------------
+  // --- Follow deliberate jumps only ----------------------------------------
+  // Driven by a token rather than by centre/zoom, because those change on every
+  // pan: reacting to them would make the map argue with the person dragging it.
   useEffect(() => {
     const m = map.current;
-    if (!m) return;
-    const c = m.getCenter();
-    const moved = Math.abs(c.lng - center.lng) > 1e-4 || Math.abs(c.lat - center.lat) > 1e-4;
-    const zoomed = Math.abs(m.getZoom() - zoom) > 0.01;
-    if (moved || zoomed) m.easeTo({ center: [center.lng, center.lat], zoom, duration: 600 });
-  }, [center.lng, center.lat, zoom]);
+    if (!m || flyToken === undefined) return;
+    m.easeTo({ center: [center.lng, center.lat], zoom, duration: 700 });
+    // Only the token is a dependency; centre and zoom are read at fire time.
+
+  }, [flyToken]);
 
   // --- Draw ----------------------------------------------------------------
   useEffect(() => {
@@ -158,8 +151,15 @@ export function DiscoveryMap({
       const el = document.createElement('button');
       el.type = 'button';
       el.className = `map-pin${place.slug === selectedSlug ? ' is-selected' : ''}`;
-      el.textContent = symbolForType(place.place_type);
-      el.setAttribute('aria-label', `${place.name}, ${place.place_type.replace(/_/g, ' ')}`);
+      // Colour and symbol together, matching the legend. Either alone would
+      // leave somebody unable to read the map.
+      const category = displayCategory(place.display_category);
+      el.style.background = category.colour;
+      el.textContent = category.symbol;
+      el.setAttribute(
+        'aria-label',
+        `${place.name}, ${place.place_type.replace(/_/g, ' ')}, ${category.label}`,
+      );
       el.addEventListener('click', () => handlers.current.onSelectPlace(place.slug));
       markers.current.push(
         new Marker({ element: el }).setLngLat([place.lng, place.lat]).addTo(m),

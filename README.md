@@ -43,7 +43,7 @@ Mobile**; publicly both are simply **Whilom**.
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Phased build plan (Phase 0â€“9) and current status |
 | [docs/INGESTION.md](docs/INGESTION.md) | The governed data-ingestion pipeline design |
 | [docs/INGESTION.md](docs/INGESTION.md) — review workbench | Internal `/admin/imports` editorial tool (editor-only) |
-| [docs/DISCOVERY.md](docs/DISCOVERY.md) | Public map, temporal model, period registry and what Whilom refuses to claim |
+| [docs/DISCOVERY.md](docs/DISCOVERY.md) | WHERE/WHEN/WHO: the map, the century ruler, people, coverage truthfulness |
 | [docs/SCALE.md](docs/SCALE.md) | Scale experiments to 25,000 records, and the WHILOM_REGION_YORKSHIRE_V1 regional activation |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Dev setup, workspace commands, conventions |
 
