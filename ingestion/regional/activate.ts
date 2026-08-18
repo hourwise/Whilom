@@ -31,6 +31,7 @@ import { MatchOutcome } from '../pipeline/candidate';
 import { CandidateMode, emptyCandidateStats } from '../matching/candidates';
 import type { MatchStats } from '../matching/matcher';
 import { REGIONAL_CACHE_FILE, readRegionalManifest } from './capture';
+import { NAME_DERIVED_ASSOCIATION, extractTemporalClaims } from '../transforms/temporal';
 import { PublicationClass, classifyDecision, moderationStateFor } from './policy';
 import {
   PUBLICATION_POLICY_VERSION,
@@ -127,6 +128,12 @@ export interface ActivationPlan {
   placeTypes: Record<string, number>;
   designations: Record<string, number>;
   genericallyTyped: number;
+  /** Records with at least one defensible temporal claim. */
+  recordsWithTemporal: number;
+  temporalCoverageRate: number;
+  temporalByPeriod: Record<string, number>;
+  /** Source fields rejected as temporal evidence, and why. */
+  rejectedTemporalFields: { field: string; reason: string }[];
   /** Why records are queued, grouped so the queue reads as causes not rows. */
   reviewCauses: { cause: string; count: number; share: number; example: string }[];
   reviewMinutesEstimate: number;
@@ -232,6 +239,48 @@ export async function buildActivation(outDir: string): Promise<ActivationPlan> {
     }
   });
 
+  // --- Temporal claims ------------------------------------------------------
+  // Only what the source itself says. NHLE carries six date fields and not one
+  // of them is a historic date — they all record when protection was conferred
+  // — so the only defensible evidence is period language in the record's own
+  // description. Coverage is consequently tiny, and that is the true answer.
+  const temporalRows: string[] = [];
+  let recordsWithTemporal = 0;
+  const temporalByPeriod = new Map<string, number>();
+
+  for (const decided of report.decided) {
+    const { candidate } = decided;
+    // Scheduled monuments are named with formal archaeological descriptions;
+    // listed buildings are named with postal addresses. A bare period word
+    // means something in the first and nothing in the second.
+    const descriptiveSource = candidate.designations.some(
+      (d) => d.designation === 'scheduled_monument',
+    );
+    const claims = extractTemporalClaims(candidate.name, { descriptiveSource });
+    if (claims.length === 0) continue;
+    recordsWithTemporal += 1;
+    for (const claim of claims) {
+      temporalByPeriod.set(claim.periodId, (temporalByPeriod.get(claim.periodId) ?? 0) + 1);
+      temporalRows.push(
+        [
+          csvField(candidate.provenance.sourceRecordId),
+          csvField(NAME_DERIVED_ASSOCIATION),
+          csvField(String(claim.startYear)),
+          csvField(String(claim.endYear)),
+          csvField(claim.precision),
+          csvField(claim.periodId),
+          csvField(claim.originalText),
+          csvField(claim.derivation),
+        ].join(','),
+      );
+    }
+  }
+
+  writeFileSync(
+    resolve(outDir, 'regional-temporal.csv'),
+    temporalRows.join('\n') + (temporalRows.length ? '\n' : ''),
+  );
+
   writeFileSync(resolve(outDir, 'regional-candidates.csv'), rows.join('\n') + '\n');
   writeFileSync(resolve(outDir, 'regional-conflicts.csv'), conflictRows.join('\n') + (conflictRows.length ? '\n' : ''));
   writeFileSync(resolve(outDir, 'regional-approved.csv'), approved.map((id) => csvField(id)).join('\n') + '\n');
@@ -293,6 +342,18 @@ export async function buildActivation(outDir: string): Promise<ActivationPlan> {
     placeTypes,
     designations,
     genericallyTyped: report.genericallyTyped,
+    recordsWithTemporal,
+    temporalCoverageRate: Math.round((recordsWithTemporal / Math.max(1, report.valid)) * 100000) / 100000,
+    temporalByPeriod: Object.fromEntries([...temporalByPeriod].sort((a, b) => b[1] - a[1])),
+    rejectedTemporalFields: [
+      { field: 'ListDate', reason: 'when the building was listed, not when it was built' },
+      { field: 'SchedDate', reason: 'when the monument was scheduled' },
+      { field: 'RegDate', reason: 'when the park or battlefield was registered' },
+      { field: 'InscrDate', reason: 'when the World Heritage Site was inscribed' },
+      { field: 'DesigDate', reason: 'when the designation was made' },
+      { field: 'AmendDate', reason: 'when the register entry was last amended' },
+      { field: 'first_designated', reason: 'the published fact derived from the above' },
+    ],
     reviewCauses,
     // Two minutes per decision, the figure used throughout the scale work. An
     // estimate from a documented assumption, not observed reviewer productivity.
@@ -333,6 +394,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       console.log(`batch size       ${PUBLISH_BATCH_SIZE}`);
       console.log(`review causes    ${plan.reviewCauses.map((c) => `${c.cause} (${c.count})`).join('; ')}`);
       console.log(`review estimate  ~${Math.round(plan.reviewMinutesEstimate / 6) / 10}h`);
+      console.log(
+        `temporal         ${plan.recordsWithTemporal} records (${(plan.temporalCoverageRate * 100).toFixed(2)}%) ${JSON.stringify(plan.temporalByPeriod)}`,
+      );
     })
     .catch((error: unknown) => {
       console.error(error);
