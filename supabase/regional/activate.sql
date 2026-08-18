@@ -87,9 +87,16 @@ select s.id, 'd0000000-0000-4000-8000-000000000001', 'place', s.normalised,
   from staged_candidates s
 on conflict (id) do nothing;
 
+-- `predicate` links a conflict to a published fact and is NULL for conflicts
+-- about canonical columns. The matcher's conflicts are about place_type and
+-- location, which are columns rather than facts, so the link is only set when
+-- the field genuinely names a registered predicate — as the column's own
+-- comment requires, and as its foreign key enforces.
 insert into public.import_conflicts
   (import_candidate_id, entity_type, entity_id, field, predicate, existing_value, incoming_value)
-select c.candidate_id, 'place', null, c.field, c.field, c.existing_value, c.incoming_value
+select c.candidate_id, 'place', null, c.field,
+       (select fp.predicate from public.fact_predicates fp where fp.predicate = c.field),
+       c.existing_value, c.incoming_value
   from staged_conflicts c
  where not exists (
    select 1 from public.import_conflicts x

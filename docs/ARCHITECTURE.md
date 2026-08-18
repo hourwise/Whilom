@@ -106,3 +106,40 @@ fact and a user claim are never indistinguishable. (spec §39)
 This scaffold is **Phase 1 — Shared Foundation** (spec §43). Feature work
 (Data MVP, Website MVP, Knowledge Platform, Trails, Mobile MVP, …) layers on top
 without re-architecting these boundaries.
+
+---
+
+## Benchmark corpus and product dataset
+
+Two distinct things live under `ingestion/`, and conflating them would be a
+category error:
+
+- **`scale/`** builds a *benchmark corpus* — nested tiers from 1,000 to 25,000
+  records, selected by quota, existing to measure how the pipeline behaves as a
+  corpus grows. It ends at metrics.
+- **`regional/`** builds a *product dataset* — every protected record inside one
+  coherent boundary, existing to be searched. It ends at canonical places with
+  provenance, facts, designations and a review queue.
+
+The data flow differs at the point where the benchmark stops:
+
+```
+                       benchmark stops here
+                              |
+source -> normalise -> validate -> candidates -> match -> metrics
+                                                    |
+                                                    v
+                                       conflict / review
+                                                    |
+                                                    v
+                              governed publication (publish_import_candidate)
+                                                    |
+                                                    v
+             canonical places + source records + facts + relationships
+                                                    |
+                                                    v
+                          bounded discovery reads (search_places, map_places)
+```
+
+Only the product path writes canonical data, and it does so exclusively through
+the governed publication contract.
