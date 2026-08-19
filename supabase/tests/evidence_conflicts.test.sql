@@ -10,7 +10,7 @@
 
 begin;
 create extension if not exists pgtap;
-select plan(34);
+select plan(38);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'user@example.test');
@@ -141,6 +141,43 @@ select ok(
 select is(
   (select coalesce(a_property, b_property) from public.temporal_conflicts()),
   'P571', 'and the property the claim came from, whichever side it sits on');
+
+-- ---------------------------------------------------------------------------
+-- One record describing several structures is not a disagreement
+-- ---------------------------------------------------------------------------
+-- Measured against the real corpus, this was the largest single cause of false
+-- conflicts: "2 Raised Grave Slabs One to John Scott Dated 1744 the Other to
+-- Gregory Tomlinson Dated 1681" is one listing about two objects, and Whilom
+-- was comparing them as though two sources had contradicted each other.
+insert into public.source_records (id, source_id, entity_type, entity_id, external_id)
+values ('60000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000002',
+        'place', 'aaaaaaaa-0000-0000-0000-000000000001', 'shared-listing');
+
+insert into public.temporal_associations
+  (entity_type, entity_id, association_type, start_year, end_year, precision,
+   source_id, source_record_id, display_label) values
+  ('place', 'aaaaaaaa-0000-0000-0000-000000000001', 'existed', 1744, 1744, 'exact_year',
+   '50000000-0000-0000-0000-000000000002', '60000000-0000-0000-0000-000000000001', '1744'),
+  ('place', 'aaaaaaaa-0000-0000-0000-000000000001', 'existed', 1681, 1681, 'exact_year',
+   '50000000-0000-0000-0000-000000000002', '60000000-0000-0000-0000-000000000001', '1681');
+
+select ok(
+  public.temporal_same_record(
+    '60000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000001'),
+  'two claims from one source record are recognised as such');
+
+select ok(
+  not public.temporal_same_record(null, null),
+  'and an unknown record is never treated as shared, which would silence real disagreements');
+
+select is(
+  (select count(*) from public.temporal_conflicts()
+    where place_slug = 'st-marys' and relation = 'exact_conflict'),
+  0::bigint, 'two dates in one listing are not reported as a conflict');
+
+select is(
+  (select pairs from public.temporal_relation_summary() where relation = 'same_record_components'),
+  1::bigint, 'they are reported as components of one description instead');
 
 -- ---------------------------------------------------------------------------
 -- Multiple phases survive
