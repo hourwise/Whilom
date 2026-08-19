@@ -299,7 +299,10 @@ select json_build_object(
     'overpreciseLabels', (
       select count(*) from public.temporal_associations
        where "precision" in ('century', 'period', 'decade')
-         and display_label ~ '[12][0-9]{3}'),
+         -- Word-bounded, matching the check constraint exactly. Without the
+         -- boundaries this counted "1870s", which is the CORRECT rendering of
+         -- a decade claim, and reported eleven violations that were not.
+         and display_label ~ '\y[12][0-9]{3}\y'),
     'quarantined', (select count(*) from public.temporal_quarantine),
     'quarantineRanking', (
       select coalesce(json_agg(row_to_json(q)), '[]'::json)
