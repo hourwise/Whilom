@@ -61,6 +61,7 @@ import {
   type RejectionReason,
   normaliseWikidataTime,
 } from '../transforms/temporal-normaliser';
+import { runSparql } from '../sources/wikidata/sparql';
 import { readRegionalManifest } from './capture';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -148,48 +149,6 @@ export interface TemporalCapture {
   outsideRegion: number;
 }
 
-/**
- * Run a query, retrying on the transient failures a shared public endpoint
- * returns under load.
- *
- * 429 and 5xx are the endpoint being busy rather than the query being wrong,
- * and a build that falls over on one of them would make temporal coverage a
- * function of Wikidata's afternoon. A 4xx other than 429 is not retried: that
- * is a bad query, and repeating it is rude and pointless.
- */
-async function runQuery(
-  endpoint: string,
-  query: string,
-  attempts = 4,
-): Promise<Record<string, { value: string }>[]> {
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    try {
-      const response = await fetch(`${endpoint}?format=json&query=${encodeURIComponent(query)}`, {
-        headers: {
-          Accept: 'application/sparql-results+json',
-          'User-Agent': `Whilom/${TEMPORAL_IMPORTER_VERSION} (bounded regional temporal enrichment)`,
-        },
-      });
-      if (response.ok) {
-        const body = (await response.json()) as {
-          results?: { bindings?: Record<string, { value: string }>[] };
-        };
-        return body.results?.bindings ?? [];
-      }
-      if (response.status !== 429 && response.status < 500) {
-        throw new Error(`SPARQL HTTP ${response.status}`);
-      }
-      lastError = new Error(`SPARQL HTTP ${response.status}`);
-    } catch (error) {
-      lastError = error;
-    }
-    if (attempt < attempts) {
-      await new Promise((r) => setTimeout(r, 2_000 * 2 ** (attempt - 1)));
-    }
-  }
-  throw lastError instanceof Error ? lastError : new Error('SPARQL query failed');
-}
 
 /**
  * The query for one property.
@@ -238,7 +197,9 @@ export async function captureTemporal(): Promise<TemporalCapture> {
   for (const spec of TEMPORAL_PROPERTIES) {
     // One property per query. The combined UNION form times out on the public
     // endpoint, and three cheap queries are kinder to a shared service.
-    const rows = await runQuery(WIKIDATA_SPARQL_ENDPOINT, buildTemporalQuery(spec.property));
+    const rows = await runSparql(buildTemporalQuery(spec.property), {
+      userAgent: `Whilom/${TEMPORAL_IMPORTER_VERSION} (bounded regional temporal enrichment)`,
+    });
     candidateRows += rows.length;
 
     for (const row of rows) {

@@ -26,6 +26,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runSparql } from '../sources/wikidata/sparql';
 import { readRegionalManifest } from './capture';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -111,17 +112,6 @@ export function parseWikidataYear(value: string | null | undefined): {
   return { year, precision };
 }
 
-async function runQuery(endpoint: string, query: string): Promise<Record<string, { value: string }>[]> {
-  const response = await fetch(`${endpoint}?format=json&query=${encodeURIComponent(query)}`, {
-    headers: {
-      Accept: 'application/sparql-results+json',
-      'User-Agent': `Whilom/${PEOPLE_IMPORTER_VERSION} (bounded regional people enrichment)`,
-    },
-  });
-  if (!response.ok) throw new Error(`SPARQL HTTP ${response.status}`);
-  const body = (await response.json()) as { results?: { bindings?: Record<string, { value: string }>[] } };
-  return body.results?.bindings ?? [];
-}
 
 export async function capturePeople(): Promise<PeopleCapture> {
   const manifest = readRegionalManifest();
@@ -143,7 +133,9 @@ export async function capturePeople(): Promise<PeopleCapture> {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
 } LIMIT 4000`;
 
-    const rows = await runQuery(WIKIDATA_SPARQL_ENDPOINT, query);
+    const rows = await runSparql(query, {
+      userAgent: `Whilom/${PEOPLE_IMPORTER_VERSION} (bounded regional people enrichment)`,
+    });
     candidateRows += rows.length;
 
     for (const row of rows) {
