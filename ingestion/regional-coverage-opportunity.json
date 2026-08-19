@@ -1,0 +1,387 @@
+{
+  "generatedAt": "2026-08-19T07:56:22.574Z",
+  "vocabularyVersion": "1.0.0",
+  "baseline": {
+    "regionalPlaces": 23151,
+    "temporalClaims": 1443,
+    "placesWithTemporal": 1322
+  },
+  "nhle": {
+    "publishedFields": [
+      "AmendDate",
+      "BPNExpire",
+      "BPNStart",
+      "COIExpire",
+      "COIStart",
+      "CaptureScale",
+      "DesigDate",
+      "Easting",
+      "Grade",
+      "InscrDate",
+      "Latitude",
+      "ListDate",
+      "ListEntry",
+      "Longitude",
+      "NGR",
+      "Name",
+      "Northing",
+      "Notes",
+      "OBJECTID",
+      "RegDate",
+      "SchedDate",
+      "area_ha",
+      "hyperlink"
+    ],
+    "layers": 11,
+    "historicDateFields": 0,
+    "administrativeDateFields": 6,
+    "nationalCounts": {
+      "Listed Building points": 379685,
+      "Scheduled Monuments": 20001,
+      "Parks and Gardens": 1721,
+      "Battlefields": 47,
+      "Protected Wreck Sites": 57,
+      "World Heritage Sites": 28
+    },
+    "nationalTotal": 401539,
+    "servicesEnumerated": 247,
+    "descriptionsInOpenData": false
+  },
+  "vocabulary": {
+    "periodTerms": [
+      {
+        "qid": "Q12554",
+        "label": "Middle Ages",
+        "classification": "BROADER_THAN_REGISTRY",
+        "periodId": null,
+        "span": {
+          "start": 410,
+          "end": 1484
+        },
+        "note": "spans early_medieval, norman and medieval; kept as a span rather than narrowed to one of them"
+      },
+      {
+        "qid": "Q131987978",
+        "label": "Romano-British period",
+        "classification": "CONTROLLED_ALIAS",
+        "periodId": "roman",
+        "span": null,
+        "note": "the British provincial name for the Roman period"
+      },
+      {
+        "qid": "Q277399",
+        "label": "British Iron Age",
+        "classification": "CONTROLLED_ALIAS",
+        "periodId": "iron_age",
+        "span": null,
+        "note": "the British regional name for the Iron Age"
+      },
+      {
+        "qid": "Q44155",
+        "label": "Mesolithic",
+        "classification": "DIRECT_REGISTRY_MATCH",
+        "periodId": "mesolithic",
+        "span": null,
+        "note": "registry period under the same name"
+      },
+      {
+        "qid": "Q11764",
+        "label": "Iron Age",
+        "classification": "DIRECT_REGISTRY_MATCH",
+        "periodId": "iron_age",
+        "span": null,
+        "note": "registry period under the same name"
+      }
+    ],
+    "eventTermsGoverned": 26,
+    "eventTermsRefused": [
+      {
+        "qid": "Q3610005",
+        "label": "geophysical survey",
+        "note": "dates the survey, not the site; a 2015 survey of a Bronze Age barrow says nothing about the barrow"
+      },
+      {
+        "qid": "Q959782",
+        "label": "archaeological excavation",
+        "note": "dates the excavation, not the site"
+      },
+      {
+        "qid": "Q1144458",
+        "label": "archaeological field survey",
+        "note": "dates the survey, not the site"
+      },
+      {
+        "qid": "Q112127197",
+        "label": "topographical survey",
+        "note": "dates the survey, not the site"
+      },
+      {
+        "qid": "Q29778318",
+        "label": "UNESCO World Heritage Site record modification",
+        "note": "an administrative act, in the same family as the designation dates the register already refuses"
+      },
+      {
+        "qid": "Q24410992",
+        "label": "automatization",
+        "note": "a lighthouse being automated is an operational change, not a date for the structure"
+      },
+      {
+        "qid": "Q34581",
+        "label": "childbirth",
+        "note": "dates a person, not the building they were born in"
+      }
+    ],
+    "rejectedProperties": [
+      {
+        "property": "P149",
+        "label": "architectural style",
+        "regionalRecords": 517,
+        "reason": "STYLE_NOT_DATE",
+        "note": "a style correlates with a period and does not assert one; revival styles invert the correlation outright, so a Norman-revival church would be dated to the twelfth century instead of the nineteenth"
+      },
+      {
+        "property": "P1435",
+        "label": "heritage designation",
+        "regionalRecords": 55133,
+        "reason": "DESIGNATION_NOT_HISTORIC",
+        "note": "designation is an act of the state, the same class of value the register's own date fields carry"
+      }
+    ]
+  },
+  "decisions": {
+    "historicEnglandDescriptions": "ACCESS_OR_LICENSING_REVIEW_REQUIRED",
+    "controlledArchaeologicalVocabulary": "PARTIAL_GOVERNED_MAPPING",
+    "additionalWikidataProperties": "SAFE_DIRECT_PROPERTIES_IDENTIFIED"
+  },
+  "opportunities": [
+    {
+      "source": "Historic England — NHLE list-entry descriptions",
+      "sourceFamily": "Historic England",
+      "accessMethod": "Not published in the open-data service. The text exists only on individual list-entry web pages, reachable one document at a time via the `hyperlink` field.",
+      "licence": "unknown for the description text; the spatial data is OGL v3.0",
+      "attributionRequirement": "Contains Historic England information © Historic England (for the open data)",
+      "bulkAccessAllowed": "unknown",
+      "stableIdentifierAvailable": true,
+      "candidateRecords": 401539,
+      "matchedWhilomPlaces": 23151,
+      "unmatchedNewPlaces": 0,
+      "directTemporalAssertions": null,
+      "periodOnlyAssertions": null,
+      "strongTemporalGain": null,
+      "periodOnlyGain": null,
+      "expectedGeographicGain": "none — same places, more detail about them",
+      "precisionDistribution": null,
+      "conflictRate": "not measurable without access",
+      "unhandledRate": "not measurable without access",
+      "provenanceQuality": "high",
+      "automationSafety": "unknown",
+      "licensingConfidence": "unknown",
+      "implementationComplexity": "high",
+      "runtimeCost": "one document retrieval per record; ~400,000 nationally",
+      "operationalRisk": "Retrieving hundreds of thousands of pages from a public website is a bulk-use decision with terms, rate and politeness consequences that Whilom cannot settle from the outside.",
+      "recommendedAction": "RESEARCH_ACCESS",
+      "evidence": [
+        "The NHLE FeatureServer publishes 11 layers with 23 distinct fields between them; none is a description and every date field records an act of the state.",
+        "All 247 feature services published by Historic England were enumerated; none carries list-entry description text.",
+        "historicengland.org.uk returned HTTP 403 to a non-browser request — including for robots.txt — so even the crawl policy could not be established, let alone bulk terms.",
+        "This is the single largest temporal opportunity available and it is blocked on access, not on engineering."
+      ]
+    },
+    {
+      "source": "Historic England — NHLE national extent",
+      "sourceFamily": "Historic England",
+      "accessMethod": "The same ArcGIS FeatureServer Whilom already ingests, without the regional envelope",
+      "licence": "OGL v3.0",
+      "attributionRequirement": "Contains Historic England information © Historic England. Contains OS data © Crown copyright",
+      "bulkAccessAllowed": true,
+      "stableIdentifierAvailable": true,
+      "candidateRecords": 401539,
+      "matchedWhilomPlaces": 23151,
+      "unmatchedNewPlaces": 378388,
+      "directTemporalAssertions": null,
+      "periodOnlyAssertions": null,
+      "strongTemporalGain": null,
+      "periodOnlyGain": null,
+      "expectedGeographicGain": "England-wide, from one Yorkshire band to the whole country",
+      "precisionDistribution": null,
+      "conflictRate": "unchanged per record; the same pipeline and the same matcher",
+      "unhandledRate": "unchanged per record",
+      "provenanceQuality": "high",
+      "automationSafety": "automatic",
+      "licensingConfidence": "established",
+      "implementationComplexity": "medium",
+      "runtimeCost": "17× the current corpus through an already-proven pipeline",
+      "operationalRisk": "The scale ladder has been proven to 25,000 records, not 400,000. Every map gate, the cluster aggregation and the coverage-truthfulness model were tuned against 23,151 places. This is a batch of its own, not a flag.",
+      "recommendedAction": "PILOT",
+      "evidence": [
+        "401,539 records nationally against 23,151 ingested — 17×.",
+        "Same licence, same stable identifiers, same adapter: no new access or licensing question at all.",
+        "By a wide margin the largest geographic gain available, and the only one requiring no new source."
+      ]
+    },
+    {
+      "source": "Wikidata — dated significant events (P793 + P585)",
+      "sourceFamily": "Wikidata",
+      "accessMethod": "SPARQL, joined on P1216 (NHLE list entry)",
+      "licence": "CC0-1.0",
+      "attributionRequirement": "Wikidata contributors, CC0 1.0",
+      "bulkAccessAllowed": true,
+      "stableIdentifierAvailable": true,
+      "candidateRecords": 122,
+      "matchedWhilomPlaces": 22,
+      "unmatchedNewPlaces": 0,
+      "directTemporalAssertions": 35,
+      "periodOnlyAssertions": 0,
+      "strongTemporalGain": 35,
+      "periodOnlyGain": 0,
+      "expectedGeographicGain": "none — enriches places Whilom already holds",
+      "precisionDistribution": {
+        "year": 33,
+        "day": 5,
+        "century": 3
+      },
+      "conflictRate": "low; events are usually different facts rather than competing dates",
+      "unhandledRate": "6 of 41 rejected as not about the place",
+      "provenanceQuality": "high",
+      "automationSafety": "automatic",
+      "licensingConfidence": "established",
+      "implementationComplexity": "low",
+      "runtimeCost": "one additional bounded SPARQL query",
+      "operationalRisk": "Requires a governed event vocabulary. Several dated event types describe a modern investigation rather than the place, and importing them blindly would date a Bronze Age barrow to 2015.",
+      "recommendedAction": "IMPORT_NOW",
+      "evidence": [
+        "33 distinct dated event types measured regionally; 26 governed as evidence, 7 refused by name.",
+        "Semantics are genuinely distinct: demolition, conflagration, slighting and licence to crenellate are four different claims and must not collapse into one generic date."
+      ]
+    },
+    {
+      "source": "Wikidata — controlled period vocabulary (P2348)",
+      "sourceFamily": "Wikidata",
+      "accessMethod": "SPARQL, joined on P1216",
+      "licence": "CC0-1.0",
+      "attributionRequirement": "Wikidata contributors, CC0 1.0",
+      "bulkAccessAllowed": true,
+      "stableIdentifierAvailable": true,
+      "candidateRecords": 94,
+      "matchedWhilomPlaces": 47,
+      "unmatchedNewPlaces": 0,
+      "directTemporalAssertions": 0,
+      "periodOnlyAssertions": 47,
+      "strongTemporalGain": 0,
+      "periodOnlyGain": 47,
+      "expectedGeographicGain": "none",
+      "precisionDistribution": {
+        "period": 47
+      },
+      "conflictRate": "low",
+      "unhandledRate": "0 of 5 distinct period items unmapped",
+      "provenanceQuality": "high",
+      "automationSafety": "automatic",
+      "licensingConfidence": "established",
+      "implementationComplexity": "low",
+      "runtimeCost": "one additional bounded SPARQL query",
+      "operationalRisk": "One of the five terms is broader than any single Whilom period. \"Middle Ages\" spans three registry periods, and narrowing it to the best-overlapping one would invent precision the source did not give.",
+      "recommendedAction": "IMPORT_NOW",
+      "evidence": [
+        "5 distinct period items measured; classified BROADER_THAN_REGISTRY, CONTROLLED_ALIAS, CONTROLLED_ALIAS, DIRECT_REGISTRY_MATCH, DIRECT_REGISTRY_MATCH.",
+        "The only genuinely controlled period vocabulary either source offers — everything else is a word read out of a name."
+      ]
+    },
+    {
+      "source": "Wikidata — start time (P580) and point in time (P585)",
+      "sourceFamily": "Wikidata",
+      "accessMethod": "SPARQL, joined on P1216",
+      "licence": "CC0-1.0",
+      "attributionRequirement": "Wikidata contributors, CC0 1.0",
+      "bulkAccessAllowed": true,
+      "stableIdentifierAvailable": true,
+      "candidateRecords": 31,
+      "matchedWhilomPlaces": 28,
+      "unmatchedNewPlaces": 0,
+      "directTemporalAssertions": 28,
+      "periodOnlyAssertions": 0,
+      "strongTemporalGain": 28,
+      "periodOnlyGain": 0,
+      "expectedGeographicGain": "none",
+      "precisionDistribution": {
+        "year": 20,
+        "day": 8
+      },
+      "conflictRate": "unmeasured at this volume",
+      "unhandledRate": "unmeasured at this volume",
+      "provenanceQuality": "medium",
+      "automationSafety": "review",
+      "licensingConfidence": "established",
+      "implementationComplexity": "low",
+      "runtimeCost": "two additional bounded SPARQL queries",
+      "operationalRisk": "The semantics are ambiguous by design. P580 on a heritage item may mean the structure began, or the organisation occupying it began, or a designation began — and 28 places is not enough evidence to settle which, per item, without reading them.",
+      "recommendedAction": "DEFER",
+      "evidence": [
+        "21 places carry P580 and 7 carry P585 regionally.",
+        "Batch 11 established that a property must be imported for what it means, not for the fact it holds a date. These two do not have one settled meaning on this class of item."
+      ]
+    },
+    {
+      "source": "Wikidata — architectural style (P149)",
+      "sourceFamily": "Wikidata",
+      "accessMethod": "SPARQL, joined on P1216",
+      "licence": "CC0-1.0",
+      "attributionRequirement": "Wikidata contributors, CC0 1.0",
+      "bulkAccessAllowed": true,
+      "stableIdentifierAvailable": true,
+      "candidateRecords": 517,
+      "matchedWhilomPlaces": null,
+      "unmatchedNewPlaces": 0,
+      "directTemporalAssertions": 0,
+      "periodOnlyAssertions": 0,
+      "strongTemporalGain": 0,
+      "periodOnlyGain": 0,
+      "expectedGeographicGain": "none",
+      "precisionDistribution": null,
+      "conflictRate": "n/a",
+      "unhandledRate": "n/a",
+      "provenanceQuality": "high",
+      "automationSafety": "unsafe",
+      "licensingConfidence": "established",
+      "implementationComplexity": "low",
+      "runtimeCost": "n/a",
+      "operationalRisk": "a style correlates with a period and does not assert one; revival styles invert the correlation outright, so a Norman-revival church would be dated to the twelfth century instead of the nineteenth",
+      "recommendedAction": "REJECT_INFERENCE",
+      "evidence": [
+        "517 regional records carry it — the largest body of apparently-temporal evidence available, and it is not temporal evidence.",
+        "a style correlates with a period and does not assert one; revival styles invert the correlation outright, so a Norman-revival church would be dated to the twelfth century instead of the nineteenth"
+      ]
+    },
+    {
+      "source": "Wikidata — heritage designation (P1435)",
+      "sourceFamily": "Wikidata",
+      "accessMethod": "SPARQL, joined on P1216",
+      "licence": "CC0-1.0",
+      "attributionRequirement": "Wikidata contributors, CC0 1.0",
+      "bulkAccessAllowed": true,
+      "stableIdentifierAvailable": true,
+      "candidateRecords": 55133,
+      "matchedWhilomPlaces": null,
+      "unmatchedNewPlaces": 0,
+      "directTemporalAssertions": 0,
+      "periodOnlyAssertions": 0,
+      "strongTemporalGain": 0,
+      "periodOnlyGain": 0,
+      "expectedGeographicGain": "none",
+      "precisionDistribution": null,
+      "conflictRate": "n/a",
+      "unhandledRate": "n/a",
+      "provenanceQuality": "high",
+      "automationSafety": "unsafe",
+      "licensingConfidence": "established",
+      "implementationComplexity": "low",
+      "runtimeCost": "n/a",
+      "operationalRisk": "designation is an act of the state, the same class of value the register's own date fields carry",
+      "recommendedAction": "REJECT_INFERENCE",
+      "evidence": [
+        "55,133 regional records carry it — the largest body of apparently-temporal evidence available, and it is not temporal evidence.",
+        "designation is an act of the state, the same class of value the register's own date fields carry"
+      ]
+    }
+  ]
+}

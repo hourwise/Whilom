@@ -59,7 +59,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ingestion/.regional-cache
-          key: whilom-region-${{ hashFiles('ingestion/regional/regional-dataset-manifest.json', 'ingestion/regional/people.ts', 'ingestion/regional/temporal-enrichment.ts') }}
+          key: whilom-region-${{ hashFiles('ingestion/regional/regional-dataset-manifest.json', 'ingestion/regional/people.ts', 'ingestion/regional/temporal-enrichment.ts', 'ingestion/transforms/source-vocabulary.ts') }}
 
       - name: Capture regional dataset
         if: steps.cache.outputs.cache-hit != 'true'
@@ -87,6 +87,12 @@ jobs:
       - name: Audit temporal sources
         working-directory: ingestion
         run: pnpm exec tsx regional/temporal-audit.ts
+
+      # Batch 12's primary deliverable: which source Whilom should trust next,
+      # what it buys, and what it costs technically and legally.
+      - name: Coverage opportunity matrix
+        working-directory: ingestion
+        run: pnpm exec tsx regional/coverage-opportunity.ts
 
       # Pinned rather than 'latest'. Resolving 'latest' asks the GitHub
       # releases API on every job, and with three workflows starting several
@@ -413,6 +419,7 @@ jobs:
             ingestion/regional-discovery.json
             ingestion/regional-query-plans.txt
             ingestion/regional-temporal-audit.json
+            ingestion/regional-coverage-opportunity.json
           if-no-files-found: warn
 
       - name: Stop stack

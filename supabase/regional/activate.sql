@@ -293,7 +293,9 @@ create temporary table staged_wikidata_temporal (
   source_field text,
   qid text,
   derivation text,
-  normaliser_version text
+  normaliser_version text,
+  wikidata_property text,
+  statement_rank text
 );
 
 \copy staged_wikidata_temporal from 'regional-temporal-wikidata.csv' with (format csv)
@@ -301,7 +303,8 @@ create temporary table staged_wikidata_temporal (
 insert into public.temporal_associations (
   entity_type, entity_id, association_type, start_year, end_year, precision,
   period_id, source_id, source_record_id, confidence, original_text, derivation, status,
-  source_field, raw_value, raw_precision, century_qualifier, display_label, normaliser_version)
+  source_field, raw_value, raw_precision, century_qualifier, display_label, normaliser_version,
+  source_property, source_rank)
 select
   'place', sr.entity_id, w.association_type::public.temporal_association_type,
   w.start_year, w.end_year, w.precision::public.temporal_precision,
@@ -325,7 +328,8 @@ select
   0.850,
   w.raw_value, w.derivation, 'approved',
   w.source_field, w.raw_value, nullif(w.raw_precision, ''),
-  nullif(w.century_qualifier, ''), nullif(w.display_label, ''), nullif(w.normaliser_version, '')
+  nullif(w.century_qualifier, ''), nullif(w.display_label, ''), nullif(w.normaliser_version, ''),
+  nullif(w.wikidata_property, ''), nullif(w.statement_rank, '')
 from staged_wikidata_temporal w
 join public.source_records sr
   on sr.external_id = w.source_record_id

@@ -88,7 +88,21 @@ export type RejectionReason =
   | 'precision_too_coarse'
   | 'unparseable_structure'
   | 'out_of_range'
-  | 'contradictory_range';
+  | 'contradictory_range'
+  // --- Added in batch 12, as source vocabulary widened -----------------------
+  /** Wikidata's own editors marked the statement wrong or superseded. */
+  | 'deprecated_statement'
+  /**
+   * A real, dated event that says nothing about the place's own history —
+   * a geophysical survey, an excavation, an administrative record change.
+   */
+  | 'event_not_about_place'
+  /** A period term Whilom does not yet govern. Ranked for a future batch. */
+  | 'unmapped_period'
+  /** An event type Whilom does not yet govern. */
+  | 'unmapped_event'
+  /** A style, material or typology, which correlates with a date but is not one. */
+  | 'style_not_date';
 
 export interface Rejection {
   reason: RejectionReason;
