@@ -81,6 +81,20 @@ export interface StorageStats {
   tables: { table: string; rows: number; totalBytes: number; indexBytes: number }[];
 }
 
+export interface WorkingSetStats {
+  mode: string;
+  canonicalRecords: number;
+  spatialIndexEntries: number;
+  identifierIndexEntries: number;
+  cachedPayloadRecords: number;
+  peakCachedPayloadRecords: number;
+  cacheHits: number;
+  cacheMisses: number;
+  chunks: number;
+  spillBytes: number;
+  maxCachedPayloadRecords: number;
+}
+
 /** What candidate generation cost, and what it saved. */
 export interface CandidateMetrics {
   mode: string;
@@ -143,6 +157,7 @@ export interface TierMetrics {
   /** Present only when the tier ran against a database. */
   queries?: QueryTiming[];
   storage?: StorageStats;
+  workingSet?: WorkingSetStats;
 
   gates: GateResult[];
   proceeded: boolean;

@@ -118,6 +118,37 @@ export interface CandidateGenerationStats {
   generationMs: number;
 }
 
+/**
+ * Storage contract used by the ingestion runner. CandidateIndex is the
+ * in-memory implementation; national runs may provide a disk-backed,
+ * chunked implementation without changing matcher semantics.
+ */
+export interface CandidateStore {
+  readonly size: number;
+  add(record: CanonicalPlaceRef, candidate?: PlaceCandidate): void | Promise<void>;
+  candidatesFor(
+    candidate: PlaceCandidate,
+    stats?: CandidateGenerationStats,
+  ): CanonicalPlaceRef[] | Promise<CanonicalPlaceRef[]>;
+  getCandidate?(id: string): PlaceCandidate | undefined | Promise<PlaceCandidate | undefined>;
+  getSourceIdentity?(id: string):
+    | {
+        provenance: { sourceId: string; sourceRecordId: string };
+        designations: readonly { designation: string }[];
+      }
+    | undefined
+    | Promise<
+        | {
+            provenance: { sourceId: string; sourceRecordId: string };
+            designations: readonly { designation: string }[];
+          }
+        | undefined
+      >;
+  beginChunk?(): void | Promise<void>;
+  workingSetStats?(): unknown;
+  close?(): void | Promise<void>;
+}
+
 export function emptyCandidateStats(): CandidateGenerationStats {
   return {
     possiblePairs: 0,
@@ -154,6 +185,14 @@ export function isCandidateMode(value: string): value is CandidateMode {
  */
 export class CandidateIndex {
   private readonly records: CanonicalPlaceRef[] = [];
+  private readonly candidates = new Map<string, PlaceCandidate>();
+  private readonly sourceIdentities = new Map<
+    string,
+    {
+      provenance: { sourceId: string; sourceRecordId: string };
+      designations: readonly { designation: string }[];
+    }
+  >();
   private readonly grid = new Map<string, number[]>();
   private readonly byIdentifier = new Map<string, number[]>();
 
@@ -168,9 +207,19 @@ export class CandidateIndex {
     return this.records;
   }
 
-  add(record: CanonicalPlaceRef): void {
+  add(record: CanonicalPlaceRef, candidate?: PlaceCandidate): void {
     const index = this.records.length;
     this.records.push(record);
+    if (candidate) this.candidates.set(record.id, candidate);
+    if (record.sourceIdentity) {
+      this.sourceIdentities.set(record.id, {
+        provenance: {
+          sourceId: record.sourceIdentity.sourceId,
+          sourceRecordId: record.sourceIdentity.sourceRecordId,
+        },
+        designations: record.sourceIdentity.designations.map((designation) => ({ designation })),
+      });
+    }
 
     const key = cellKey(latCell(record.location.lat), lngCell(record.location.lng));
     const cell = this.grid.get(key);
@@ -182,6 +231,24 @@ export class CandidateIndex {
       if (bucket) bucket.push(index);
       else this.byIdentifier.set(identifier, [index]);
     }
+  }
+
+  getCandidate(id: string): PlaceCandidate | undefined {
+    return this.candidates.get(id);
+  }
+
+  getSourceIdentity(id: string):
+    | {
+        provenance: { sourceId: string; sourceRecordId: string };
+        designations: readonly { designation: string }[];
+      }
+    | undefined {
+    return this.sourceIdentities.get(id);
+  }
+
+  beginChunk(): void {
+    // The in-memory implementation has no chunk lifecycle; this method keeps
+    // it substitutable for a bounded CandidateStore.
   }
 
   /**
@@ -215,7 +282,10 @@ export class CandidateIndex {
     // cosine collapses at the poles, and an unbounded span there would turn a
     // locality query back into a full scan.
     const cosLat = Math.cos((candidate.location.lat * Math.PI) / 180);
-    const lngSpanDegrees = Math.min(180, radius / (METRES_PER_DEGREE_LATITUDE * Math.max(cosLat, 0.01)));
+    const lngSpanDegrees = Math.min(
+      180,
+      radius / (METRES_PER_DEGREE_LATITUDE * Math.max(cosLat, 0.01)),
+    );
 
     const latSteps = Math.ceil(latSpanDegrees / CELL_DEGREES);
     const lngSteps = Math.ceil(lngSpanDegrees / CELL_DEGREES);

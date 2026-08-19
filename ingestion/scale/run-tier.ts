@@ -23,13 +23,14 @@ import { runIngestion } from '../pipeline/run';
 import type { DecidedCandidate } from '../pipeline/run';
 import { MatchOutcome } from '../pipeline/candidate';
 import type { MatchStats } from '../matching/matcher';
+import type { CandidateStore } from '../matching/candidates';
 import { CandidateMode, emptyCandidateStats } from '../matching/candidates';
 import type { CandidateGenerationStats } from '../matching/candidates';
 import { GATES, mayProceed } from './gates';
 import type { GateResult } from './gates';
 import { TIER_SIZES, buildTierFixture, isTierSize } from './tier';
 import { evenSample, round, timingStats } from './metrics';
-import type { QualitySample, ReviewPressure, TierMetrics } from './metrics';
+import type { QualitySample, ReviewPressure, TierMetrics, WorkingSetStats } from './metrics';
 
 const SAMPLE_SIZE = 20;
 
@@ -53,12 +54,16 @@ function parseTier(argv: readonly string[]): number {
 function reviewCause(decided: DecidedCandidate): string {
   const { decision } = decided;
   if (decision.outcome === MatchOutcome.ConflictReview) {
-    const fields = decision.conflicts.map((c) => c.field).sort().join(' + ');
+    const fields = decision.conflicts
+      .map((c) => c.field)
+      .sort()
+      .join(' + ');
     return `sources disagree on ${fields || 'an unnamed field'}`;
   }
   const why = decision.rationale.split('needs review: ')[1] ?? decision.rationale;
   if (why.includes('association rather than identity')) return 'one name contains the other';
-  if (why.includes('protects a landscape')) return 'landscape designation versus a structure inside it';
+  if (why.includes('protects a landscape'))
+    return 'landscape designation versus a structure inside it';
   if (why.includes('the name is not distinctive')) return 'name is not distinctive';
   if (why.includes('scores almost as well')) return 'two candidates score alike';
   if (why.includes('outside the')) return 'position outside the agreement radius';
@@ -97,6 +102,87 @@ function buildReviewPressure(decided: readonly DecidedCandidate[], valid: number
         count: items.length,
         share: round(items.length / Math.max(1, queued.length), 4),
         example: `${items[0]!.candidate.name} — ${items[0]!.decision.rationale}`,
+      }))
+      .sort((a, b) => b.count - a.count),
+  };
+}
+
+interface DecisionAggregates {
+  samples: Record<QualitySample['category'], DecidedCandidate[]>;
+  matchReview: number;
+  conflictReview: number;
+  causes: Map<string, { count: number; example: string }>;
+  conflictFields: Map<string, number>;
+}
+
+function emptyDecisionAggregates(): DecisionAggregates {
+  return {
+    samples: { auto_match: [], new_canonical: [], review_match: [], conflict: [] },
+    matchReview: 0,
+    conflictReview: 0,
+    causes: new Map(),
+    conflictFields: new Map(),
+  };
+}
+
+function decisionCategory(decided: DecidedCandidate): QualitySample['category'] {
+  switch (decided.decision.outcome) {
+    case MatchOutcome.MatchConfident:
+      return 'auto_match';
+    case MatchOutcome.NewCanonical:
+      return 'new_canonical';
+    case MatchOutcome.MatchReview:
+      return 'review_match';
+    case MatchOutcome.ConflictReview:
+      return 'conflict';
+    default:
+      return 'new_canonical';
+  }
+}
+
+function observeDecision(aggregates: DecisionAggregates, decided: DecidedCandidate): void {
+  const category = decisionCategory(decided);
+  if (aggregates.samples[category].length < SAMPLE_SIZE) aggregates.samples[category].push(decided);
+  if (decided.decision.outcome === MatchOutcome.MatchReview) aggregates.matchReview += 1;
+  if (decided.decision.outcome === MatchOutcome.ConflictReview) aggregates.conflictReview += 1;
+  if (
+    decided.decision.outcome === MatchOutcome.MatchReview ||
+    decided.decision.outcome === MatchOutcome.ConflictReview
+  ) {
+    const cause = reviewCause(decided);
+    const existing = aggregates.causes.get(cause);
+    if (existing) existing.count += 1;
+    else
+      aggregates.causes.set(cause, {
+        count: 1,
+        example: `${decided.candidate.name} — ${decided.decision.rationale}`,
+      });
+  }
+  for (const conflict of decided.decision.conflicts) {
+    aggregates.conflictFields.set(
+      conflict.field,
+      (aggregates.conflictFields.get(conflict.field) ?? 0) + 1,
+    );
+  }
+}
+
+function buildStreamingReviewPressure(
+  aggregates: DecisionAggregates,
+  valid: number,
+): ReviewPressure {
+  const totalForReview = aggregates.matchReview + aggregates.conflictReview;
+  return {
+    matchReview: aggregates.matchReview,
+    conflictReview: aggregates.conflictReview,
+    totalForReview,
+    shareOfValid: valid > 0 ? round(totalForReview / valid, 5) : 0,
+    estimatedReviewHours: round((totalForReview * 2) / 60, 2),
+    causes: [...aggregates.causes.entries()]
+      .map(([cause, value]) => ({
+        cause,
+        count: value.count,
+        share: round(value.count / Math.max(1, totalForReview), 4),
+        example: value.example,
       }))
       .sort((a, b) => b.count - a.count),
   };
@@ -165,6 +251,15 @@ export interface TierExecution {
   startedAt: Date;
   finishedAt: Date;
   wallClockMs: number;
+  decisionAggregates: DecisionAggregates;
+  retainedDecided: boolean;
+  workingSet?: WorkingSetStats;
+}
+
+export interface TierExecutionOptions {
+  candidateStore?: CandidateStore;
+  retainDecided?: boolean;
+  chunkSize?: number;
 }
 
 /**
@@ -178,22 +273,33 @@ export async function executeTier(
   tier: number,
   candidateMode: CandidateMode = CandidateMode.Bounded,
   buildFixture: (size: number) => ReturnType<typeof buildTierFixture> = buildTierFixture,
+  options: TierExecutionOptions = {},
 ): Promise<TierExecution> {
   const fixture = buildFixture(tier);
   const startedAt = new Date();
 
-  const matchStats: MatchStats = { comparisons: 0, vetoedByDistance: 0, vetoedByName: 0, vetoedByRegister: 0, beyondMaxDistance: 0 };
+  const matchStats: MatchStats = {
+    comparisons: 0,
+    vetoedByDistance: 0,
+    vetoedByName: 0,
+    vetoedByRegister: 0,
+    beyondMaxDistance: 0,
+  };
   const candidateStats = emptyCandidateStats();
   const normaliseSamples: number[] = [];
   const validateSamples: number[] = [];
   const matchSamples: number[] = [];
+  const decisionAggregates = emptyDecisionAggregates();
 
   const report = await runIngestion({
     importRunId: `scale-${tier}`,
     candidateMode,
     sources: [
       {
-        adapter: new HistoricEnglandNhleAdapter({ kind: 'file', path: fixture.path }),
+        adapter: new HistoricEnglandNhleAdapter({
+          kind: fixture.mode ?? 'file',
+          path: fixture.path,
+        }),
         normalise: normaliseNhleRecord,
       },
     ],
@@ -205,10 +311,16 @@ export async function executeTier(
         validateSamples.push(validateMs);
         matchSamples.push(matchMs);
       },
+      onDecision: (decided) => observeDecision(decisionAggregates, decided),
     },
+    candidateStore: options.candidateStore,
+    chunkSize: options.chunkSize,
+    retainDecided: options.retainDecided,
   });
 
   const finishedAt = new Date();
+  const workingSet = options.candidateStore?.workingSetStats?.() as WorkingSetStats | undefined;
+  await options.candidateStore?.close?.();
   return {
     fixture,
     candidateMode,
@@ -221,6 +333,9 @@ export async function executeTier(
     startedAt,
     finishedAt,
     wallClockMs: finishedAt.getTime() - startedAt.getTime(),
+    decisionAggregates,
+    retainedDecided: options.retainDecided !== false,
+    workingSet,
   };
 }
 
@@ -228,8 +343,9 @@ export async function runTier(
   tier: number,
   candidateMode: CandidateMode = CandidateMode.Bounded,
   buildFixture: (size: number) => ReturnType<typeof buildTierFixture> = buildTierFixture,
+  options: TierExecutionOptions = {},
 ): Promise<TierMetrics> {
-  const execution = await executeTier(tier, candidateMode, buildFixture);
+  const execution = await executeTier(tier, candidateMode, buildFixture, options);
   const metrics = buildTierMetrics(execution, tier);
   metrics.gates = evaluateGates(metrics, loadPreviousTier(tier));
   metrics.proceeded = mayProceed(metrics.gates);
@@ -244,8 +360,18 @@ export async function runTier(
  * produced identically.
  */
 export function buildTierMetrics(execution: TierExecution, tier: number): TierMetrics {
-  const { fixture, candidateMode, report, matchStats, candidateStats, normaliseSamples, validateSamples, matchSamples, startedAt, finishedAt } =
-    execution;
+  const {
+    fixture,
+    candidateMode,
+    report,
+    matchStats,
+    candidateStats,
+    normaliseSamples,
+    validateSamples,
+    matchSamples,
+    startedAt,
+    finishedAt,
+  } = execution;
 
   const rejectionReasons = new Map<string, number>();
   for (const rejection of report.rejections) {
@@ -257,18 +383,17 @@ export function buildTierMetrics(execution: TierExecution, tier: number): TierMe
   }
 
   const conflictFields = new Map<string, number>();
-  for (const decided of report.decided) {
-    for (const conflict of decided.decision.conflicts) {
-      conflictFields.set(conflict.field, (conflictFields.get(conflict.field) ?? 0) + 1);
-    }
-  }
+  for (const [field, count] of execution.decisionAggregates.conflictFields)
+    conflictFields.set(field, count);
 
   const matchTiming = timingStats(matchSamples);
   const valid = report.valid;
   const outcomes = report.outcomes;
   const autoMatched = outcomes[MatchOutcome.MatchConfident];
 
-  const review = buildReviewPressure(report.decided, valid);
+  const review = !execution.retainedDecided
+    ? buildStreamingReviewPressure(execution.decisionAggregates, valid)
+    : buildReviewPressure(report.decided, valid);
 
   const metrics: TierMetrics = {
     tier,
@@ -331,7 +456,10 @@ export function buildTierMetrics(execution: TierExecution, tier: number): TierMe
         candidateStats.possiblePairs > 0
           ? round(1 - candidateStats.candidatePairs / candidateStats.possiblePairs, 5)
           : 0,
-      candidatePairsPerRecord: round(candidateStats.candidatePairs / Math.max(1, matchSamples.length), 2),
+      candidatePairsPerRecord: round(
+        candidateStats.candidatePairs / Math.max(1, matchSamples.length),
+        2,
+      ),
       fromSpatial: candidateStats.fromSpatial,
       fromIdentifierOnly: candidateStats.fromIdentifierOnly,
       cellsInspected: candidateStats.cellsInspected,
@@ -342,21 +470,30 @@ export function buildTierMetrics(execution: TierExecution, tier: number): TierMe
     quality: [
       sampleFor(
         'auto_match',
-        report.decided.filter((d) => d.decision.outcome === MatchOutcome.MatchConfident),
+        !execution.retainedDecided
+          ? execution.decisionAggregates.samples.auto_match
+          : report.decided.filter((d) => d.decision.outcome === MatchOutcome.MatchConfident),
       ),
       sampleFor(
         'new_canonical',
-        report.decided.filter((d) => d.decision.outcome === MatchOutcome.NewCanonical),
+        !execution.retainedDecided
+          ? execution.decisionAggregates.samples.new_canonical
+          : report.decided.filter((d) => d.decision.outcome === MatchOutcome.NewCanonical),
       ),
       sampleFor(
         'review_match',
-        report.decided.filter((d) => d.decision.outcome === MatchOutcome.MatchReview),
+        !execution.retainedDecided
+          ? execution.decisionAggregates.samples.review_match
+          : report.decided.filter((d) => d.decision.outcome === MatchOutcome.MatchReview),
       ),
       sampleFor(
         'conflict',
-        report.decided.filter((d) => d.decision.outcome === MatchOutcome.ConflictReview),
+        !execution.retainedDecided
+          ? execution.decisionAggregates.samples.conflict
+          : report.decided.filter((d) => d.decision.outcome === MatchOutcome.ConflictReview),
       ),
     ],
+    ...(execution.workingSet ? { workingSet: execution.workingSet } : {}),
     gates: [],
     proceeded: false,
   };
@@ -428,7 +565,9 @@ export function evaluateGates(metrics: TierMetrics, previous?: TierMetrics): Gat
   results.push({
     ...g('G6-query-latency'),
     passed: true,
-    observed: metrics.queries ? `${metrics.queries.length} queries measured` : 'not measured in this lane',
+    observed: metrics.queries
+      ? `${metrics.queries.length} queries measured`
+      : 'not measured in this lane',
     ...(metrics.queries
       ? {}
       : { notEvaluated: 'Needs a database; measured by the query lane of the scale workflow.' }),
@@ -455,7 +594,9 @@ export function evaluateGates(metrics: TierMetrics, previous?: TierMetrics): Gat
   results.push({
     ...g('G10-storage-linearity'),
     passed: true,
-    observed: metrics.storage ? `${metrics.storage.bytesPerRecord} bytes/record` : 'not measured in this lane',
+    observed: metrics.storage
+      ? `${metrics.storage.bytesPerRecord} bytes/record`
+      : 'not measured in this lane',
     ...(metrics.storage
       ? {}
       : { notEvaluated: 'Needs a database; measured by the storage lane of the scale workflow.' }),

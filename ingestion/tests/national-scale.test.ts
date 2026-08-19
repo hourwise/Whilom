@@ -10,6 +10,7 @@
 import { describe, expect, it } from 'vitest';
 import { interleavedOrder, type Cache } from '../scale/national/tier';
 import { osGridSquare } from '../scale/national/audit';
+import { classifyStage, type StageResult } from '../scale/national/run-ladder';
 
 /** A synthetic cache: three cells of very different sizes, all in one layer. */
 function syntheticCache(sizes: Record<string, number>): Cache {
@@ -83,5 +84,67 @@ describe('deterministic national sampling', () => {
   it('is stable when a cell is empty', () => {
     const sparse = syntheticCache({ '5,1': 10 });
     expect(interleavedOrder(sparse)).toHaveLength(10);
+  });
+});
+
+describe('national stage classification', () => {
+  function stage(over: Partial<StageResult> = {}): StageResult {
+    return {
+      stage: 50_000,
+      recordCount: 50_000,
+      ingestMs: 1_000,
+      recordsPerSecond: 1_000,
+      meanMsPerRecord: 0.1,
+      meanComparisonsPerRecord: 100,
+      matchTimeScaling: 1,
+      integrity: {
+        sourceRows: 50_000,
+        accountedFor: 50_000,
+        valid: 50_000,
+        rejected: 0,
+        conflicts: 0,
+      },
+      conflicts: 0,
+      conflictRate: 0,
+      heapUsedMb: 100,
+      rssMb: 200,
+      externalMb: 1,
+      gcAvailable: true,
+      classification: 'NOT_RUN',
+      reason: '',
+      ...over,
+    };
+  }
+
+  it('keeps the declared gates strict and classifies integrity, resource and growth failures', () => {
+    expect(
+      classifyStage(stage(), stage({ stage: 25_000, recordCount: 25_000, meanMsPerRecord: 0.1 })),
+    ).toEqual({
+      classification: 'PASS',
+      reason: 'within every national gate',
+    });
+    expect(
+      classifyStage(
+        stage({
+          integrity: {
+            sourceRows: 50_000,
+            accountedFor: 49_999,
+            valid: 50_000,
+            rejected: 0,
+            conflicts: 0,
+          },
+        }),
+        undefined,
+      ).classification,
+    ).toBe('FAIL_INTEGRITY');
+    expect(classifyStage(stage({ heapUsedMb: 1_401 }), undefined).classification).toBe(
+      'FAIL_RESOURCE_BOUND',
+    );
+    expect(
+      classifyStage(
+        stage({ meanMsPerRecord: 0.3 }),
+        stage({ stage: 25_000, recordCount: 25_000, meanMsPerRecord: 0.1 }),
+      ).classification,
+    ).toBe('FAIL_PERFORMANCE');
   });
 });

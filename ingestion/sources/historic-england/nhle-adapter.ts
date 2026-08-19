@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { createReadStream, readFileSync } from 'node:fs';
+import { createInterface } from 'node:readline';
 import type { FetchOptions, RawPlaceRecord, SourceAdapter } from '../source-adapter';
 import { NHLE_LAYERS, findLayer, type NhleLayer } from './nhle-layers';
 
@@ -63,6 +64,7 @@ interface NhleFixture {
 
 export type NhleFetchMode =
   | { kind: 'file'; path: string }
+  | { kind: 'ndjson'; path: string }
   | { kind: 'service'; serviceUrl?: string; layerIds?: number[]; pageSize?: number };
 
 /** British National Grid envelope, as the service's `inSR=27700` expects. */
@@ -90,6 +92,10 @@ export class HistoricEnglandNhleAdapter implements SourceAdapter {
       yield* this.fetchFromFile(this.mode.path);
       return;
     }
+    if (this.mode.kind === 'ndjson') {
+      yield* this.fetchFromNdjson(this.mode.path);
+      return;
+    }
     yield* this.fetchFromService(this.mode, options);
   }
 
@@ -112,6 +118,27 @@ export class HistoricEnglandNhleAdapter implements SourceAdapter {
         const record = toRawRecord(feature.attributes, layer, retrievedAt);
         if (record) yield record;
       }
+    }
+  }
+
+  /** Stream a captured tier without parsing the whole corpus into the heap. */
+  private async *fetchFromNdjson(path: string): AsyncGenerator<RawPlaceRecord> {
+    const lines = createInterface({ input: createReadStream(path), crlfDelay: Infinity });
+    for await (const line of lines) {
+      if (!line.trim()) continue;
+      const row = JSON.parse(line) as {
+        layerId?: unknown;
+        attributes?: NhleAttributes;
+        retrievedAt?: unknown;
+      };
+      const layer = findLayer(Number(row.layerId));
+      if (!layer) continue;
+      const record = toRawRecord(
+        row.attributes,
+        layer,
+        typeof row.retrievedAt === 'string' ? row.retrievedAt : new Date().toISOString(),
+      );
+      if (record) yield record;
     }
   }
 
@@ -207,7 +234,8 @@ function toRawRecord(
     provenance: {
       sourceId: NHLE_SOURCE_ID,
       sourceRecordId: String(listEntry),
-      originalUrl: hyperlink ?? `https://historicengland.org.uk/listing/the-list/list-entry/${listEntry}`,
+      originalUrl:
+        hyperlink ?? `https://historicengland.org.uk/listing/the-list/list-entry/${listEntry}`,
       licence: NHLE_LICENCE,
       attribution: NHLE_ATTRIBUTION,
       retrievedAt,

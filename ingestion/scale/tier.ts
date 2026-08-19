@@ -35,7 +35,11 @@ export function isTierSize(value: number): value is TierSize {
 
 interface CacheFile {
   _source: Record<string, unknown>;
-  layers: { layerId: number; layerName: string; features: { attributes: Record<string, unknown> }[] }[];
+  layers: {
+    layerId: number;
+    layerName: string;
+    features: { attributes: Record<string, unknown> }[];
+  }[];
 }
 
 export interface TierFixture {
@@ -43,6 +47,8 @@ export interface TierFixture {
   path: string;
   size: number;
   mix: Record<string, number>;
+  /** National streaming fixtures use NDJSON; ordinary tiers use JSON. */
+  mode?: 'file' | 'ndjson';
 }
 
 /**
@@ -90,7 +96,9 @@ export function buildTierFixture(size: number): TierFixture {
 
   const total = layers.reduce((sum, l) => sum + l.features.length, 0);
   if (total !== size) {
-    throw new Error(`tier ${size} assembled ${total} records; the cache does not match the manifest`);
+    throw new Error(
+      `tier ${size} assembled ${total} records; the cache does not match the manifest`,
+    );
   }
 
   mkdirSync(CACHE_DIR, { recursive: true });

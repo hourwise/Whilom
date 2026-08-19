@@ -42,14 +42,15 @@ export const NATIONAL_CACHE_DIR = resolve(HERE, '../../.national-cache');
 export const NATIONAL_CACHE_FILE = resolve(NATIONAL_CACHE_DIR, 'nhle-national-cache.json');
 export const NATIONAL_MANIFEST_FILE = resolve(HERE, 'manifest.json');
 
-/** National checkpoints. 100k is the largest the sample provides. */
-export const NATIONAL_CHECKPOINTS = [25_000, 50_000, 100_000] as const;
-export const NATIONAL_SAMPLE_SIZE = 100_000;
+/** National checkpoints. Capture may supply fewer; the ladder reports NOT_RUN. */
+export const NATIONAL_CHECKPOINTS = [25_000, 50_000, 100_000, 200_000] as const;
+export const NATIONAL_SAMPLE_SIZE = 200_000;
 
 const CELL_M = 100_000;
 const GRID_COLS = 7;
 const GRID_ROWS = 13;
-const USER_AGENT = 'WhilomNationalPilot/0.1 (https://github.com/hourwise/Whilom; philgeran@gmail.com)';
+const USER_AGENT =
+  'WhilomNationalPilot/0.1 (https://github.com/hourwise/Whilom; philgeran@gmail.com)';
 
 export interface NationalManifest {
   dataset: string;
@@ -74,13 +75,17 @@ async function arcgis(layer: number, params: Record<string, string>): Promise<an
   const url = `${NHLE_SERVICE}/${layer}/query?${new URLSearchParams({ ...params, f: 'json' })}`;
   for (let attempt = 1; attempt <= 5; attempt += 1) {
     try {
-      const response = await fetch(url, { headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' } });
+      const response = await fetch(url, {
+        headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
+      });
       if (response.ok) {
         const body = (await response.json()) as { error?: unknown } & Record<string, unknown>;
-        if (body.error) throw new Error(`layer ${layer}: ${JSON.stringify(body.error).slice(0, 160)}`);
+        if (body.error)
+          throw new Error(`layer ${layer}: ${JSON.stringify(body.error).slice(0, 160)}`);
         return body;
       }
-      if (response.status < 500 && response.status !== 429) throw new Error(`HTTP ${response.status}`);
+      if (response.status < 500 && response.status !== 429)
+        throw new Error(`HTTP ${response.status}`);
     } catch (error) {
       if (attempt === 5) throw error;
     }
@@ -90,7 +95,12 @@ async function arcgis(layer: number, params: Record<string, string>): Promise<an
 }
 
 function envelope(col: number, row: number) {
-  return { xmin: col * CELL_M, ymin: row * CELL_M, xmax: (col + 1) * CELL_M, ymax: (row + 1) * CELL_M };
+  return {
+    xmin: col * CELL_M,
+    ymin: row * CELL_M,
+    xmax: (col + 1) * CELL_M,
+    ymax: (row + 1) * CELL_M,
+  };
 }
 
 function envParams(env: ReturnType<typeof envelope>): Record<string, string> {
@@ -108,7 +118,11 @@ async function cellCount(layer: number, env: ReturnType<typeof envelope>): Promi
 }
 
 /** Fetch up to `limit` records of a layer within a cell, ListEntry-ascending. */
-async function fetchCell(layer: number, env: ReturnType<typeof envelope>, limit: number): Promise<Feature[]> {
+async function fetchCell(
+  layer: number,
+  env: ReturnType<typeof envelope>,
+  limit: number,
+): Promise<Feature[]> {
   const out: Feature[] = [];
   const page = 2000;
   for (let offset = 0; out.length < limit; offset += page) {
@@ -156,14 +170,18 @@ export async function captureNational(): Promise<NationalManifest> {
       const env = envelope(col, row);
       const layerCounts = await Promise.all(INGESTED_LAYERS.map((l) => cellCount(l.id, env)));
       const n = layerCounts.reduce((a, b) => a + b, 0);
-      if (n > 0) occupied.push({ cell: osGridSquare(col, row), col, row, nationalCount: n, layerCounts });
+      if (n > 0)
+        occupied.push({ cell: osGridSquare(col, row), col, row, nationalCount: n, layerCounts });
     }
   }
   const nationalTotal = occupied.reduce((sum, c) => sum + c.nationalCount, 0);
 
   // 2. Proportional quota per cell. Largest-remainder rounding so the quotas
   //    sum to exactly the sample size rather than drifting by rounding.
-  const raw = occupied.map((c) => ({ ...c, exact: (NATIONAL_SAMPLE_SIZE * c.nationalCount) / nationalTotal }));
+  const raw = occupied.map((c) => ({
+    ...c,
+    exact: (NATIONAL_SAMPLE_SIZE * c.nationalCount) / nationalTotal,
+  }));
   const quotas = raw.map((c) => ({ ...c, quota: Math.floor(c.exact) }));
   let assigned = quotas.reduce((sum, c) => sum + c.quota, 0);
   quotas
@@ -192,7 +210,10 @@ export async function captureNational(): Promise<NationalManifest> {
     const layerCounts = cell.layerCounts;
     const cellTotal = layerCounts.reduce((a, b) => a + b, 0) || 1;
     for (let li = 0; li < INGESTED_LAYERS.length; li += 1) {
-      const want = Math.min(layerCounts[li] ?? 0, Math.round((cell.quota * (layerCounts[li] ?? 0)) / cellTotal));
+      const want = Math.min(
+        layerCounts[li] ?? 0,
+        Math.round((cell.quota * (layerCounts[li] ?? 0)) / cellTotal),
+      );
       if (want === 0) continue;
       const layer = INGESTED_LAYERS[li]!;
       const features = await fetchCell(layer.id, env, want);
@@ -210,7 +231,8 @@ export async function captureNational(): Promise<NationalManifest> {
       licence: 'OGL-UK-3.0',
       attribution:
         'Contains Historic England information © Historic England. Contains Ordnance Survey data © Crown copyright and database right. Licensed under the Open Government Licence v3.0.',
-      strategy: 'geographically stratified national sample; per-cell quota proportional to national share',
+      strategy:
+        'geographically stratified national sample; per-cell quota proportional to national share',
       retrievedAt: new Date().toISOString(),
     },
     layers: layers.filter((l) => l.features.length > 0),
@@ -225,11 +247,18 @@ export async function captureNational(): Promise<NationalManifest> {
     publisher: 'Historic England',
     licence: 'OGL-UK-3.0',
     service: NHLE_SERVICE,
-    strategy: 'geographically stratified national sample; per-cell quota proportional to national share; ListEntry-ascending within a cell',
+    strategy:
+      'geographically stratified national sample; per-cell quota proportional to national share; ListEntry-ascending within a cell',
     sampleSize: total,
     checkpoints: [...NATIONAL_CHECKPOINTS],
     retrievedAt: cache._source.retrievedAt,
-    cells: quotas.map((c) => ({ cell: c.cell, col: c.col, row: c.row, nationalCount: c.nationalCount, quota: c.quota })),
+    cells: quotas.map((c) => ({
+      cell: c.cell,
+      col: c.col,
+      row: c.row,
+      nationalCount: c.nationalCount,
+      quota: c.quota,
+    })),
     composition: { total, perLayer },
     cache: { file: 'nhle-national-cache.json', sha256, bytes },
   };
@@ -244,9 +273,16 @@ export function readNationalManifest(): NationalManifest {
 const invokedDirectly = process.argv[1] && resolve(process.argv[1]).endsWith('capture.ts');
 if (invokedDirectly) {
   const run = async () => {
-    if (existsSync(NATIONAL_MANIFEST_FILE) && existsSync(NATIONAL_CACHE_FILE) && !process.argv.includes('--refresh')) {
+    if (
+      existsSync(NATIONAL_MANIFEST_FILE) &&
+      existsSync(NATIONAL_CACHE_FILE) &&
+      !process.argv.includes('--refresh')
+    ) {
       const m = readNationalManifest();
-      if (createHash('sha256').update(readFileSync(NATIONAL_CACHE_FILE)).digest('hex') === m.cache.sha256) {
+      if (
+        createHash('sha256').update(readFileSync(NATIONAL_CACHE_FILE)).digest('hex') ===
+        m.cache.sha256
+      ) {
         console.log('national cache present and matches the manifest checksum; nothing to do');
         return;
       }
@@ -255,7 +291,9 @@ if (invokedDirectly) {
     console.log(`sample           ${m.composition.total.toLocaleString()} records`);
     console.log(`cells            ${m.cells.filter((c) => c.quota > 0).length} occupied`);
     console.log(`perLayer         ${JSON.stringify(m.composition.perLayer)}`);
-    console.log(`cache            ${(m.cache.bytes / 1_048_576).toFixed(1)} MB, sha ${m.cache.sha256.slice(0, 16)}`);
+    console.log(
+      `cache            ${(m.cache.bytes / 1_048_576).toFixed(1)} MB, sha ${m.cache.sha256.slice(0, 16)}`,
+    );
   };
   run().catch((error: unknown) => {
     console.error(error);

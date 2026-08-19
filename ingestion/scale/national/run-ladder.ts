@@ -23,6 +23,7 @@
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { CandidateMode } from '../../matching/candidates';
+import { ChunkedCandidateIndex } from '../../matching/chunked-candidates';
 import { MatchOutcome } from '../../pipeline/candidate';
 import { executeTier, buildTierMetrics } from '../run-tier';
 import type { TierMetrics } from '../metrics';
@@ -57,6 +58,22 @@ export interface StageResult {
   conflicts: number;
   conflictRate: number;
   heapUsedMb: number;
+  rssMb: number;
+  externalMb: number;
+  gcAvailable: boolean;
+  workingSet?: {
+    mode: string;
+    canonicalRecords: number;
+    spatialIndexEntries: number;
+    identifierIndexEntries: number;
+    cachedPayloadRecords: number;
+    peakCachedPayloadRecords: number;
+    cacheHits: number;
+    cacheMisses: number;
+    chunks: number;
+    spillBytes: number;
+    maxCachedPayloadRecords: number;
+  };
   classification: StageClassification;
   reason: string;
 }
@@ -91,19 +108,28 @@ export const NATIONAL_GATES = {
   heapUsedMbMax: 1_400,
 } as const;
 
-function classify(
+export function classifyStage(
   stage: StageResult,
   previous: StageResult | undefined,
 ): { classification: StageClassification; reason: string } {
   const i = stage.integrity;
   if (i.accountedFor !== i.sourceRows) {
-    return { classification: 'FAIL_INTEGRITY', reason: `${i.sourceRows - i.accountedFor} source rows reached no recorded outcome` };
+    return {
+      classification: 'FAIL_INTEGRITY',
+      reason: `${i.sourceRows - i.accountedFor} source rows reached no recorded outcome`,
+    };
   }
   if (stage.heapUsedMb > NATIONAL_GATES.heapUsedMbMax) {
-    return { classification: 'FAIL_RESOURCE_BOUND', reason: `heap ${stage.heapUsedMb}MB exceeds ${NATIONAL_GATES.heapUsedMbMax}MB` };
+    return {
+      classification: 'FAIL_RESOURCE_BOUND',
+      reason: `heap ${stage.heapUsedMb}MB exceeds ${NATIONAL_GATES.heapUsedMbMax}MB`,
+    };
   }
   if (stage.meanMsPerRecord > NATIONAL_GATES.meanMsPerRecordMax) {
-    return { classification: 'FAIL_PERFORMANCE', reason: `${stage.meanMsPerRecord}ms/record exceeds the ${NATIONAL_GATES.meanMsPerRecordMax}ms absolute ceiling` };
+    return {
+      classification: 'FAIL_PERFORMANCE',
+      reason: `${stage.meanMsPerRecord}ms/record exceeds the ${NATIONAL_GATES.meanMsPerRecordMax}ms absolute ceiling`,
+    };
   }
   // The architectural test: per-record cost against corpus growth, adjacent
   // stages, exactly as the regional G5 compares two tiers.
@@ -142,7 +168,9 @@ export async function runNationalLadder(largest?: number): Promise<{
   maxProvenScale: string;
 }> {
   const available = nationalSampleSize();
-  const requested: number[] = [...NATIONAL_CHECKPOINTS].filter((c) => c <= available && (largest === undefined || c <= largest));
+  const requested: number[] = [...NATIONAL_CHECKPOINTS].filter(
+    (c) => c <= available && (largest === undefined || c <= largest),
+  );
   // The stratified sample lands a hair under 100k (largest-remainder rounding on
   // per-layer sub-quotas), so the 100k checkpoint is exercised at the full
   // sample size rather than dropped. Reported as the ~100k stage it is.
@@ -156,12 +184,19 @@ export async function runNationalLadder(largest?: number): Promise<{
 
   for (const size of requested) {
     if (globalThis.gc) globalThis.gc();
-    const execution = await executeTier(size, CandidateMode.Bounded, buildNationalTier);
+    const store = new ChunkedCandidateIndex(
+      resolve(process.cwd(), '.national-chunk-cache', `${size}-${process.pid}`),
+    );
+    const execution = await executeTier(size, CandidateMode.Bounded, buildNationalTier, {
+      candidateStore: store,
+      chunkSize: 4_096,
+      retainDecided: false,
+    });
     const metrics = buildTierMetrics(execution, size);
 
-    const heapUsedMb = Math.round(process.memoryUsage().heapUsed / 1_048_576);
-    const accountedFor =
-      metrics.ingestion.valid + metrics.ingestion.rejected;
+    const memory = process.memoryUsage();
+    const heapUsedMb = Math.round(memory.heapUsed / 1_048_576);
+    const accountedFor = metrics.ingestion.valid + metrics.ingestion.rejected;
     const conflicts = conflictCount(metrics);
     const meanMsPerRecord = metrics.matching.work.meanMsPerRecord;
     perRecordByStage.push(meanMsPerRecord);
@@ -184,12 +219,19 @@ export async function runNationalLadder(largest?: number): Promise<{
         conflicts,
       },
       conflicts,
-      conflictRate: metrics.ingestion.valid > 0 ? Math.round((conflicts / metrics.ingestion.valid) * 10000) / 10000 : 0,
+      conflictRate:
+        metrics.ingestion.valid > 0
+          ? Math.round((conflicts / metrics.ingestion.valid) * 10000) / 10000
+          : 0,
       heapUsedMb,
+      rssMb: Math.round(memory.rss / 1_048_576),
+      externalMb: Math.round(memory.external / 1_048_576),
+      gcAvailable: typeof globalThis.gc === 'function',
+      ...(execution.workingSet ? { workingSet: execution.workingSet } : {}),
       classification: 'NOT_RUN',
       reason: '',
     };
-    const verdict = classify(partial, previousStage);
+    const verdict = classifyStage(partial, previousStage);
     partial.classification = verdict.classification;
     partial.reason = verdict.reason;
     stages.push(partial);
@@ -199,7 +241,9 @@ export async function runNationalLadder(largest?: number): Promise<{
     if (partial.classification.startsWith('FAIL')) break;
   }
 
-  const lastPass = [...stages].reverse().find((s) => s.classification === 'PASS' || s.classification === 'PASS_WITH_HEADROOM_CONCERN');
+  const lastPass = [...stages]
+    .reverse()
+    .find((s) => s.classification === 'PASS' || s.classification === 'PASS_WITH_HEADROOM_CONCERN');
   const fullDatasetExercised = false; // the sample is 100k; the full 401k is not fetched here
   // Report the proven scale to the nearest 5k below the largest passing stage,
   // so a 99,990-record stage reads as 95K rather than an odd exact figure and
@@ -220,7 +264,10 @@ if (invokedDirectly) {
   const largest = largestArg >= 0 ? Number(process.argv[largestArg + 1]) : undefined;
   runNationalLadder(largest)
     .then((result) => {
-      writeFileSync(resolve(process.cwd(), 'national-ladder.json'), JSON.stringify(result, null, 2) + '\n');
+      writeFileSync(
+        resolve(process.cwd(), 'national-ladder.json'),
+        JSON.stringify(result, null, 2) + '\n',
+      );
       console.log(`sample ${result.sampleSize.toLocaleString()} records\n`);
       console.log('stage    rec/s   ms/rec  comps/rec  scaling  heapMB  conflicts  class');
       for (const s of result.stages) {

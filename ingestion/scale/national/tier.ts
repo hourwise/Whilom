@@ -38,6 +38,7 @@ export interface NationalTierFixture {
   path: string;
   size: number;
   mix: Record<string, number>;
+  mode: 'ndjson';
 }
 
 /** The OS 100km cell key a record falls in, from its BNG coordinate. */
@@ -68,7 +69,9 @@ export function interleavedOrder(cache: Cache): { layerIndex: number; feature: F
   // Deal round-robin, largest cells first within a round, so a short prefix is
   // still spread across the country. Cell order is fixed by size then key, so
   // the interleave is deterministic.
-  const cells = [...byCell.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+  const cells = [...byCell.entries()].sort(
+    (a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]),
+  );
   const cursors = new Map(cells.map(([key]) => [key, 0]));
   const order: { layerIndex: number; feature: Feature }[] = [];
   let remaining = cells.reduce((sum, [, list]) => sum + list.length, 0);
@@ -90,16 +93,12 @@ export function interleavedOrder(cache: Cache): { layerIndex: number; feature: F
   return order;
 }
 
-let cachedOrder: { layerIndex: number; feature: Feature }[] | null = null;
-let cachedCache: Cache | null = null;
-
 function loadOrder(): { cache: Cache; order: { layerIndex: number; feature: Feature }[] } {
-  if (!cachedCache) cachedCache = JSON.parse(readFileSync(NATIONAL_CACHE_FILE, 'utf8')) as Cache;
-  if (!cachedOrder) cachedOrder = interleavedOrder(cachedCache);
-  return { cache: cachedCache, order: cachedOrder };
+  const cache = JSON.parse(readFileSync(NATIONAL_CACHE_FILE, 'utf8')) as Cache;
+  return { cache, order: interleavedOrder(cache) };
 }
 
-/** Materialise the first `size` records of the national interleave as a fixture. */
+/** Materialise the first `size` records as a streaming, one-feature-per-line fixture. */
 export function buildNationalTier(size: number): NationalTierFixture {
   const { cache, order } = loadOrder();
   if (size > order.length) {
@@ -108,16 +107,23 @@ export function buildNationalTier(size: number): NationalTierFixture {
   const prefix = order.slice(0, size);
 
   const mix: Record<string, number> = {};
-  const layers = cache.layers.map((layer, layerIndex) => {
-    const features = prefix.filter((p) => p.layerIndex === layerIndex).map((p) => p.feature);
-    if (features.length > 0) mix[layer.layerName] = features.length;
-    return { ...layer, features };
-  }).filter((l) => l.features.length > 0);
-
   mkdirSync(NATIONAL_CACHE_DIR, { recursive: true });
-  const path = resolve(NATIONAL_CACHE_DIR, `national-tier-${size}.json`);
-  writeFileSync(path, JSON.stringify({ _source: cache._source, layers }));
-  return { path, size, mix };
+  const path = resolve(NATIONAL_CACHE_DIR, `national-tier-${size}.ndjson`);
+  const lines: string[] = [];
+  for (const item of prefix) {
+    const layer = cache.layers[item.layerIndex];
+    if (!layer) continue;
+    mix[layer.layerName] = (mix[layer.layerName] ?? 0) + 1;
+    lines.push(
+      JSON.stringify({
+        layerId: layer.layerId,
+        attributes: item.feature.attributes,
+        retrievedAt: cache._source['retrievedAt'],
+      }),
+    );
+  }
+  writeFileSync(path, `${lines.join('\n')}\n`);
+  return { path, size, mix, mode: 'ndjson' };
 }
 
 /** The largest checkpoint the current sample can supply. */
