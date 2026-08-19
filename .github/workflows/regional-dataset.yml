@@ -82,6 +82,12 @@ jobs:
         working-directory: ingestion
         run: pnpm exec tsx regional/temporal-enrichment.ts
 
+      # The source audit that decided this batch: what temporal evidence the
+      # sources actually hold, measured rather than assumed.
+      - name: Audit temporal sources
+        working-directory: ingestion
+        run: pnpm exec tsx regional/temporal-audit.ts
+
       # Pinned rather than 'latest'. Resolving 'latest' asks the GitHub
       # releases API on every job, and with three workflows starting several
       # jobs each that is answered with 'rate limit exceeded' often enough to
@@ -146,6 +152,24 @@ jobs:
           jq -r '.provenance' regional-audit.json
 
       # --- Discovery readiness ---------------------------------------------
+      # Plans for the queries the gate watches, captured whether or not it
+      # passes. Two wrong guesses at a latency regression cost far more than an
+      # EXPLAIN does, and the plan is the only thing that actually says which
+      # side of a join the planner chose.
+      - name: Query plans
+        working-directory: ingestion
+        continue-on-error: true
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -c "analyze;" > /dev/null
+          {
+            echo "=== period_counts_for_viewport (urban)"
+            psql "$DB_URL" -X -c "explain (analyze, buffers) select * from public.period_counts_for_viewport(-1.95, 53.75, -1.45, 53.95);"
+            echo
+            echo "=== map_clusters (region)"
+            psql "$DB_URL" -X -c "explain (analyze, buffers) select * from public.map_clusters(-2.60, 53.20, 0.40, 54.80, 0.25);"
+          } > regional-query-plans.txt 2>&1
+          tail -n 70 regional-query-plans.txt
+
       # The map has to survive the real dataset, not a fixture. Gates declared
       # here before the run: no query may hand over the corpus, and the worst
       # p95 must stay under the same 300ms used for every earlier query gate.
@@ -351,6 +375,8 @@ jobs:
             ingestion/regional-audit.json
             ingestion/regional-gates.json
             ingestion/regional-discovery.json
+            ingestion/regional-query-plans.txt
+            ingestion/regional-temporal-audit.json
           if-no-files-found: warn
 
       - name: Stop stack

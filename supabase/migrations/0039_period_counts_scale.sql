@@ -50,39 +50,38 @@ stable
 security invoker
 set search_path = ''
 as $$
-  -- Start from the temporal claims, not from the viewport.
+  -- The envelope, built once.
   --
-  -- This is the whole fix. 0036 built a materialised set of visible place ids
-  -- and joined the claims to it — but a materialised CTE carries no index, so
-  -- that join is a nested loop scanning thousands of viewport rows for every
-  -- claim. At 267 claims and an 8,000-place viewport that is two million
-  -- comparisons and 78ms; at 1,443 claims it is eleven million and 372ms. The
-  -- cost was never the OR, it was scanning the wrong side.
+  -- Inlined into a join predicate it is rebuilt per row, and a geography cast
+  -- is not free at twenty-three thousand rows. A single-row materialised CTE
+  -- pins it to one evaluation.
+  with params as materialized (
+    select extensions.st_makeenvelope(
+      bbox_sw_lng, bbox_sw_lat, bbox_ne_lng, bbox_ne_lat, 4326)::extensions.geography as env
+  ),
+  -- Lead with the claims and test each against the viewport by primary key.
   --
-  -- Turned around, the small side leads: every approved temporal claim in the
-  -- corpus is a few thousand rows, each resolved to its place by primary key
-  -- and then tested against the viewport. The work is now proportional to how
-  -- much Whilom knows about time, not to how crowded the map is.
-  with dated as materialized (
+  -- EXISTS rather than a join: it asks for one index probe per claim, which is
+  -- what the shape should cost. A join lets the planner choose to scan places
+  -- and hash, and at 23,151 rows that is the slow direction.
+  dated as materialized (
     select distinct ta.entity_id, ta.period_id, ta.start_year, ta.end_year
       from public.temporal_associations ta
-      join public.places p on p.id = ta.entity_id
      where ta.status = 'approved'
        and ta.entity_type = 'place'
-       and p.status = 'approved'
-       and p.location operator(extensions.&&) extensions.st_makeenvelope(
-             bbox_sw_lng, bbox_sw_lat, bbox_ne_lng, bbox_ne_lat, 4326)::extensions.geography
-       and (place_types is null or p.place_type::text = any(place_types))
-       and (q is null or q = '' or p.search_vector @@ websearch_to_tsquery('english', q))
+       and exists (
+         select 1
+           from public.places p, params
+          where p.id = ta.entity_id
+            and p.status = 'approved'
+            and p.location operator(extensions.&&) params.env
+            and (place_types is null or p.place_type::text = any(place_types))
+            and (q is null or q = '' or p.search_vector @@ websearch_to_tsquery('english', q))
+       )
   ),
-  -- A claim that names its period. A plain equality, so this is a hash join.
   by_named as (
-    select d.period_id, d.entity_id
-      from dated d
-     where d.period_id is not null
+    select d.period_id, d.entity_id from dated d where d.period_id is not null
   ),
-  -- A claim that has years and overlaps a period without naming it. A range
-  -- join, but against the 21-row registry.
   by_span as (
     select hp.id as period_id, d.entity_id
       from dated d
