@@ -232,14 +232,18 @@ create temporary table staged_temporal (
   precision text not null,
   period_id text,
   original_text text,
-  derivation text
+  derivation text,
+  century_qualifier text,
+  display_label text,
+  normaliser_version text
 );
 
-\copy staged_temporal (source_record_id, association_type, start_year, end_year, precision, period_id, original_text, derivation) from 'regional-temporal.csv' with (format csv)
+\copy staged_temporal from 'regional-temporal.csv' with (format csv)
 
 insert into public.temporal_associations (
   entity_type, entity_id, association_type, start_year, end_year, precision,
-  period_id, source_id, source_record_id, confidence, original_text, derivation, status)
+  period_id, source_id, source_record_id, confidence, original_text, derivation, status,
+  source_field, raw_value, century_qualifier, display_label, normaliser_version)
 select
   'place', sr.entity_id, t.association_type::public.temporal_association_type,
   t.start_year, t.end_year, t.precision::public.temporal_precision,
@@ -247,13 +251,120 @@ select
   -- Not a probability. A period read from the source's own words is a strong
   -- claim about what the source said, and a weaker one about the world.
   0.700,
-  t.original_text, t.derivation, 'approved'
+  t.original_text, t.derivation, 'approved',
+  -- The register's name field is the only place a historic date appears at all.
+  'Name', t.original_text,
+  nullif(t.century_qualifier, ''), nullif(t.display_label, ''), nullif(t.normaliser_version, '')
 from staged_temporal t
 join public.source_records sr
   on sr.external_id = t.source_record_id
  and sr.source_id = 'b0000000-0000-4000-8000-000000000001'
  and sr.entity_type = 'place'
 on conflict do nothing;
+
+-- ---------------------------------------------------------------------------
+-- Structured temporal evidence from Wikidata
+-- ---------------------------------------------------------------------------
+-- The register holds no historic date at all, so depth has to come from a
+-- source that does. Bounded exactly as the people enrichment is: joined on the
+-- NHLE list entry Whilom has already published, so nothing arrives because it
+-- is famous or nearby.
+--
+-- `raw_precision` carries Wikidata's own timePrecision code, and keeping it is
+-- what makes the claim auditable rather than merely plausible: 7 means the
+-- source said "century" and never named a year, and a check constraint stops
+-- the display label naming one.
+insert into public.sources (id, kind, name, publisher, url, licence, attribution, trust_level)
+values (
+  'b0000000-0000-4000-8000-000000000002', 'open_data', 'Wikidata', 'Wikimedia Foundation',
+  'https://www.wikidata.org', 'CC0-1.0', 'Wikidata contributors, CC0 1.0', 'open_data_source')
+on conflict (id) do nothing;
+
+create temporary table staged_wikidata_temporal (
+  source_record_id text not null,
+  association_type text not null,
+  start_year integer,
+  end_year integer,
+  precision text not null,
+  century_qualifier text,
+  display_label text,
+  raw_value text,
+  raw_precision text,
+  source_field text,
+  qid text,
+  derivation text,
+  normaliser_version text
+);
+
+\copy staged_wikidata_temporal from 'regional-temporal-wikidata.csv' with (format csv)
+
+insert into public.temporal_associations (
+  entity_type, entity_id, association_type, start_year, end_year, precision,
+  period_id, source_id, source_record_id, confidence, original_text, derivation, status,
+  source_field, raw_value, raw_precision, century_qualifier, display_label, normaliser_version)
+select
+  'place', sr.entity_id, w.association_type::public.temporal_association_type,
+  w.start_year, w.end_year, w.precision::public.temporal_precision,
+  -- The navigation period the span sits most fully inside, resolved against the
+  -- effective registry rather than against a second hard-coded copy of it.
+  -- Parent periods are skipped: "Prehistory" spans 900,000 years and would win
+  -- every overlap contest while telling a visitor nothing.
+  (select hp.id
+     from public.historical_periods hp
+    where not exists (
+            select 1 from public.historical_periods child where child.parent_id = hp.id)
+      and hp.start_year <= w.end_year
+      and hp.end_year >= w.start_year
+    order by least(hp.end_year, w.end_year) - greatest(hp.start_year, w.start_year) desc,
+             hp.display_order
+    limit 1),
+  'b0000000-0000-4000-8000-000000000002',
+  sr.id,
+  -- A structured statement that carries its own precision is better evidence
+  -- than a period word read out of a name, and is scored above it.
+  0.850,
+  w.raw_value, w.derivation, 'approved',
+  w.source_field, w.raw_value, nullif(w.raw_precision, ''),
+  nullif(w.century_qualifier, ''), nullif(w.display_label, ''), nullif(w.normaliser_version, '')
+from staged_wikidata_temporal w
+join public.source_records sr
+  on sr.external_id = w.source_record_id
+ and sr.source_id = 'b0000000-0000-4000-8000-000000000001'
+ and sr.entity_type = 'place'
+on conflict do nothing;
+
+-- Values the normaliser declined, kept rather than dropped so that recurrent
+-- unhandled formats can be ranked and fixed deliberately.
+create temporary table staged_temporal_rejected (
+  source_record_id text not null,
+  raw_value text,
+  raw_precision text,
+  source_field text,
+  reason text,
+  note text
+);
+
+\copy staged_temporal_rejected from 'regional-temporal-rejected.csv' with (format csv)
+
+-- Replayed rather than appended: quarantine is a current statement of what
+-- Whilom cannot read, not a growing log, and a second activation must leave the
+-- same rows behind as the first.
+delete from public.temporal_quarantine
+ where source_id = 'b0000000-0000-4000-8000-000000000002';
+
+insert into public.temporal_quarantine (
+  entity_type, entity_id, source_id, source_record_id, source_field,
+  raw_value, raw_precision, reason, note, normaliser_version)
+select
+  'place', sr.entity_id, 'b0000000-0000-4000-8000-000000000002',
+  r.source_record_id, r.source_field,
+  coalesce(r.raw_value, ''), nullif(r.raw_precision, ''), r.reason, r.note,
+  (select max(normaliser_version) from staged_wikidata_temporal)
+from staged_temporal_rejected r
+left join public.source_records sr
+  on sr.external_id = r.source_record_id
+ and sr.source_id = 'b0000000-0000-4000-8000-000000000001'
+ and sr.entity_type = 'place';
 
 -- ---------------------------------------------------------------------------
 -- People

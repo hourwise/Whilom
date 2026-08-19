@@ -59,7 +59,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ingestion/.regional-cache
-          key: whilom-region-${{ hashFiles('ingestion/regional/regional-dataset-manifest.json', 'ingestion/regional/people.ts') }}
+          key: whilom-region-${{ hashFiles('ingestion/regional/regional-dataset-manifest.json', 'ingestion/regional/people.ts', 'ingestion/regional/temporal-enrichment.ts') }}
 
       - name: Capture regional dataset
         if: steps.cache.outputs.cache-hit != 'true'
@@ -75,10 +75,27 @@ jobs:
         working-directory: ingestion
         run: pnpm exec tsx regional/people.ts
 
+      # Bounded temporal enrichment via the same already-approved source and the
+      # same NHLE join. The register carries no historic date of its own, so
+      # this is where defensible dating actually comes from.
+      - name: Enrich temporal evidence
+        working-directory: ingestion
+        run: pnpm exec tsx regional/temporal-enrichment.ts
+
+      # The source audit that decided this batch: what temporal evidence the
+      # sources actually hold, measured rather than assumed.
+      - name: Audit temporal sources
+        working-directory: ingestion
+        run: pnpm exec tsx regional/temporal-audit.ts
+
+      # Pinned rather than 'latest'. Resolving 'latest' asks the GitHub
+      # releases API on every job, and with three workflows starting several
+      # jobs each that is answered with 'rate limit exceeded' often enough to
+      # make the database suites fail for reasons unrelated to the database.
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.115.0
 
       - name: Start ephemeral Supabase stack
         run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector
@@ -135,6 +152,60 @@ jobs:
           jq -r '.provenance' regional-audit.json
 
       # --- Discovery readiness ---------------------------------------------
+      # Plans for the queries the gate watches, captured whether or not it
+      # passes. Two wrong guesses at a latency regression cost far more than an
+      # EXPLAIN does, and the plan is the only thing that actually says which
+      # side of a join the planner chose.
+      - name: Query plans
+        working-directory: ingestion
+        continue-on-error: true
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -c "analyze;" > /dev/null
+          {
+            # Timing for the functions as the map actually calls them. EXPLAIN
+            # will not expand the body of a SQL function containing CTEs, so
+            # these give execution time and buffers but no inner plan.
+            echo "=== period_counts_for_viewport (urban) — as called"
+            psql "$DB_URL" -X -c "explain (analyze, buffers) select * from public.period_counts_for_viewport(-1.95, 53.75, -1.45, 53.95);"
+            echo
+            echo "=== map_clusters (region) — as called"
+            psql "$DB_URL" -X -c "explain (analyze, buffers) select * from public.map_clusters(-2.60, 53.20, 0.40, 54.80, 0.25);"
+            echo
+            # The inner plan, which is the part worth having. The body is
+            # repeated here rather than called so the planner's choices are
+            # visible — which side of each join it led with is exactly what two
+            # wrong diagnoses in this batch could not be settled without.
+            echo "=== period_counts_for_viewport (urban) — inlined body"
+            psql "$DB_URL" -X <<'PLAN'
+          explain (analyze, buffers)
+          with params as materialized (
+            select st_makeenvelope(-1.95, 53.75, -1.45, 53.95, 4326)::geography as env
+          ),
+          dated as materialized (
+            select distinct ta.entity_id, ta.period_id, ta.start_year, ta.end_year
+              from public.temporal_associations ta
+             where ta.status = 'approved' and ta.entity_type = 'place'
+               and exists (
+                 select 1 from public.places p, params
+                  where p.id = ta.entity_id and p.status = 'approved'
+                    and p.location && params.env)
+          ),
+          by_named as (select d.period_id, d.entity_id from dated d where d.period_id is not null),
+          by_span as (
+            select hp.id as period_id, d.entity_id
+              from dated d join public.historical_periods hp
+                on d.start_year is not null and d.end_year is not null
+               and d.start_year <= hp.end_year and d.end_year >= hp.start_year
+          ),
+          matched as (select * from by_named union select * from by_span)
+          select hp.id, count(m.entity_id)
+            from public.historical_periods hp
+            left join matched m on m.period_id = hp.id
+           group by hp.id;
+          PLAN
+          } > regional-query-plans.txt 2>&1
+          tail -n 80 regional-query-plans.txt
+
       # The map has to survive the real dataset, not a fixture. Gates declared
       # here before the run: no query may hand over the corpus, and the worst
       # p95 must stay under the same 300ms used for every earlier query gate.
@@ -340,6 +411,8 @@ jobs:
             ingestion/regional-audit.json
             ingestion/regional-gates.json
             ingestion/regional-discovery.json
+            ingestion/regional-query-plans.txt
+            ingestion/regional-temporal-audit.json
           if-no-files-found: warn
 
       - name: Stop stack

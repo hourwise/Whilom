@@ -2383,16 +2383,22 @@ export type Database = {
       temporal_associations: {
         Row: {
           association_type: Database["public"]["Enums"]["temporal_association_type"]
+          century_qualifier: string | null
           confidence: number | null
           created_at: string
           derivation: string | null
+          display_label: string | null
           end_year: number | null
           entity_id: string
           entity_type: Database["public"]["Enums"]["entity_type"]
           id: string
+          normaliser_version: string | null
           original_text: string | null
           period_id: string | null
           precision: Database["public"]["Enums"]["temporal_precision"]
+          raw_precision: string | null
+          raw_value: string | null
+          source_field: string | null
           source_id: string | null
           source_record_id: string | null
           start_year: number | null
@@ -2400,16 +2406,22 @@ export type Database = {
         }
         Insert: {
           association_type: Database["public"]["Enums"]["temporal_association_type"]
+          century_qualifier?: string | null
           confidence?: number | null
           created_at?: string
           derivation?: string | null
+          display_label?: string | null
           end_year?: number | null
           entity_id: string
           entity_type?: Database["public"]["Enums"]["entity_type"]
           id?: string
+          normaliser_version?: string | null
           original_text?: string | null
           period_id?: string | null
           precision?: Database["public"]["Enums"]["temporal_precision"]
+          raw_precision?: string | null
+          raw_value?: string | null
+          source_field?: string | null
           source_id?: string | null
           source_record_id?: string | null
           start_year?: number | null
@@ -2417,16 +2429,22 @@ export type Database = {
         }
         Update: {
           association_type?: Database["public"]["Enums"]["temporal_association_type"]
+          century_qualifier?: string | null
           confidence?: number | null
           created_at?: string
           derivation?: string | null
+          display_label?: string | null
           end_year?: number | null
           entity_id?: string
           entity_type?: Database["public"]["Enums"]["entity_type"]
           id?: string
+          normaliser_version?: string | null
           original_text?: string | null
           period_id?: string | null
           precision?: Database["public"]["Enums"]["temporal_precision"]
+          raw_precision?: string | null
+          raw_value?: string | null
+          source_field?: string | null
           source_id?: string | null
           source_record_id?: string | null
           start_year?: number | null
@@ -2452,6 +2470,59 @@ export type Database = {
             columns: ["source_record_id"]
             isOneToOne: false
             referencedRelation: "source_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      temporal_quarantine: {
+        Row: {
+          created_at: string
+          entity_id: string | null
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          id: string
+          normaliser_version: string | null
+          note: string | null
+          raw_precision: string | null
+          raw_value: string
+          reason: string
+          source_field: string | null
+          source_id: string | null
+          source_record_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: Database["public"]["Enums"]["entity_type"]
+          id?: string
+          normaliser_version?: string | null
+          note?: string | null
+          raw_precision?: string | null
+          raw_value: string
+          reason: string
+          source_field?: string | null
+          source_id?: string | null
+          source_record_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: Database["public"]["Enums"]["entity_type"]
+          id?: string
+          normaliser_version?: string | null
+          note?: string | null
+          raw_precision?: string | null
+          raw_value?: string
+          reason?: string
+          source_field?: string | null
+          source_id?: string | null
+          source_record_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "temporal_quarantine_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
             referencedColumns: ["id"]
           },
         ]
@@ -3252,6 +3323,23 @@ export type Database = {
           slug: string
         }[]
       }
+      place_temporal_claims: {
+        Args: { max_rows?: number; p_place_id: string }
+        Returns: {
+          association_type: string
+          claim_precision: string
+          derivation: string
+          end_year: number
+          label: string
+          period_id: string
+          period_name: string
+          precision_class: string
+          raw_value: string
+          source_field: string
+          source_name: string
+          start_year: number
+        }[]
+      }
       preview_import_candidate: {
         Args: { p_candidate_id: string }
         Returns: Json
@@ -3353,6 +3441,52 @@ export type Database = {
         }[]
       }
       slugify_unique: { Args: { p_name: string }; Returns: string }
+      temporal_claim_label: {
+        Args: {
+          p_display_label: string
+          p_end_year: number
+          p_period_id: string
+          p_precision: Database["public"]["Enums"]["temporal_precision"]
+          p_start_year: number
+        }
+        Returns: string
+      }
+      temporal_coverage: {
+        Args: never
+        Returns: {
+          any_coverage: number
+          any_rate: number
+          bounded_only: number
+          period_only: number
+          published_places: number
+          strong: number
+          strong_rate: number
+          unknown: number
+        }[]
+      }
+      temporal_coverage_breakdown: {
+        Args: never
+        Returns: {
+          bucket: string
+          claims: number
+          dimension: string
+          places: number
+          precision_class: string
+        }[]
+      }
+      temporal_precision_class: {
+        Args: { p: Database["public"]["Enums"]["temporal_precision"] }
+        Returns: string
+      }
+      temporal_quarantine_ranking: {
+        Args: { max_rows?: number }
+        Returns: {
+          example_source_record: string
+          occurrences: number
+          raw_value: string
+          reason: string
+        }[]
+      }
     }
     Enums: {
       access_cost: "free" | "paid" | "donation" | "exterior_only"

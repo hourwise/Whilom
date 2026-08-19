@@ -271,7 +271,42 @@ select json_build_object(
     -- The correctness claim this whole model exists to hold.
     'derivedFromDesignationDate', (
       select count(*) from public.temporal_associations
-       where derivation ilike '%designat%' or derivation ilike '%listed%')
+       where derivation ilike '%designat%' or derivation ilike '%listed%'),
+    -- Coverage in mutually exclusive buckets. A single "dated" figure lets
+    -- period-level evidence pass itself off as a date; these cannot.
+    'coverage', (select row_to_json(c) from public.temporal_coverage() c),
+    'byPrecisionClass', (
+      select coalesce(json_object_agg(klass, n), '{}'::json)
+        from (select public.temporal_precision_class("precision") as klass, count(*) as n
+                from public.temporal_associations where status = 'approved' group by 1) t),
+    'bySource', (
+      select coalesce(json_object_agg(name, n), '{}'::json)
+        from (select coalesce(s.name, 'name-derived') as name, count(*) as n
+                from public.temporal_associations ta
+                left join public.sources s on s.id = ta.source_id
+               where ta.status = 'approved' group by 1) t),
+    'byAssociation', (
+      select coalesce(json_object_agg(association_type, n), '{}'::json)
+        from (select association_type::text, count(*) as n
+                from public.temporal_associations where status = 'approved' group by 1) t),
+    'multiPhasePlaces', (
+      select count(*) from (
+        select entity_id from public.temporal_associations
+         where entity_type = 'place' and status = 'approved'
+         group by entity_id having count(distinct (start_year, end_year)) > 1) t),
+    -- A claim that says century but displays a year would be the exact defect
+    -- this batch exists to prevent, so it is counted rather than assumed absent.
+    'overpreciseLabels', (
+      select count(*) from public.temporal_associations
+       where "precision" in ('century', 'period', 'decade')
+         -- Word-bounded, matching the check constraint exactly. Without the
+         -- boundaries this counted "1870s", which is the CORRECT rendering of
+         -- a decade claim, and reported eleven violations that were not.
+         and display_label ~ '\y[12][0-9]{3}\y'),
+    'quarantined', (select count(*) from public.temporal_quarantine),
+    'quarantineRanking', (
+      select coalesce(json_agg(row_to_json(q)), '[]'::json)
+        from (select * from public.temporal_quarantine_ranking(15)) q)
   ),
   'people', json_build_object(
     'total', (select count(*) from public.people),
