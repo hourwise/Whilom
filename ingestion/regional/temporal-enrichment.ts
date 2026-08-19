@@ -61,6 +61,8 @@ import {
   type RejectionReason,
   normaliseWikidataTime,
 } from '../transforms/temporal-normaliser';
+import { PERIOD_SPANS } from '../transforms/temporal';
+import { eventTerm, periodTerm } from '../transforms/source-vocabulary';
 import { runSparql } from '../sources/wikidata/sparql';
 import { readRegionalManifest } from './capture';
 
@@ -117,12 +119,31 @@ export interface TemporalClaimRow {
   qid: string;
   property: string;
   sourceField: string;
-  associationType: 'built' | 'event' | 'lost';
+  associationType: 'built' | 'event' | 'lost' | 'altered' | 'associated';
   /** The source's own value, kept verbatim as the evidence. */
   rawValue: string;
   /** Wikidata's own statement of how precisely it knows this. */
   rawPrecision: number;
+  /** Wikidata statement rank. Deprecated statements never reach here. */
+  rank: StatementRank;
   span: NormalisedSpan;
+}
+
+/** Wikidata statement ranks, in the sense Wikidata gives them. */
+export type StatementRank = 'preferred' | 'normal' | 'deprecated';
+
+/**
+ * Read the rank from the ontology URI Wikidata returns.
+ *
+ * Unknown values are treated as normal rather than dropped: an unrecognised
+ * rank is a reason to be cautious about precedence, not a reason to lose a
+ * claim. Only an explicit deprecation refuses evidence.
+ */
+export function rankOf(uri: string | undefined): StatementRank {
+  if (!uri) return 'normal';
+  if (uri.endsWith('DeprecatedRank')) return 'deprecated';
+  if (uri.endsWith('PreferredRank')) return 'preferred';
+  return 'normal';
 }
 
 export interface TemporalRejectionRow {
@@ -159,9 +180,9 @@ export interface TemporalCapture {
  * version of this import is impossible through the shortcut form.
  */
 export function buildTemporalQuery(property: string): string {
-  return `SELECT ?nhle ?item ?value ?precision WHERE {
+  return `SELECT ?nhle ?item ?value ?precision ?rank WHERE {
   ?item wdt:P1216 ?nhle ; p:${property} ?statement .
-  ?statement psv:${property} ?node .
+  ?statement psv:${property} ?node ; wikibase:rank ?rank .
   ?node wikibase:timeValue ?value ; wikibase:timePrecision ?precision .
 ${REGION_BOX}
 } LIMIT 8000`;
@@ -185,6 +206,22 @@ const REGION_BOX = `  SERVICE wikibase:box {
     bd:serviceParam wikibase:cornerNorthEast "Point(0.40 54.80)"^^geo:wktLiteral .
   }`;
 
+/** Dated significant events: P793 with a point-in-time qualifier. */
+export const EVENT_QUERY = `SELECT ?nhle ?item ?event ?value ?precision ?rank WHERE {
+  ?item wdt:P1216 ?nhle ; p:P793 ?statement .
+  ?statement ps:P793 ?event ; wikibase:rank ?rank .
+  ?statement pqv:P585 ?node .
+  ?node wikibase:timeValue ?value ; wikibase:timePrecision ?precision .
+${REGION_BOX}
+} LIMIT 4000`;
+
+/** Controlled period vocabulary: P2348. */
+export const PERIOD_QUERY = `SELECT ?nhle ?item ?period ?rank WHERE {
+  ?item wdt:P1216 ?nhle ; p:P2348 ?statement .
+  ?statement ps:P2348 ?period ; wikibase:rank ?rank .
+${REGION_BOX}
+} LIMIT 4000`;
+
 export async function captureTemporal(): Promise<TemporalCapture> {
   const manifest = readRegionalManifest();
   const regional = new Set(manifest.sourceRecordIds.map(String));
@@ -207,6 +244,7 @@ export async function captureTemporal(): Promise<TemporalCapture> {
       const itemUri = row['item']?.value;
       const rawValue = row['value']?.value;
       const rawPrecision = Number(row['precision']?.value);
+      const rank = rankOf(row['rank']?.value);
       if (!nhle || !itemUri || !rawValue || !Number.isFinite(rawPrecision)) continue;
 
       // The intersection that keeps this bounded.
@@ -217,6 +255,19 @@ export async function captureTemporal(): Promise<TemporalCapture> {
       if (claims.length >= TEMPORAL_ROW_CAP) break;
 
       const qid = itemUri.split('/').pop() ?? '';
+
+      // A deprecated statement is one Wikidata's own editors have marked as
+      // wrong or superseded. Importing it as ordinary evidence would give a
+      // known-bad claim the same standing as a good one.
+      if (rank === 'deprecated') {
+        rejections.push({
+          sourceRecordId: nhle, qid, sourceField: spec.field, rawValue, rawPrecision,
+          reason: 'deprecated_statement',
+          note: 'Wikidata marks this statement deprecated; not imported as evidence',
+        });
+        continue;
+      }
+
       const result = normaliseWikidataTime(rawValue, rawPrecision, { field: spec.field });
 
       if (!result.ok) {
@@ -240,7 +291,153 @@ export async function captureTemporal(): Promise<TemporalCapture> {
         associationType: spec.associationType,
         rawValue,
         rawPrecision,
+        rank,
         span: result.span,
+      });
+    }
+    await new Promise((r) => setTimeout(r, 1200));
+  }
+
+  // ---------------------------------------------------------------------
+  // Dated significant events
+  // ---------------------------------------------------------------------
+  // P793 with a P585 qualifier: a real, dated thing that happened here.
+  // Thirty-three distinct types appear in this region and they are NOT
+  // interchangeable — a demolition, a fire and a geophysical survey say three
+  // different things, and the last says nothing about the place at all. Each
+  // type is governed by name in transforms/source-vocabulary.ts.
+  {
+    const rows = await runSparql(EVENT_QUERY, {
+      userAgent: `Whilom/${TEMPORAL_IMPORTER_VERSION} (bounded regional temporal enrichment)`,
+    });
+    candidateRows += rows.length;
+    for (const row of rows) {
+      const nhle = row['nhle']?.value?.trim();
+      const itemUri = row['item']?.value;
+      const eventUri = row['event']?.value;
+      const rawValue = row['value']?.value;
+      const rawPrecision = Number(row['precision']?.value);
+      const rank = rankOf(row['rank']?.value);
+      if (!nhle || !itemUri || !eventUri || !rawValue || !Number.isFinite(rawPrecision)) continue;
+      if (!regional.has(nhle)) {
+        outsideRegion += 1;
+        continue;
+      }
+
+      const qid = itemUri.split('/').pop() ?? '';
+      const eventQid = eventUri.split('/').pop() ?? '';
+      const term = eventTerm(eventQid);
+      const field = `significant event (P793) — ${term?.label ?? eventQid}`;
+
+      if (rank === 'deprecated') {
+        rejections.push({
+          sourceRecordId: nhle, qid, sourceField: field, rawValue, rawPrecision,
+          reason: 'deprecated_statement',
+          note: 'Wikidata marks this statement deprecated',
+        });
+        continue;
+      }
+      if (!term) {
+        rejections.push({
+          sourceRecordId: nhle, qid, sourceField: field, rawValue, rawPrecision,
+          reason: 'unmapped_event',
+          note: `event type ${eventQid} is not governed; ranked for a future batch`,
+        });
+        continue;
+      }
+      if (term.association === null) {
+        rejections.push({
+          sourceRecordId: nhle, qid, sourceField: field, rawValue, rawPrecision,
+          reason: 'event_not_about_place',
+          note: term.note,
+        });
+        continue;
+      }
+      const result = normaliseWikidataTime(rawValue, rawPrecision, { field });
+      if (!result.ok) {
+        rejections.push({
+          sourceRecordId: nhle, qid, sourceField: field, rawValue, rawPrecision,
+          reason: result.rejection.reason, note: result.rejection.note,
+        });
+        continue;
+      }
+      claims.push({
+        sourceRecordId: nhle, qid, property: 'P793', sourceField: field,
+        associationType: term.association, rawValue, rawPrecision, rank, span: result.span,
+      });
+    }
+    await new Promise((r) => setTimeout(r, 1200));
+  }
+
+  // ---------------------------------------------------------------------
+  // Controlled period vocabulary
+  // ---------------------------------------------------------------------
+  // P2348 is the only genuinely controlled period vocabulary either source
+  // offers; everything else is a word read out of a name. Five distinct items
+  // regionally — small, and worth governing precisely for that reason.
+  {
+    const rows = await runSparql(PERIOD_QUERY, {
+      userAgent: `Whilom/${TEMPORAL_IMPORTER_VERSION} (bounded regional temporal enrichment)`,
+    });
+    candidateRows += rows.length;
+    for (const row of rows) {
+      const nhle = row['nhle']?.value?.trim();
+      const itemUri = row['item']?.value;
+      const periodUri = row['period']?.value;
+      const rank = rankOf(row['rank']?.value);
+      if (!nhle || !itemUri || !periodUri) continue;
+      if (!regional.has(nhle)) {
+        outsideRegion += 1;
+        continue;
+      }
+
+      const qid = itemUri.split('/').pop() ?? '';
+      const periodQid = periodUri.split('/').pop() ?? '';
+      const term = periodTerm(periodQid);
+      const field = `time period (P2348) — ${term?.label ?? periodQid}`;
+
+      if (rank === 'deprecated') {
+        rejections.push({
+          sourceRecordId: nhle, qid, sourceField: field, rawValue: periodQid, rawPrecision: 0,
+          reason: 'deprecated_statement', note: 'Wikidata marks this statement deprecated',
+        });
+        continue;
+      }
+      if (!term || term.classification === 'REJECTED' || term.classification === 'AMBIGUOUS') {
+        rejections.push({
+          sourceRecordId: nhle, qid, sourceField: field, rawValue: periodQid, rawPrecision: 0,
+          reason: 'unmapped_period',
+          note: term ? term.note : `period item ${periodQid} is not governed; ranked for a future batch`,
+        });
+        continue;
+      }
+      const span = term.periodId ? PERIOD_SPANS[term.periodId] : term.span;
+      if (!span) {
+        rejections.push({
+          sourceRecordId: nhle, qid, sourceField: field, rawValue: periodQid, rawPrecision: 0,
+          reason: 'unmapped_period', note: `no span for ${term.label}`,
+        });
+        continue;
+      }
+      claims.push({
+        sourceRecordId: nhle, qid, property: 'P2348', sourceField: field,
+        associationType: 'associated',
+        rawValue: `${periodQid} (${term.label})`,
+        rawPrecision: 0,
+        rank,
+        span: {
+          startYear: span.start,
+          endYear: span.end,
+          precision: 'period',
+          qualifier: null,
+          // The SOURCE's word, not Whilom's nearest registry name. A claim that
+          // said "Middle Ages" must not come back reading "Medieval".
+          label: term.label,
+          derivation:
+            `Wikidata time period (P2348) = ${periodQid} (${term.label}); classified ${term.classification}; ` +
+            `${term.note}; years from the Whilom period registry, which is a navigation convention`,
+          normaliserVersion: NORMALISER_VERSION,
+        },
       });
     }
     await new Promise((r) => setTimeout(r, 1200));
@@ -339,6 +536,8 @@ export function writeTemporalCsv(capture: TemporalCapture, outDir: string): void
       csvField(c.qid),
       csvField(c.span.derivation),
       csvField(c.span.normaliserVersion),
+      csvField(c.property),
+      csvField(c.rank),
     ].join(','),
   );
   const rejected = capture.rejections.map((r) =>

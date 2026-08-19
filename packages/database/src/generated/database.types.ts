@@ -2400,6 +2400,8 @@ export type Database = {
           raw_value: string | null
           source_field: string | null
           source_id: string | null
+          source_property: string | null
+          source_rank: string | null
           source_record_id: string | null
           start_year: number | null
           status: Database["public"]["Enums"]["moderation_state"]
@@ -2423,6 +2425,8 @@ export type Database = {
           raw_value?: string | null
           source_field?: string | null
           source_id?: string | null
+          source_property?: string | null
+          source_rank?: string | null
           source_record_id?: string | null
           start_year?: number | null
           status?: Database["public"]["Enums"]["moderation_state"]
@@ -2446,6 +2450,8 @@ export type Database = {
           raw_value?: string | null
           source_field?: string | null
           source_id?: string | null
+          source_property?: string | null
+          source_rank?: string | null
           source_record_id?: string | null
           start_year?: number | null
           status?: Database["public"]["Enums"]["moderation_state"]
@@ -3451,6 +3457,36 @@ export type Database = {
         }
         Returns: string
       }
+      temporal_claim_relation: {
+        Args: {
+          a_association: Database["public"]["Enums"]["temporal_association_type"]
+          a_end: number
+          a_precision: Database["public"]["Enums"]["temporal_precision"]
+          a_start: number
+          b_association: Database["public"]["Enums"]["temporal_association_type"]
+          b_end: number
+          b_precision: Database["public"]["Enums"]["temporal_precision"]
+          b_start: number
+        }
+        Returns: string
+      }
+      temporal_conflicts: {
+        Args: { max_rows?: number }
+        Returns: {
+          a_association: string
+          a_label: string
+          a_property: string
+          a_source: string
+          b_association: string
+          b_label: string
+          b_property: string
+          b_source: string
+          place_id: string
+          place_name: string
+          place_slug: string
+          relation: string
+        }[]
+      }
       temporal_coverage: {
         Args: never
         Returns: {
@@ -3486,6 +3522,25 @@ export type Database = {
           raw_value: string
           reason: string
         }[]
+      }
+      temporal_relation_summary: {
+        Args: never
+        Returns: {
+          pairs: number
+          places: number
+          relation: string
+        }[]
+      }
+      temporal_same_description: {
+        Args: {
+          a_property: string
+          a_record: string
+          a_source_id: string
+          b_property: string
+          b_record: string
+          b_source_id: string
+        }
+        Returns: boolean
       }
     }
     Enums: {

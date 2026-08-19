@@ -304,6 +304,23 @@ select json_build_object(
          -- a decade claim, and reported eleven violations that were not.
          and display_label ~ '\y[12][0-9]{3}\y'),
     'quarantined', (select count(*) from public.temporal_quarantine),
+    -- How much the sources agree, not merely where they do not. A report that
+    -- shows only conflicts cannot say whether disagreement is rare.
+    'relations', (
+      select coalesce(json_object_agg(relation, pairs), '{}'::json)
+        from public.temporal_relation_summary()),
+    'conflicts', (select count(*) from public.temporal_conflicts(1000)),
+    'conflictExamples', (
+      select coalesce(json_agg(row_to_json(c)), '[]'::json)
+        from (select * from public.temporal_conflicts(10)) c),
+    'byProperty', (
+      select coalesce(json_object_agg(coalesce(source_property, 'name-derived'), n), '{}'::json)
+        from (select source_property, count(*) as n from public.temporal_associations
+               where status = 'approved' group by 1) t),
+    'byRank', (
+      select coalesce(json_object_agg(coalesce(source_rank, 'unstated'), n), '{}'::json)
+        from (select source_rank, count(*) as n from public.temporal_associations
+               where status = 'approved' group by 1) t),
     'quarantineRanking', (
       select coalesce(json_agg(row_to_json(q)), '[]'::json)
         from (select * from public.temporal_quarantine_ranking(15)) q)
