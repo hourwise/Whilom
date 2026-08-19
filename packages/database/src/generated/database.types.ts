@@ -2480,6 +2480,112 @@ export type Database = {
           },
         ]
       }
+      temporal_conflict_entities: {
+        Row: {
+          category: Database["public"]["Enums"]["temporal_conflict_category"]
+          claim_ids: string[]
+          claim_set_digest: string
+          detected_at: string
+          id: string
+          max_disagreement_years: number
+          pair_count: number
+          place_id: string
+          refreshed_at: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["temporal_conflict_category"]
+          claim_ids: string[]
+          claim_set_digest: string
+          detected_at?: string
+          id?: string
+          max_disagreement_years: number
+          pair_count: number
+          place_id: string
+          refreshed_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["temporal_conflict_category"]
+          claim_ids?: string[]
+          claim_set_digest?: string
+          detected_at?: string
+          id?: string
+          max_disagreement_years?: number
+          pair_count?: number
+          place_id?: string
+          refreshed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "temporal_conflict_entities_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: true
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temporal_conflict_entities_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: true
+            referencedRelation: "places_geo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      temporal_conflict_reviews: {
+        Row: {
+          claim_set_digest: string
+          id: string
+          place_id: string
+          preferred_claim_id: string | null
+          rationale: string | null
+          review_state: Database["public"]["Enums"]["temporal_conflict_review_state"]
+          reviewed_at: string
+          reviewed_by: string | null
+        }
+        Insert: {
+          claim_set_digest: string
+          id?: string
+          place_id: string
+          preferred_claim_id?: string | null
+          rationale?: string | null
+          review_state: Database["public"]["Enums"]["temporal_conflict_review_state"]
+          reviewed_at?: string
+          reviewed_by?: string | null
+        }
+        Update: {
+          claim_set_digest?: string
+          id?: string
+          place_id?: string
+          preferred_claim_id?: string | null
+          rationale?: string | null
+          review_state?: Database["public"]["Enums"]["temporal_conflict_review_state"]
+          reviewed_at?: string
+          reviewed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "temporal_conflict_reviews_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temporal_conflict_reviews_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "places_geo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temporal_conflict_reviews_preferred_claim_id_fkey"
+            columns: ["preferred_claim_id"]
+            isOneToOne: false
+            referencedRelation: "temporal_associations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       temporal_quarantine: {
         Row: {
           created_at: string
@@ -3358,6 +3464,7 @@ export type Database = {
         Args: { p_candidate_id: string; p_note?: string }
         Returns: string
       }
+      refresh_temporal_conflicts: { Args: never; Returns: number }
       related_people: {
         Args: { max_rows?: number; p_person_id: string }
         Returns: {
@@ -3447,6 +3554,10 @@ export type Database = {
         }[]
       }
       slugify_unique: { Args: { p_name: string }; Returns: string }
+      temporal_category_for_relation: {
+        Args: { relation: string }
+        Returns: Database["public"]["Enums"]["temporal_conflict_category"]
+      }
       temporal_claim_label: {
         Args: {
           p_display_label: string
@@ -3469,6 +3580,39 @@ export type Database = {
           b_start: number
         }
         Returns: string
+      }
+      temporal_conflict_claim_digest: {
+        Args: { p_place_id: string }
+        Returns: string
+      }
+      temporal_conflict_pairs: {
+        Args: never
+        Returns: {
+          a_id: string
+          b_id: string
+          category: Database["public"]["Enums"]["temporal_conflict_category"]
+          disagreement_years: number
+          place_id: string
+          relation: string
+        }[]
+      }
+      temporal_conflict_status: {
+        Args: { max_rows?: number }
+        Returns: {
+          category: Database["public"]["Enums"]["temporal_conflict_category"]
+          current_digest: string
+          is_stale: boolean
+          max_disagreement_years: number
+          pair_count: number
+          place_id: string
+          place_name: string
+          place_slug: string
+          preferred_claim_id: string
+          rationale: string
+          review_state: Database["public"]["Enums"]["temporal_conflict_review_state"]
+          reviewed_at: string
+          reviewed_digest: string
+        }[]
       }
       temporal_conflicts: {
         Args: { max_rows?: number }
@@ -3767,6 +3911,19 @@ export type Database = {
         | "event"
         | "lost"
         | "associated"
+      temporal_conflict_category:
+        | "direct_date_disagreement"
+        | "century_disagreement"
+        | "period_disagreement"
+        | "disjoint_range"
+        | "overlapping_range"
+      temporal_conflict_review_state:
+        | "unreviewed"
+        | "reviewed_unresolved"
+        | "multi_phase_confirmed"
+        | "preferred_interpretation_recorded"
+        | "source_error_confirmed"
+        | "no_longer_conflicting"
       temporal_precision:
         | "exact_year"
         | "circa"
@@ -4160,6 +4317,21 @@ export const Constants = {
         "event",
         "lost",
         "associated",
+      ],
+      temporal_conflict_category: [
+        "direct_date_disagreement",
+        "century_disagreement",
+        "period_disagreement",
+        "disjoint_range",
+        "overlapping_range",
+      ],
+      temporal_conflict_review_state: [
+        "unreviewed",
+        "reviewed_unresolved",
+        "multi_phase_confirmed",
+        "preferred_interpretation_recorded",
+        "source_error_confirmed",
+        "no_longer_conflicting",
       ],
       temporal_precision: [
         "exact_year",

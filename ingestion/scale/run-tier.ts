@@ -155,6 +155,7 @@ function loadPreviousTier(tier: number): TierMetrics | undefined {
 /** One tier executed under one candidate strategy, with everything measured. */
 export interface TierExecution {
   fixture: ReturnType<typeof buildTierFixture>;
+  candidateMode: CandidateMode;
   report: Awaited<ReturnType<typeof runIngestion>>;
   matchStats: MatchStats;
   candidateStats: CandidateGenerationStats;
@@ -176,8 +177,9 @@ export interface TierExecution {
 export async function executeTier(
   tier: number,
   candidateMode: CandidateMode = CandidateMode.Bounded,
+  buildFixture: (size: number) => ReturnType<typeof buildTierFixture> = buildTierFixture,
 ): Promise<TierExecution> {
-  const fixture = buildTierFixture(tier);
+  const fixture = buildFixture(tier);
   const startedAt = new Date();
 
   const matchStats: MatchStats = { comparisons: 0, vetoedByDistance: 0, vetoedByName: 0, vetoedByRegister: 0, beyondMaxDistance: 0 };
@@ -209,6 +211,7 @@ export async function executeTier(
   const finishedAt = new Date();
   return {
     fixture,
+    candidateMode,
     report,
     matchStats,
     candidateStats,
@@ -224,9 +227,24 @@ export async function executeTier(
 export async function runTier(
   tier: number,
   candidateMode: CandidateMode = CandidateMode.Bounded,
+  buildFixture: (size: number) => ReturnType<typeof buildTierFixture> = buildTierFixture,
 ): Promise<TierMetrics> {
-  const execution = await executeTier(tier, candidateMode);
-  const { fixture, report, matchStats, candidateStats, normaliseSamples, validateSamples, matchSamples, startedAt, finishedAt } =
+  const execution = await executeTier(tier, candidateMode, buildFixture);
+  const metrics = buildTierMetrics(execution, tier);
+  metrics.gates = evaluateGates(metrics, loadPreviousTier(tier));
+  metrics.proceeded = mayProceed(metrics.gates);
+  return metrics;
+}
+
+/**
+ * Assemble a tier's metrics from an execution.
+ *
+ * Extracted so the national ladder measures with exactly the same code as the
+ * regional ladder — the numbers can only be compared across scales if they are
+ * produced identically.
+ */
+export function buildTierMetrics(execution: TierExecution, tier: number): TierMetrics {
+  const { fixture, candidateMode, report, matchStats, candidateStats, normaliseSamples, validateSamples, matchSamples, startedAt, finishedAt } =
     execution;
 
   const rejectionReasons = new Map<string, number>();
@@ -343,8 +361,6 @@ export async function runTier(
     proceeded: false,
   };
 
-  metrics.gates = evaluateGates(metrics, loadPreviousTier(tier));
-  metrics.proceeded = mayProceed(metrics.gates);
   return metrics;
 }
 

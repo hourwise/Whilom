@@ -186,6 +186,44 @@ for (const file of readdirSync(DIR).filter((f) => f.endsWith('.sql'))) {
   }
 }
 
+/**
+ * A function must not share a name with a type.
+ *
+ * `name(arg)` where `name` is also a type is parsed by Postgres as a CAST to
+ * that type, not a call — so the function is unreachable and the cast fails at
+ * runtime with "invalid input value for enum". This has bitten twice:
+ * map_display_category in batch 10 and temporal_conflict_category in batch 13,
+ * each after a full CI database spin-up. Cheap to catch here.
+ *
+ * Checked across the whole migration set, since the type and the colliding
+ * function may live in different files.
+ */
+{
+  const types = new Set();
+  const functions = new Map(); // name -> file:line
+  for (const file of readdirSync(DIR).filter((f) => f.endsWith('.sql'))) {
+    const original = readFileSync(join(DIR, file), 'utf8');
+    const sql = blank(original);
+    for (const m of sql.matchAll(/\bcreate\s+type\s+(?:public\.)?(\w+)\b/gi)) {
+      types.add(m[1].toLowerCase());
+    }
+    for (const m of sql.matchAll(/\bcreate\s+(?:or\s+replace\s+)?function\s+(?:public\.)?(\w+)\s*\(/gi)) {
+      const name = m[1].toLowerCase();
+      if (!functions.has(name)) {
+        functions.set(name, `${file}:${original.slice(0, m.index).split('\n').length}`);
+      }
+    }
+  }
+  for (const [name, where] of functions) {
+    if (types.has(name)) {
+      console.error(
+        `FAIL ${where}: function "${name}" shares its name with a type, so "${name}(...)" is parsed as a CAST, not a call. Rename the function.`,
+      );
+      failed += 1;
+    }
+  }
+}
+
 if (failed > 0) {
   console.error(`\n${failed} migration problem(s).`);
   process.exit(1);
