@@ -3531,8 +3531,15 @@ export type Database = {
           relation: string
         }[]
       }
-      temporal_same_record: {
-        Args: { a_record: string; b_record: string }
+      temporal_same_description: {
+        Args: {
+          a_property: string
+          a_record: string
+          a_source_id: string
+          b_property: string
+          b_record: string
+          b_source_id: string
+        }
         Returns: boolean
       }
     }
