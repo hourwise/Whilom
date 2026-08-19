@@ -334,7 +334,9 @@ create or replace function public.place_temporal_claims(p_place_id uuid, max_row
 returns table (
   association_type text,
   label text,
-  precision text,
+  -- Named claim_precision, not precision: a RETURNS TABLE column is an OUT
+  -- parameter, and Postgres will not accept a keyword as one.
+  claim_precision text,
   precision_class text,
   start_year integer,
   end_year integer,

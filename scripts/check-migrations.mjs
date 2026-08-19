@@ -153,6 +153,39 @@ for (const file of readdirSync(DIR).filter((f) => f.endsWith('.sql'))) {
   }
 }
 
+/**
+ * A RETURNS TABLE column is an OUT parameter, and Postgres will not accept a
+ * keyword as one — even though the same word is a perfectly legal column name
+ * on a table. `precision text` in a returns-table list is a syntax error, and
+ * it reports at the word rather than at the declaration that caused it.
+ */
+for (const file of readdirSync(DIR).filter((f) => f.endsWith('.sql'))) {
+  const original = readFileSync(join(DIR, file), 'utf8');
+  const sql = blank(original);
+
+  for (const returns of sql.matchAll(/\breturns\s+table\s*\(/gi)) {
+    let depth = 0;
+    let end = returns.index + returns[0].length - 1;
+    for (; end < sql.length; end += 1) {
+      if (sql[end] === '(') depth += 1;
+      if (sql[end] === ')') {
+        depth -= 1;
+        if (depth === 0) break;
+      }
+    }
+    const body = sql.slice(returns.index + returns[0].length, end);
+    for (const column of topLevelSplit(body)) {
+      const name = column.trim().split(/\s+/)[0]?.toLowerCase();
+      if (!name || !KEYWORD_COLUMNS.includes(name)) continue;
+      const line = original.slice(0, returns.index).split('\n').length;
+      console.error(
+        `FAIL ${file}:${line}: RETURNS TABLE column named "${name}" is a keyword and cannot be an OUT parameter. Rename it.`,
+      );
+      failed += 1;
+    }
+  }
+}
+
 if (failed > 0) {
   console.error(`\n${failed} migration problem(s).`);
   process.exit(1);
