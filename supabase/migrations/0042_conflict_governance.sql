@@ -211,7 +211,13 @@ grant select on public.temporal_conflict_entities to anon, authenticated;
 create or replace function public.refresh_temporal_conflicts()
 returns integer
 language plpgsql
-security invoker
+-- Definer, deliberately. This is a trusted rebuild of derived data: it takes no
+-- input, reads only approved claims, and writes only the entity table it owns.
+-- Running as the owner lets an editor (or the governed activation) trigger a
+-- rebuild without a direct write grant on temporal_conflict_entities, and the
+-- empty search_path keeps the definer rights from resolving an unexpected
+-- object.
+security definer
 set search_path = ''
 as $$
 declare
