@@ -59,7 +59,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ingestion/.regional-cache
-          key: whilom-region-${{ hashFiles('ingestion/regional/regional-dataset-manifest.json', 'ingestion/regional/people.ts') }}
+          key: whilom-region-${{ hashFiles('ingestion/regional/regional-dataset-manifest.json', 'ingestion/regional/people.ts', 'ingestion/regional/temporal-enrichment.ts') }}
 
       - name: Capture regional dataset
         if: steps.cache.outputs.cache-hit != 'true'
@@ -74,6 +74,13 @@ jobs:
       - name: Enrich people
         working-directory: ingestion
         run: pnpm exec tsx regional/people.ts
+
+      # Bounded temporal enrichment via the same already-approved source and the
+      # same NHLE join. The register carries no historic date of its own, so
+      # this is where defensible dating actually comes from.
+      - name: Enrich temporal evidence
+        working-directory: ingestion
+        run: pnpm exec tsx regional/temporal-enrichment.ts
 
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v1

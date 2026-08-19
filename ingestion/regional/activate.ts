@@ -31,7 +31,7 @@ import { MatchOutcome } from '../pipeline/candidate';
 import { CandidateMode, emptyCandidateStats } from '../matching/candidates';
 import type { MatchStats } from '../matching/matcher';
 import { REGIONAL_CACHE_FILE, readRegionalManifest } from './capture';
-import { NAME_DERIVED_ASSOCIATION, extractTemporalClaims } from '../transforms/temporal';
+import { extractTemporalClaims } from '../transforms/temporal';
 import { PublicationClass, classifyDecision, moderationStateFor } from './policy';
 import {
   PUBLICATION_POLICY_VERSION,
@@ -256,7 +256,13 @@ export async function buildActivation(outDir: string): Promise<ActivationPlan> {
     const descriptiveSource = candidate.designations.some(
       (d) => d.designation === 'scheduled_monument',
     );
-    const claims = extractTemporalClaims(candidate.name, { descriptiveSource });
+    // A registered battlefield is named "Battle of Marston Moor 1644": the
+    // year dates the fighting, and recording it as construction would claim
+    // somebody built a moor.
+    const eventSource = candidate.designations.some(
+      (d) => d.designation === 'registered_battlefield',
+    );
+    const claims = extractTemporalClaims(candidate.name, { descriptiveSource, eventSource });
     if (claims.length === 0) continue;
     recordsWithTemporal += 1;
     for (const claim of claims) {
@@ -264,13 +270,16 @@ export async function buildActivation(outDir: string): Promise<ActivationPlan> {
       temporalRows.push(
         [
           csvField(candidate.provenance.sourceRecordId),
-          csvField(NAME_DERIVED_ASSOCIATION),
+          csvField(claim.associationType),
           csvField(String(claim.startYear)),
           csvField(String(claim.endYear)),
           csvField(claim.precision),
           csvField(claim.periodId),
           csvField(claim.originalText),
           csvField(claim.derivation),
+          csvField(claim.qualifier ?? ''),
+          csvField(claim.label),
+          csvField(claim.normaliserVersion),
         ].join(','),
       );
     }

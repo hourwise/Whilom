@@ -17,7 +17,8 @@
     "regional:capture": "tsx regional/capture.ts",
     "regional:activate": "tsx regional/activate.ts",
     "regional:people": "tsx regional/people.ts",
-    "regional:temporal": "tsx regional/temporal-enrichment.ts"
+    "regional:temporal": "tsx regional/temporal-enrichment.ts",
+    "regional:temporal-audit": "tsx regional/temporal-audit.ts"
   },
   "dependencies": {
     "@whilom/database": "workspace:*",
