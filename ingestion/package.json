@@ -19,7 +19,10 @@
     "regional:people": "tsx regional/people.ts",
     "regional:temporal": "tsx regional/temporal-enrichment.ts",
     "regional:temporal-audit": "tsx regional/temporal-audit.ts",
-    "regional:opportunity": "tsx regional/coverage-opportunity.ts"
+    "regional:opportunity": "tsx regional/coverage-opportunity.ts",
+    "national:audit": "tsx scale/national/audit.ts",
+    "national:capture": "tsx scale/national/capture.ts",
+    "national:ladder": "tsx scale/national/run-ladder.ts"
   },
   "dependencies": {
     "@whilom/database": "workspace:*",

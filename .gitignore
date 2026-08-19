@@ -40,6 +40,9 @@ Thumbs.db
 
 # Scale-experiment cache (regenerate with `pnpm --filter @whilom/ingestion scale:capture`)
 ingestion/.scale-cache/
+ingestion/.national-cache/
+# National ladder run output (machine-specific timings; regenerate with national:ladder)
+ingestion/national-ladder.json
 scale-results-*.json
 scale-seed-*.sql
 db-results-*.json
