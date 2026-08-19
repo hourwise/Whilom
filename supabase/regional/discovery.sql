@@ -310,6 +310,18 @@ select json_build_object(
       select coalesce(json_object_agg(relation, pairs), '{}'::json)
         from public.temporal_relation_summary()),
     'conflicts', (select count(*) from public.temporal_conflicts(1000)),
+    -- Governed conflict entities: the durable form, with taxonomy and review
+    -- state, that a workflow can act on. Built by refresh_temporal_conflicts().
+    'conflictEntities', (select count(*) from public.temporal_conflict_entities),
+    'conflictsByCategory', (
+      select coalesce(json_object_agg(category, n), '{}'::json)
+        from (select category, count(*) as n from public.temporal_conflict_entities group by 1) t),
+    'conflictReviewStates', (
+      select coalesce(json_object_agg(review_state, n), '{}'::json)
+        from (select review_state, count(*) as n from public.temporal_conflict_status(1000) group by 1) t),
+    'conflictMaxSpanYears', (select coalesce(max(max_disagreement_years), 0) from public.temporal_conflict_entities),
+    'conflictPlacesAffected', (select count(distinct place_id) from public.temporal_conflict_entities),
+    'conflictStaleReviews', (select count(*) from public.temporal_conflict_status(1000) where is_stale),
     'conflictExamples', (
       select coalesce(json_agg(row_to_json(c)), '[]'::json)
         from (select * from public.temporal_conflicts(10)) c),

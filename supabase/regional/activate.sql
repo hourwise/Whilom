@@ -370,6 +370,11 @@ left join public.source_records sr
  and sr.source_id = 'b0000000-0000-4000-8000-000000000001'
  and sr.entity_type = 'place';
 
+-- Build the durable conflict entities from the claims just published. This is
+-- the only writer of temporal_conflict_entities, and it is idempotent: a second
+-- activation rebuilds the same set.
+select public.refresh_temporal_conflicts();
+
 -- ---------------------------------------------------------------------------
 -- People
 -- ---------------------------------------------------------------------------
