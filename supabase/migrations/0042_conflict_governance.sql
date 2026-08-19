@@ -335,7 +335,9 @@ create index temporal_conflict_reviews_place_idx on public.temporal_conflict_rev
 
 alter table public.temporal_conflict_reviews enable row level security;
 -- Reviews are editorial. The public sees that a conflict exists, not the
--- editorial deliberation over it.
+-- editorial deliberation over it. The grant is what lets an editor write at
+-- all; the policy is what limits that write to editors — both are needed.
+grant select, insert, update, delete on public.temporal_conflict_reviews to authenticated;
 create policy "temporal_conflict_reviews editors" on public.temporal_conflict_reviews for all
   using (public.is_editor()) with check (public.is_editor());
 
