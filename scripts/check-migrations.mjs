@@ -113,8 +113,48 @@ for (const file of readdirSync(DIR).filter((f) => f.endsWith('.sql'))) {
   }
 }
 
+/**
+ * Column names that are also Postgres keywords.
+ *
+ * `temporal_associations.precision` is a legal column name and an illegal bare
+ * identifier in several grammar positions — inside a CHECK constraint it is a
+ * syntax error, while `ta.precision` and `precision::text` parse fine. The
+ * schema is not going to rename the column, so the rule is: qualify it or
+ * quote it.
+ */
+const KEYWORD_COLUMNS = ['precision'];
+
+for (const file of readdirSync(DIR).filter((f) => f.endsWith('.sql'))) {
+  const original = readFileSync(join(DIR, file), 'utf8');
+  const sql = blank(original);
+
+  for (const check of sql.matchAll(/\bcheck\s*\(/gi)) {
+    // Take the balanced body of the check constraint.
+    let depth = 0;
+    let end = check.index + check[0].length - 1;
+    for (; end < sql.length; end += 1) {
+      if (sql[end] === '(') depth += 1;
+      if (sql[end] === ')') {
+        depth -= 1;
+        if (depth === 0) break;
+      }
+    }
+    const body = sql.slice(check.index, end);
+    for (const word of KEYWORD_COLUMNS) {
+      // Bare: not preceded by a dot (qualified) or a quote (quoted).
+      const bare = new RegExp(`(^|[^.\\w"])${word}\\s*(?:not\\s+)?(?:in\\b|=|<|>|!)`, 'i');
+      if (!bare.test(body)) continue;
+      const line = original.slice(0, check.index).split('\n').length;
+      console.error(
+        `FAIL ${file}:${line}: bare "${word}" inside a CHECK constraint is a syntax error. Quote it as "${word}".`,
+      );
+      failed += 1;
+    }
+  }
+}
+
 if (failed > 0) {
-  console.error(`\n${failed} malformed ALTER TABLE action(s).`);
+  console.error(`\n${failed} migration problem(s).`);
   process.exit(1);
 }
 console.log(`ok   ${readdirSync(DIR).filter((f) => f.endsWith('.sql')).length} migrations`);

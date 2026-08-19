@@ -277,7 +277,7 @@ select json_build_object(
     'coverage', (select row_to_json(c) from public.temporal_coverage() c),
     'byPrecisionClass', (
       select coalesce(json_object_agg(klass, n), '{}'::json)
-        from (select public.temporal_precision_class(precision) as klass, count(*) as n
+        from (select public.temporal_precision_class("precision") as klass, count(*) as n
                 from public.temporal_associations where status = 'approved' group by 1) t),
     'bySource', (
       select coalesce(json_object_agg(name, n), '{}'::json)
@@ -298,7 +298,7 @@ select json_build_object(
     -- this batch exists to prevent, so it is counted rather than assumed absent.
     'overpreciseLabels', (
       select count(*) from public.temporal_associations
-       where precision in ('century', 'period', 'decade')
+       where "precision" in ('century', 'period', 'decade')
          and display_label ~ '[12][0-9]{3}'),
     'quarantined', (select count(*) from public.temporal_quarantine),
     'quarantineRanking', (

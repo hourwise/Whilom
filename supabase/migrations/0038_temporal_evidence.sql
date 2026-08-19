@@ -66,7 +66,10 @@ alter table public.temporal_associations
   add constraint temporal_associations_label_not_overprecise
   check (
     display_label is null
-    or precision not in ('century', 'period', 'decade')
+    -- Quoted: `precision` is a Postgres keyword, and a bare reference to it is
+    -- a syntax error inside a check constraint even though it is a legal
+    -- column name.
+    or "precision" not in ('century', 'period', 'decade')
     or display_label !~ '\y[12][0-9]{3}\y'
   );
 
