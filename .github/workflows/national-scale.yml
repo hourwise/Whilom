@@ -1,7 +1,7 @@
 name: National scale pilot
 
 # The heavy, one-time-ish scale pilot: audit the national NHLE source and run
-# the ordinary pipeline up a stratified national ladder (25k / 50k / ~100k).
+# the ordinary pipeline up a stratified national ladder (25k / 50k / ~100k / ~200k).
 #
 # Deliberately NOT on pull requests. It fetches a ~100k-record stratified sample
 # from Historic England and runs the pipeline at national scale, which is
@@ -67,7 +67,7 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=3072
         run: |
           set -o pipefail
-          pnpm exec tsx scale/national/run-ladder.ts --largest "${{ inputs.largest || '100000' }}" \
+          pnpm exec tsx scale/national/run-ladder.ts --largest "${{ inputs.largest || '200000' }}" \
             | tee national-ladder.log
 
       - name: Summarise
