@@ -135,9 +135,12 @@ select ok(
   (select count(*) from public.temporal_conflicts() where a_source = b_source) = 0,
   'a conflict names both sources so it can be adjudicated');
 
+-- Which claim lands on which side of the pair depends on the order of two
+-- random uuids, so the assertion must not assume an orientation. Exactly one
+-- of the two carries a property and the other is name-derived.
 select is(
-  (select a_property from public.temporal_conflicts()),
-  'P571', 'and the property each claim came from');
+  (select coalesce(a_property, b_property) from public.temporal_conflicts()),
+  'P571', 'and the property the claim came from, whichever side it sits on');
 
 -- ---------------------------------------------------------------------------
 -- Multiple phases survive
