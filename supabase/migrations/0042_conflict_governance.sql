@@ -217,11 +217,18 @@ as $$
 declare
   affected integer;
 begin
-  with per_place as (
+  with pair_rows as (
+    select place_id, a_id, b_id, category, disagreement_years
+      from public.temporal_conflict_pairs()
+  ),
+  per_place as (
     select
-      pairs.place_id,
-      (array_agg(distinct pairs.category order by
-        case pairs.category
+      pr.place_id,
+      -- The single most severe category on the place. No DISTINCT — ordering by
+      -- a CASE with DISTINCT would require the CASE in the argument list, and
+      -- taking the first of the severity-ordered list needs neither.
+      (array_agg(pr.category order by
+        case pr.category
           when 'period_disagreement' then 1
           when 'century_disagreement' then 2
           when 'direct_date_disagreement' then 3
@@ -229,19 +236,28 @@ begin
           when 'overlapping_range' then 5
         end))[1] as category,
       count(*) as pair_count,
-      max(pairs.disagreement_years) as max_years,
-      (select array_agg(distinct cid order by cid) from (
-        select unnest(array_agg(pairs.a_id) || array_agg(pairs.b_id)) as cid
-      ) ids) as claim_ids
-    from public.temporal_conflict_pairs() pairs
-    group by pairs.place_id
+      max(pr.disagreement_years) as max_years
+    from pair_rows pr
+    group by pr.place_id
+  ),
+  claims_per_place as (
+    -- The distinct claims a place's conflicts touch, sorted, computed without
+    -- nesting aggregates.
+    select place_id, array_agg(claim_id order by claim_id) as claim_ids
+    from (
+      select place_id, a_id as claim_id from pair_rows
+      union
+      select place_id, b_id from pair_rows
+    ) u
+    group by place_id
   )
   insert into public.temporal_conflict_entities
     (place_id, category, claim_ids, pair_count, max_disagreement_years, claim_set_digest, refreshed_at)
   select
-    pp.place_id, pp.category, pp.claim_ids, pp.pair_count, coalesce(pp.max_years, 0),
+    pp.place_id, pp.category, cpp.claim_ids, pp.pair_count, coalesce(pp.max_years, 0),
     public.temporal_conflict_claim_digest(pp.place_id), now()
   from per_place pp
+  join claims_per_place cpp on cpp.place_id = pp.place_id
   on conflict (place_id) do update set
     category = excluded.category,
     claim_ids = excluded.claim_ids,
