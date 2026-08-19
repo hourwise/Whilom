@@ -167,6 +167,15 @@ describe('Wikidata time values', () => {
     expect(parseWikidataYear('not a time')).toBeNull();
   });
 
+  it('reads the UNSIGNED form the SPARQL endpoint actually returns', () => {
+    // Wikidata dumps write "+1350-01-01". The query service serialises the
+    // same value as an xsd:dateTime and drops the plus. Requiring the sign
+    // rejected every CE date while letting BCE dates through, which looked
+    // exactly like a working importer against a thin source.
+    expect(parseWikidataYear('1870-01-01T00:00:00Z')).toBe(1870);
+    expect(parseWikidataYear('1350-01-01T00:00:00Z')).toBe(1350);
+  });
+
   it('reads year zero as 1 BCE, because year zero does not exist', () => {
     expect(parseWikidataYear('+0000-01-01T00:00:00Z')).toBe(-1);
   });

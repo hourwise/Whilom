@@ -243,7 +243,13 @@ export const WIKIDATA_PRECISION = {
  * as 1 BCE, the same way the people importer reads it.
  */
 export function parseWikidataYear(literal: string): number | null {
-  const match = /^([+-])(\d{1,16})-/.exec(literal.trim());
+  // The sign is optional. Wikidata's own dumps write `+1350-01-01`, but the
+  // SPARQL endpoint serialises the same value as an xsd:dateTime and drops the
+  // plus — so the query service returns `1350-01-01T00:00:00Z`. Requiring the
+  // sign silently rejected every CE date the endpoint returned while letting
+  // the BCE ones through, which is a failure mode that looks like a working
+  // importer with thin data.
+  const match = /^([+-]?)(\d{1,16})-/.exec(literal.trim());
   if (!match) return null;
   const magnitude = Number(match[2]);
   if (!Number.isFinite(magnitude)) return null;
