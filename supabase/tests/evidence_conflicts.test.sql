@@ -10,7 +10,7 @@
 
 begin;
 create extension if not exists pgtap;
-select plan(38);
+select plan(39);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'user@example.test');
@@ -162,12 +162,19 @@ insert into public.temporal_associations
    '50000000-0000-0000-0000-000000000002', '60000000-0000-0000-0000-000000000001', '1681');
 
 select ok(
-  public.temporal_same_record(
-    '60000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000001'),
-  'two claims from one source record are recognised as such');
+  public.temporal_same_description(
+    '50000000-0000-0000-0000-000000000002', '60000000-0000-0000-0000-000000000001', null,
+    '50000000-0000-0000-0000-000000000002', '60000000-0000-0000-0000-000000000001', null),
+  'two claims read out of one piece of text are recognised as one description');
 
 select ok(
-  not public.temporal_same_record(null, null),
+  not public.temporal_same_description(
+    '50000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000001', 'P571',
+    '50000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000001', 'P571'),
+  'but two structured statements stay comparable, even on the same record');
+
+select ok(
+  not public.temporal_same_description(null, null, null, null, null, null),
   'and an unknown record is never treated as shared, which would silence real disagreements');
 
 select is(
@@ -176,7 +183,7 @@ select is(
   0::bigint, 'two dates in one listing are not reported as a conflict');
 
 select is(
-  (select pairs from public.temporal_relation_summary() where relation = 'same_record_components'),
+  (select pairs from public.temporal_relation_summary() where relation = 'same_description_components'),
   1::bigint, 'they are reported as components of one description instead');
 
 -- ---------------------------------------------------------------------------

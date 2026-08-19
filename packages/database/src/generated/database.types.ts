@@ -3531,6 +3531,10 @@ export type Database = {
           relation: string
         }[]
       }
+      temporal_same_record: {
+        Args: { a_record: string; b_record: string }
+        Returns: boolean
+      }
     }
     Enums: {
       access_cost: "free" | "paid" | "donation" | "exterior_only"
