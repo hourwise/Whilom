@@ -375,6 +375,11 @@ as $$
   order by
     case public.temporal_precision_class(ta.precision)
       when 'strong' then 0 when 'bounded' then 1 when 'period' then 2 else 3 end,
+    -- Then narrowest first. Class alone is not enough: a 14th-century claim and
+    -- an 1872 rebuilding are both "strong", and ordering by start year would
+    -- offer the vaguer of the two first. The width of the span is what actually
+    -- says how much is known.
+    coalesce(ta.end_year - ta.start_year, 2147483647),
     ta.start_year nulls last
   limit least(greatest(coalesce(max_rows, 12), 1), 50);
 $$;

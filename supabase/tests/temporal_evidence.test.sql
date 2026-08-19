@@ -14,6 +14,12 @@ begin;
 create extension if not exists pgtap;
 select plan(38);
 
+-- The test database carries a seed, so corpus-wide counts are not this file's
+-- fixtures alone. Coverage is therefore asserted as a DELTA against what was
+-- already there: the arithmetic being tested is the bucketing, not the size of
+-- somebody else's seed.
+create temporary table coverage_baseline as select * from public.temporal_coverage();
+
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'user@example.test'),
   ('22222222-2222-2222-2222-222222222222', 'editor@example.test');
@@ -114,24 +120,26 @@ select is(
 -- Coverage that cannot be inflated
 -- ---------------------------------------------------------------------------
 select is(
-  (select published_places from public.temporal_coverage()),
-  4::bigint, 'coverage is measured against every published place');
+  (select c.published_places - b.published_places
+     from public.temporal_coverage() c, coverage_baseline b),
+  4::bigint, 'coverage counts every published place, and only published ones');
 
 select is(
-  (select strong from public.temporal_coverage()),
+  (select c.strong - b.strong from public.temporal_coverage() c, coverage_baseline b),
   2::bigint, 'two places have evidence precise to a century or better');
 
 select is(
-  (select period_only from public.temporal_coverage()),
+  (select c.period_only - b.period_only from public.temporal_coverage() c, coverage_baseline b),
   1::bigint, 'one has a period and nothing narrower — reported separately, not as a date');
 
 select is(
-  (select unknown from public.temporal_coverage()),
+  (select c.unknown - b.unknown from public.temporal_coverage() c, coverage_baseline b),
   1::bigint, 'and one has no temporal evidence at all');
 
 select is(
   (select strong + period_only + bounded_only + unknown from public.temporal_coverage()),
-  4::bigint, 'the buckets are exclusive and account for the whole corpus');
+  (select published_places from public.temporal_coverage()),
+  'the buckets are exclusive and account for the whole corpus');
 
 select ok(
   (select strong_rate from public.temporal_coverage()) < (select any_rate from public.temporal_coverage()),
@@ -139,7 +147,7 @@ select ok(
 
 -- A place with both a strong and a period-level claim counts once, as strong.
 select is(
-  (select any_coverage from public.temporal_coverage()),
+  (select c.any_coverage - b.any_coverage from public.temporal_coverage() c, coverage_baseline b),
   3::bigint, 'a place with several claims is still one place');
 
 -- ---------------------------------------------------------------------------
