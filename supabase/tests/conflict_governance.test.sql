@@ -71,13 +71,13 @@ insert into public.temporal_associations
 -- ---------------------------------------------------------------------------
 -- The taxonomy is derived from the relations, not invented
 -- ---------------------------------------------------------------------------
-select is(public.temporal_conflict_category('exact_conflict'), 'direct_date_disagreement',
+select is(public.temporal_category_for_relation('exact_conflict'), 'direct_date_disagreement',
   'an exact-year disagreement is a direct date disagreement');
-select is(public.temporal_conflict_category('century_conflict'), 'century_disagreement',
+select is(public.temporal_category_for_relation('century_conflict'), 'century_disagreement',
   'a century disagreement keeps its own category');
-select is(public.temporal_conflict_category('range_disagreement'), 'disjoint_range',
+select is(public.temporal_category_for_relation('range_disagreement'), 'disjoint_range',
   'disjoint ranges are their own category');
-select is(public.temporal_conflict_category('different_event'), null,
+select is(public.temporal_category_for_relation('different_event'), null,
   'a different event is not a conflict category at all');
 
 -- ---------------------------------------------------------------------------
@@ -272,9 +272,9 @@ reset role;
 -- ---------------------------------------------------------------------------
 -- Category severity ordering
 -- ---------------------------------------------------------------------------
-select is(public.temporal_conflict_category('period_conflict'), 'period_disagreement',
+select is(public.temporal_category_for_relation('period_conflict'), 'period_disagreement',
   'a period disagreement is recognised');
-select is(public.temporal_conflict_category('range_overlap'), 'overlapping_range',
+select is(public.temporal_category_for_relation('range_overlap'), 'overlapping_range',
   'and an overlapping range');
 
 -- The BCE / year-zero invariant is untouched by any of this.
@@ -286,13 +286,13 @@ select is(
 select is(
   (select count(*) from (values ('exact_conflict'),('century_conflict'),('period_conflict'),
      ('range_disagreement'),('range_overlap')) v(r)
-    where public.temporal_conflict_category(v.r) is null),
+    where public.temporal_category_for_relation(v.r) is null),
   0::bigint, 'every conflicting relation maps to a category');
 
 select is(
   (select count(*) from (values ('different_event'),('compatible_refinement'),
      ('duplicate_equivalent'),('indeterminate')) v(r)
-    where public.temporal_conflict_category(v.r) is not null),
+    where public.temporal_category_for_relation(v.r) is not null),
   0::bigint, 'and no non-conflict relation is miscategorised as one');
 
 select * from finish();

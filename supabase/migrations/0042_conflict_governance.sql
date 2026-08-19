@@ -39,7 +39,7 @@ create type public.temporal_conflict_category as enum (
 comment on type public.temporal_conflict_category is
   'The kinds of genuine temporal disagreement the corpus contains. Derived from the real conflict set (60 direct-date, 17 disjoint-range, 3 century), not from an imagined ontology.';
 
-create or replace function public.temporal_conflict_category(relation text)
+create or replace function public.temporal_category_for_relation(relation text)
 returns public.temporal_conflict_category
 language sql
 immutable
@@ -56,7 +56,7 @@ as $$
   end::public.temporal_conflict_category;
 $$;
 
-grant execute on function public.temporal_conflict_category(text) to anon, authenticated;
+grant execute on function public.temporal_category_for_relation(text) to anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Conflicting claim pairs
@@ -85,7 +85,7 @@ as $$
     public.temporal_claim_relation(
       a.association_type, a.precision, a.start_year, a.end_year,
       b.association_type, b.precision, b.start_year, b.end_year) as relation,
-    public.temporal_conflict_category(public.temporal_claim_relation(
+    public.temporal_category_for_relation(public.temporal_claim_relation(
       a.association_type, a.precision, a.start_year, a.end_year,
       b.association_type, b.precision, b.start_year, b.end_year)),
     abs(coalesce(a.start_year, 0) - coalesce(b.start_year, 0))
