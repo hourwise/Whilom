@@ -47,7 +47,7 @@ alter table public.temporal_associations
   add column display_label text,
   /** The version of the normalisation rules that produced the span. */
   add column normaliser_version text,
-  constraint temporal_associations_qualifier_known
+  add constraint temporal_associations_qualifier_known
     check (century_qualifier is null or century_qualifier in ('early', 'mid', 'late'));
 
 comment on column public.temporal_associations.raw_value is

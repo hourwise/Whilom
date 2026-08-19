@@ -43,6 +43,12 @@ jobs:
       - name: Validate pgTAP plans
         run: node scripts/check-pgtap-plans.mjs
 
+      # There is no local Postgres in this project, so a SQL syntax error is
+      # only discovered after a push, a runner and a container start. This
+      # catches the malformed ALTER TABLE action list that has cost that twice.
+      - name: Validate migrations
+        run: node scripts/check-migrations.mjs
+
       - name: Typecheck
         run: pnpm typecheck
 
