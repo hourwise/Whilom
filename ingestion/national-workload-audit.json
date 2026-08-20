@@ -1,0 +1,1457 @@
+{
+  "generatedAt": "2026-08-20T14:29:05.217Z",
+  "source": "D:\\Users\\fleur\\History\\whilom\\ingestion\\.national-cache\\nhle-national-cache.json",
+  "sourceRecords": 199980,
+  "authoritativeCheckpoints": {
+    "25000": {
+      "records": 25000,
+      "layers": {
+        "Listed Building points": 24989,
+        "Protected Wreck Sites": 11
+      },
+      "layerPercentages": {
+        "Listed Building points": 99.956,
+        "Protected Wreck Sites": 0.044
+      },
+      "designations": {
+        "listed_building": 24989,
+        "protected_wreck": 11
+      },
+      "designationPercentages": {
+        "listed_building": 99.956,
+        "protected_wreck": 0.044
+      },
+      "cells": {
+        "TQ": 3125,
+        "SP": 2225,
+        "SU": 2225,
+        "TL": 2225,
+        "ST": 2225,
+        "SE": 1450,
+        "SK": 1450,
+        "SO": 1425,
+        "SX": 1150,
+        "SJ": 1125,
+        "SD": 825,
+        "TM": 775,
+        "NZ": 725,
+        "TF": 575,
+        "NY": 500,
+        "SS": 500,
+        "SW": 500,
+        "TR": 475,
+        "SY": 433,
+        "TG": 312,
+        "SZ": 264,
+        "TA": 216,
+        "NU": 120,
+        "NT": 72,
+        "SV": 24,
+        "NX": 24,
+        "TV": 24,
+        "none": 11
+      },
+      "cellPercentages": {
+        "TQ": 12.5,
+        "SP": 8.9,
+        "SU": 8.9,
+        "TL": 8.9,
+        "ST": 8.9,
+        "SE": 5.8,
+        "SK": 5.8,
+        "SO": 5.7,
+        "SX": 4.6,
+        "SJ": 4.5,
+        "SD": 3.3,
+        "TM": 3.1,
+        "NZ": 2.9,
+        "TF": 2.3,
+        "NY": 2,
+        "SS": 2,
+        "SW": 2,
+        "TR": 1.9,
+        "SY": 1.732,
+        "TG": 1.248,
+        "SZ": 1.056,
+        "TA": 0.864,
+        "NU": 0.48,
+        "NT": 0.288,
+        "SV": 0.096,
+        "NX": 0.096,
+        "TV": 0.096,
+        "none": 0.044
+      },
+      "sourceIds": {
+        "historic-england-nhle": 25000
+      },
+      "uniqueSourceRecordIds": 25000,
+      "sharedSourceRecordIds": 0
+    },
+    "50000": {
+      "records": 50000,
+      "layers": {
+        "Listed Building points": 49972,
+        "Protected Wreck Sites": 11,
+        "Scheduled Monuments": 17
+      },
+      "layerPercentages": {
+        "Listed Building points": 99.944,
+        "Protected Wreck Sites": 0.022,
+        "Scheduled Monuments": 0.034
+      },
+      "designations": {
+        "listed_building": 49972,
+        "protected_wreck": 11,
+        "scheduled_monument": 17
+      },
+      "designationPercentages": {
+        "listed_building": 99.944,
+        "protected_wreck": 0.022,
+        "scheduled_monument": 0.034
+      },
+      "cells": {
+        "TQ": 6250,
+        "SP": 4450,
+        "SU": 4450,
+        "TL": 4450,
+        "ST": 4450,
+        "SE": 2900,
+        "SK": 2900,
+        "SO": 2850,
+        "SX": 2300,
+        "SJ": 2250,
+        "SD": 1650,
+        "TM": 1550,
+        "NZ": 1450,
+        "TF": 1150,
+        "NY": 1000,
+        "SS": 990,
+        "SW": 980,
+        "TR": 931,
+        "SY": 882,
+        "TG": 637,
+        "SZ": 539,
+        "TA": 441,
+        "NU": 245,
+        "NT": 147,
+        "SV": 49,
+        "NX": 49,
+        "TV": 49,
+        "none": 11
+      },
+      "cellPercentages": {
+        "TQ": 12.5,
+        "SP": 8.9,
+        "SU": 8.9,
+        "TL": 8.9,
+        "ST": 8.9,
+        "SE": 5.8,
+        "SK": 5.8,
+        "SO": 5.7,
+        "SX": 4.6,
+        "SJ": 4.5,
+        "SD": 3.3,
+        "TM": 3.1,
+        "NZ": 2.9,
+        "TF": 2.3,
+        "NY": 2,
+        "SS": 1.98,
+        "SW": 1.96,
+        "TR": 1.862,
+        "SY": 1.764,
+        "TG": 1.274,
+        "SZ": 1.078,
+        "TA": 0.882,
+        "NU": 0.49,
+        "NT": 0.294,
+        "SV": 0.098,
+        "NX": 0.098,
+        "TV": 0.098,
+        "none": 0.022
+      },
+      "sourceIds": {
+        "historic-england-nhle": 50000
+      },
+      "uniqueSourceRecordIds": 50000,
+      "sharedSourceRecordIds": 0
+    },
+    "100000": {
+      "records": 100000,
+      "layers": {
+        "Listed Building points": 94537,
+        "Protected Wreck Sites": 19,
+        "Scheduled Monuments": 4994,
+        "Battlefields": 10,
+        "Parks and Gardens": 435,
+        "World Heritage Sites": 5
+      },
+      "layerPercentages": {
+        "Listed Building points": 94.537,
+        "Protected Wreck Sites": 0.019,
+        "Scheduled Monuments": 4.994,
+        "Battlefields": 0.01,
+        "Parks and Gardens": 0.435,
+        "World Heritage Sites": 0.005
+      },
+      "designations": {
+        "listed_building": 94537,
+        "protected_wreck": 19,
+        "scheduled_monument": 4994,
+        "registered_battlefield": 10,
+        "registered_park_garden": 435,
+        "world_heritage_site": 5
+      },
+      "designationPercentages": {
+        "listed_building": 94.537,
+        "protected_wreck": 0.019,
+        "scheduled_monument": 4.994,
+        "registered_battlefield": 0.01,
+        "registered_park_garden": 0.435,
+        "world_heritage_site": 0.005
+      },
+      "cells": {
+        "TQ": 12499,
+        "SP": 8927,
+        "SU": 8926,
+        "TL": 8906,
+        "ST": 8868,
+        "SE": 5820,
+        "SK": 5782,
+        "SO": 5671,
+        "SX": 4564,
+        "SJ": 4526,
+        "SD": 3349,
+        "TM": 3099,
+        "NZ": 2866,
+        "TF": 2332,
+        "NY": 1987,
+        "SS": 1976,
+        "SW": 1951,
+        "TR": 1888,
+        "SY": 1796,
+        "TG": 1276,
+        "SZ": 1128,
+        "TA": 868,
+        "NU": 504,
+        "NT": 255,
+        "SV": 93,
+        "NX": 64,
+        "TV": 60,
+        "none": 19
+      },
+      "cellPercentages": {
+        "TQ": 12.499,
+        "SP": 8.927,
+        "SU": 8.926,
+        "TL": 8.906,
+        "ST": 8.868,
+        "SE": 5.82,
+        "SK": 5.782,
+        "SO": 5.671,
+        "SX": 4.564,
+        "SJ": 4.526,
+        "SD": 3.349,
+        "TM": 3.099,
+        "NZ": 2.866,
+        "TF": 2.332,
+        "NY": 1.987,
+        "SS": 1.976,
+        "SW": 1.951,
+        "TR": 1.888,
+        "SY": 1.796,
+        "TG": 1.276,
+        "SZ": 1.128,
+        "TA": 0.868,
+        "NU": 0.504,
+        "NT": 0.255,
+        "SV": 0.093,
+        "NX": 0.064,
+        "TV": 0.06,
+        "none": 0.019
+      },
+      "sourceIds": {
+        "historic-england-nhle": 100000
+      },
+      "uniqueSourceRecordIds": 99971,
+      "sharedSourceRecordIds": 29
+    },
+    "199980": {
+      "records": 199980,
+      "layers": {
+        "Listed Building points": 189067,
+        "Protected Wreck Sites": 26,
+        "Scheduled Monuments": 9989,
+        "Battlefields": 21,
+        "Parks and Gardens": 865,
+        "World Heritage Sites": 12
+      },
+      "layerPercentages": {
+        "Listed Building points": 94.543,
+        "Protected Wreck Sites": 0.013,
+        "Scheduled Monuments": 4.995,
+        "Battlefields": 0.0105,
+        "Parks and Gardens": 0.4325,
+        "World Heritage Sites": 0.006
+      },
+      "designations": {
+        "listed_building": 189067,
+        "protected_wreck": 26,
+        "scheduled_monument": 9989,
+        "registered_battlefield": 21,
+        "registered_park_garden": 865,
+        "world_heritage_site": 12
+      },
+      "designationPercentages": {
+        "listed_building": 94.543,
+        "protected_wreck": 0.013,
+        "scheduled_monument": 4.995,
+        "registered_battlefield": 0.0105,
+        "registered_park_garden": 0.4325,
+        "world_heritage_site": 0.006
+      },
+      "cells": {
+        "TQ": 24994,
+        "SP": 17857,
+        "SU": 17850,
+        "TL": 17814,
+        "ST": 17736,
+        "SE": 11644,
+        "SK": 11562,
+        "SO": 11341,
+        "SX": 9128,
+        "SJ": 9053,
+        "SD": 6696,
+        "TM": 6196,
+        "NZ": 5735,
+        "TF": 4667,
+        "NY": 3973,
+        "SS": 3951,
+        "SW": 3902,
+        "TR": 3776,
+        "SY": 3591,
+        "TG": 2552,
+        "SZ": 2258,
+        "TA": 1731,
+        "NU": 1007,
+        "NT": 509,
+        "SV": 184,
+        "NX": 127,
+        "TV": 120,
+        "none": 26
+      },
+      "cellPercentages": {
+        "TQ": 12.4982,
+        "SP": 8.9294,
+        "SU": 8.9259,
+        "TL": 8.9079,
+        "ST": 8.8689,
+        "SE": 5.8226,
+        "SK": 5.7816,
+        "SO": 5.6711,
+        "SX": 4.5645,
+        "SJ": 4.527,
+        "SD": 3.3483,
+        "TM": 3.0983,
+        "NZ": 2.8678,
+        "TF": 2.3337,
+        "NY": 1.9867,
+        "SS": 1.9757,
+        "SW": 1.9512,
+        "TR": 1.8882,
+        "SY": 1.7957,
+        "TG": 1.2761,
+        "SZ": 1.1291,
+        "TA": 0.8656,
+        "NU": 0.5036,
+        "NT": 0.2545,
+        "SV": 0.092,
+        "NX": 0.0635,
+        "TV": 0.06,
+        "none": 0.013
+      },
+      "sourceIds": {
+        "historic-england-nhle": 199980
+      },
+      "uniqueSourceRecordIds": 199930,
+      "sharedSourceRecordIds": 49
+    }
+  },
+  "firstAppearance": {
+    "layers": {
+      "Listed Building points": 1,
+      "Protected Wreck Sites": 1003,
+      "Scheduled Monuments": 33075,
+      "Battlefields": 85134,
+      "Parks and Gardens": 97082,
+      "World Heritage Sites": 98899
+    },
+    "designations": {
+      "listed_building": 1,
+      "protected_wreck": 1003,
+      "scheduled_monument": 33075,
+      "registered_battlefield": 85134,
+      "registered_park_garden": 97082,
+      "world_heritage_site": 98899
+    },
+    "cells": {
+      "TQ": 1,
+      "SP": 126,
+      "SU": 215,
+      "TL": 304,
+      "ST": 393,
+      "SE": 482,
+      "SK": 540,
+      "SO": 598,
+      "SX": 655,
+      "SJ": 701,
+      "SD": 746,
+      "TM": 779,
+      "NZ": 810,
+      "TF": 839,
+      "NY": 862,
+      "SS": 882,
+      "SW": 902,
+      "TR": 922,
+      "SY": 941,
+      "TG": 959,
+      "SZ": 972,
+      "TA": 983,
+      "NU": 992,
+      "NT": 997,
+      "SV": 1000,
+      "NX": 1001,
+      "TV": 1002,
+      "none": 1003
+    }
+  },
+  "transition": {
+    "before50k": [
+      {
+        "layerName": "Listed Building points",
+        "layerId": 0,
+        "designation": "listed_building",
+        "cell": "SS",
+        "feature": {
+          "attributes": {
+            "OBJECTID": 83856,
+            "ListEntry": 1105927,
+            "Name": "VENNLEIGH",
+            "Grade": "II",
+            "ListDate": -118108800000,
+            "AmendDate": null,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1105927",
+            "NGR": "SS 99586 03766",
+            "Easting": 299586,
+            "Northing": 103766
+          }
+        }
+      },
+      {
+        "layerName": "Listed Building points",
+        "layerId": 0,
+        "designation": "listed_building",
+        "cell": "SS",
+        "feature": {
+          "attributes": {
+            "OBJECTID": 83858,
+            "ListEntry": 1105929,
+            "Name": "BARN, STORAGE CHAMBER AND TALLET 20 METRES SOUTH OF EAST BUTTERLEIGH HOUSE",
+            "Grade": "II",
+            "ListDate": 518832000000,
+            "AmendDate": null,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1105929",
+            "NGR": "SS 98443 08967",
+            "Easting": 298443,
+            "Northing": 108967
+          }
+        }
+      },
+      {
+        "layerName": "Listed Building points",
+        "layerId": 0,
+        "designation": "listed_building",
+        "cell": "SS",
+        "feature": {
+          "attributes": {
+            "OBJECTID": 83860,
+            "ListEntry": 1105931,
+            "Name": "STABLE BLOCK 50 METRES NORTH OF HILLERSDON HOUSE",
+            "Grade": "II",
+            "ListDate": 518832000000,
+            "AmendDate": null,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1105931",
+            "NGR": "SS 99605 08009",
+            "Easting": 299605,
+            "Northing": 108009
+          }
+        }
+      },
+      {
+        "layerName": "Listed Building points",
+        "layerId": 0,
+        "designation": "listed_building",
+        "cell": "SS",
+        "feature": {
+          "attributes": {
+            "OBJECTID": 83867,
+            "ListEntry": 1105938,
+            "Name": "ELSTON BARTON INCLUDING ADJOINING COB WALLS ON SOUTH AND EAST",
+            "Grade": "II*",
+            "ListDate": -137289600000,
+            "AmendDate": 485395200000,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1105938",
+            "NGR": "SS 78506 02611",
+            "Easting": 278506,
+            "Northing": 102611
+          }
+        }
+      },
+      {
+        "layerName": "Listed Building points",
+        "layerId": 0,
+        "designation": "listed_building",
+        "cell": "SS",
+        "feature": {
+          "attributes": {
+            "OBJECTID": 83870,
+            "ListEntry": 1105941,
+            "Name": "HOLLACOMBE HOUSE",
+            "Grade": "II",
+            "ListDate": -137289600000,
+            "AmendDate": 485395200000,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1105941",
+            "NGR": "SS 81110 00288",
+            "Easting": 281110,
+            "Northing": 100288
+          }
+        }
+      },
+      {
+        "layerName": "Listed Building points",
+        "layerId": 0,
+        "designation": "listed_building",
+        "cell": "SS",
+        "feature": {
+          "attributes": {
+            "OBJECTID": 83872,
+            "ListEntry": 1105943,
+            "Name": "AMBER COTTAGE",
+            "Grade": "II",
+            "ListDate": 485395200000,
+            "AmendDate": 858297600000,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1105943",
+            "NGR": "SS 78271 02135",
+            "Easting": 278271,
+            "Northing": 102135
+          }
+        }
+      }
+    ],
+    "after50k": [
+      {
+        "layerName": "Protected Wreck Sites",
+        "layerId": 9,
+        "designation": "protected_wreck",
+        "cell": "none",
+        "feature": {
+          "attributes": {
+            "OBJECTID": 5,
+            "ListEntry": 1000048,
+            "Name": "The Hazardous (formerly Le Hazardeux)",
+            "DesigDate": 524966400000,
+            "AmendDate": 1654528395000,
+            "CaptureScale": "1:10000",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1000048",
+            "area_ha": 7.072736439563184,
+            "NGR": "SZ8056595358",
+            "Latitude": 50.752242,
+            "Longitude": -0.85931
+          }
+        }
+      },
+      {
+        "layerName": "Listed Building points",
+        "layerId": 0,
+        "designation": "listed_building",
+        "cell": "SV",
+        "feature": {
+          "attributes": {
+            "OBJECTID": 118814,
+            "ListEntry": 1141209,
+            "Name": "THE PIER",
+            "Grade": "II",
+            "ListDate": 161395200000,
+            "AmendDate": null,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1141209",
+            "NGR": "SV 90192 10788",
+            "Easting": 90192,
+            "Northing": 10788
+          }
+        }
+      },
+      {
+        "layerName": "Listed Building points",
+        "layerId": 0,
+        "designation": "listed_building",
+        "cell": "SV",
+        "feature": {
+          "attributes": {
+            "OBJECTID": 118815,
+            "ListEntry": 1141210,
+            "Name": "THE OLD CHURCH OF ST MARY",
+            "Grade": "II*",
+            "ListDate": -338947200000,
+            "AmendDate": null,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1141210",
+            "NGR": "SV 91109 10045",
+            "Easting": 91109,
+            "Northing": 10045
+          }
+        }
+      },
+      {
+        "layerName": "Protected Wreck Sites",
+        "layerId": 9,
+        "designation": "protected_wreck",
+        "cell": "none",
+        "feature": {
+          "attributes": {
+            "OBJECTID": 9,
+            "ListEntry": 1000052,
+            "Name": "HMS INVINCIBLE",
+            "DesigDate": 336614400000,
+            "AmendDate": null,
+            "CaptureScale": "1:50000",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1000052",
+            "area_ha": 3.139682901486351,
+            "NGR": "SZ 67933 93771",
+            "Latitude": 50.73958504,
+            "Longitude": -1.03864017
+          }
+        }
+      },
+      {
+        "layerName": "Listed Building points",
+        "layerId": 0,
+        "designation": "listed_building",
+        "cell": "SV",
+        "feature": {
+          "attributes": {
+            "OBJECTID": 118816,
+            "ListEntry": 1141211,
+            "Name": "MONUMENT TO CHARLES BUDD APPROXIMATELY 25 METRES NORTH OF THE OLD CHURCH OF ST MARY",
+            "Grade": "II",
+            "ListDate": 724291200000,
+            "AmendDate": null,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1141211",
+            "NGR": "SV 91090 10068",
+            "Easting": 91090,
+            "Northing": 10068
+          }
+        }
+      },
+      {
+        "layerName": "Listed Building points",
+        "layerId": 0,
+        "designation": "listed_building",
+        "cell": "SV",
+        "feature": {
+          "attributes": {
+            "OBJECTID": 118817,
+            "ListEntry": 1141212,
+            "Name": "LEAD CISTERN TO NORTH OF WEST DOOR OF CHURCH OF ST MARY'S",
+            "Grade": "II",
+            "ListDate": 724291200000,
+            "AmendDate": null,
+            "CaptureScale": "1:2500",
+            "hyperlink": "https://historicengland.org.uk/listing/the-list/list-entry/1141212",
+            "NGR": "SV9064310580",
+            "Easting": 90643,
+            "Northing": 10580
+          }
+        }
+      }
+    ]
+  },
+  "prefixes": [
+    {
+      "size": 25000,
+      "composition": {
+        "records": 25000,
+        "layers": {
+          "Listed Building points": 24989,
+          "Protected Wreck Sites": 11
+        },
+        "designations": {
+          "Listed Building points": 24989,
+          "Protected Wreck Sites": 11
+        },
+        "cells": {
+          "TQ": 3125,
+          "SP": 2225,
+          "SU": 2225,
+          "TL": 2225,
+          "ST": 2225,
+          "SE": 1450,
+          "SK": 1450,
+          "SO": 1425,
+          "SX": 1150,
+          "SJ": 1125,
+          "SD": 825,
+          "TM": 775,
+          "NZ": 725,
+          "TF": 575,
+          "NY": 500,
+          "SS": 500,
+          "SW": 500,
+          "TR": 475,
+          "SY": 433,
+          "TG": 312,
+          "SZ": 264,
+          "TA": 216,
+          "NU": 120,
+          "NT": 72,
+          "SV": 24,
+          "NX": 24,
+          "TV": 24,
+          "none": 11
+        },
+        "sourceIds": {
+          "historic-england-nhle": 25000
+        },
+        "uniqueSourceRecordIds": 25000,
+        "sharedSourceRecordIds": 0
+      },
+      "exactRadiusCandidates": 1163464,
+      "registerPrunedCandidates": 1163464,
+      "finalMatcherCandidates": 0,
+      "conflicts": 0
+    },
+    {
+      "size": 40000,
+      "composition": {
+        "records": 40000,
+        "layers": {
+          "Listed Building points": 39982,
+          "Protected Wreck Sites": 11,
+          "Scheduled Monuments": 7
+        },
+        "designations": {
+          "Listed Building points": 39982,
+          "Protected Wreck Sites": 11,
+          "Scheduled Monuments": 7
+        },
+        "cells": {
+          "TQ": 5000,
+          "SP": 3560,
+          "SU": 3560,
+          "TL": 3560,
+          "ST": 3560,
+          "SE": 2320,
+          "SK": 2320,
+          "SO": 2280,
+          "SX": 1840,
+          "SJ": 1800,
+          "SD": 1320,
+          "TM": 1240,
+          "NZ": 1160,
+          "TF": 920,
+          "NY": 800,
+          "SS": 800,
+          "SW": 790,
+          "TR": 741,
+          "SY": 702,
+          "TG": 507,
+          "SZ": 429,
+          "TA": 351,
+          "NU": 195,
+          "NT": 117,
+          "SV": 39,
+          "NX": 39,
+          "TV": 39,
+          "none": 11
+        },
+        "sourceIds": {
+          "historic-england-nhle": 40000
+        },
+        "uniqueSourceRecordIds": 40000,
+        "sharedSourceRecordIds": 0
+      },
+      "exactRadiusCandidates": 1980077,
+      "registerPrunedCandidates": 1979935,
+      "finalMatcherCandidates": 142,
+      "conflicts": 0
+    },
+    {
+      "size": 50000,
+      "composition": {
+        "records": 50000,
+        "layers": {
+          "Listed Building points": 49972,
+          "Protected Wreck Sites": 11,
+          "Scheduled Monuments": 17
+        },
+        "designations": {
+          "Listed Building points": 49972,
+          "Protected Wreck Sites": 11,
+          "Scheduled Monuments": 17
+        },
+        "cells": {
+          "TQ": 6250,
+          "SP": 4450,
+          "SU": 4450,
+          "TL": 4450,
+          "ST": 4450,
+          "SE": 2900,
+          "SK": 2900,
+          "SO": 2850,
+          "SX": 2300,
+          "SJ": 2250,
+          "SD": 1650,
+          "TM": 1550,
+          "NZ": 1450,
+          "TF": 1150,
+          "NY": 1000,
+          "SS": 990,
+          "SW": 980,
+          "TR": 931,
+          "SY": 882,
+          "TG": 637,
+          "SZ": 539,
+          "TA": 441,
+          "NU": 245,
+          "NT": 147,
+          "SV": 49,
+          "NX": 49,
+          "TV": 49,
+          "none": 11
+        },
+        "sourceIds": {
+          "historic-england-nhle": 50000
+        },
+        "uniqueSourceRecordIds": 50000,
+        "sharedSourceRecordIds": 0
+      },
+      "exactRadiusCandidates": 2705460,
+      "registerPrunedCandidates": 2705115,
+      "finalMatcherCandidates": 345,
+      "conflicts": 0,
+      "pairMatrix": {
+        "scheduled_monument": {
+          "listed_building": 345
+        }
+      }
+    },
+    {
+      "size": 60000,
+      "composition": {
+        "records": 60000,
+        "layers": {
+          "Listed Building points": 59946,
+          "Protected Wreck Sites": 11,
+          "Scheduled Monuments": 43
+        },
+        "designations": {
+          "Listed Building points": 59946,
+          "Protected Wreck Sites": 11,
+          "Scheduled Monuments": 43
+        },
+        "cells": {
+          "TQ": 7500,
+          "SP": 5340,
+          "SU": 5340,
+          "TL": 5340,
+          "ST": 5340,
+          "SE": 3480,
+          "SK": 3480,
+          "SO": 3420,
+          "SX": 2760,
+          "SJ": 2700,
+          "SD": 1980,
+          "TM": 1860,
+          "NZ": 1740,
+          "TF": 1380,
+          "NY": 1190,
+          "SS": 1180,
+          "SW": 1180,
+          "TR": 1121,
+          "SY": 1062,
+          "TG": 767,
+          "SZ": 649,
+          "TA": 531,
+          "NU": 295,
+          "NT": 177,
+          "SV": 59,
+          "NX": 59,
+          "TV": 59,
+          "none": 11
+        },
+        "sourceIds": {
+          "historic-england-nhle": 60000
+        },
+        "uniqueSourceRecordIds": 60000,
+        "sharedSourceRecordIds": 0
+      },
+      "exactRadiusCandidates": 3744361,
+      "registerPrunedCandidates": 3743385,
+      "finalMatcherCandidates": 976,
+      "conflicts": 0
+    },
+    {
+      "size": 70000,
+      "composition": {
+        "records": 70000,
+        "layers": {
+          "Listed Building points": 69903,
+          "Protected Wreck Sites": 11,
+          "Scheduled Monuments": 86
+        },
+        "designations": {
+          "Listed Building points": 69903,
+          "Protected Wreck Sites": 11,
+          "Scheduled Monuments": 86
+        },
+        "cells": {
+          "TQ": 8750,
+          "SP": 6230,
+          "SU": 6230,
+          "TL": 6230,
+          "ST": 6230,
+          "SE": 4060,
+          "SK": 4060,
+          "SO": 3990,
+          "SX": 3220,
+          "SJ": 3150,
+          "SD": 2310,
+          "TM": 2170,
+          "NZ": 2030,
+          "TF": 1610,
+          "NY": 1384,
+          "SS": 1380,
+          "SW": 1380,
+          "TR": 1311,
+          "SY": 1242,
+          "TG": 897,
+          "SZ": 759,
+          "TA": 621,
+          "NU": 345,
+          "NT": 207,
+          "SV": 69,
+          "NX": 64,
+          "TV": 60,
+          "none": 11
+        },
+        "sourceIds": {
+          "historic-england-nhle": 70000
+        },
+        "uniqueSourceRecordIds": 70000,
+        "sharedSourceRecordIds": 0
+      },
+      "exactRadiusCandidates": 4933297,
+      "registerPrunedCandidates": 4931479,
+      "finalMatcherCandidates": 1818,
+      "conflicts": 0
+    },
+    {
+      "size": 80000,
+      "composition": {
+        "records": 80000,
+        "layers": {
+          "Listed Building points": 79863,
+          "Protected Wreck Sites": 11,
+          "Scheduled Monuments": 126
+        },
+        "designations": {
+          "Listed Building points": 79863,
+          "Protected Wreck Sites": 11,
+          "Scheduled Monuments": 126
+        },
+        "cells": {
+          "TQ": 10000,
+          "SP": 7120,
+          "SU": 7120,
+          "TL": 7120,
+          "ST": 7120,
+          "SE": 4640,
+          "SK": 4640,
+          "SO": 4560,
+          "SX": 3680,
+          "SJ": 3600,
+          "SD": 2640,
+          "TM": 2480,
+          "NZ": 2320,
+          "TF": 1840,
+          "NY": 1584,
+          "SS": 1580,
+          "SW": 1580,
+          "TR": 1501,
+          "SY": 1422,
+          "TG": 1027,
+          "SZ": 869,
+          "TA": 711,
+          "NU": 395,
+          "NT": 237,
+          "SV": 79,
+          "NX": 64,
+          "TV": 60,
+          "none": 11
+        },
+        "sourceIds": {
+          "historic-england-nhle": 80000
+        },
+        "uniqueSourceRecordIds": 80000,
+        "sharedSourceRecordIds": 0
+      },
+      "exactRadiusCandidates": 5654572,
+      "registerPrunedCandidates": 5652177,
+      "finalMatcherCandidates": 2395,
+      "conflicts": 0
+    },
+    {
+      "size": 90000,
+      "composition": {
+        "records": 90000,
+        "layers": {
+          "Listed Building points": 89647,
+          "Protected Wreck Sites": 11,
+          "Scheduled Monuments": 341,
+          "Battlefields": 1
+        },
+        "designations": {
+          "Listed Building points": 89647,
+          "Protected Wreck Sites": 11,
+          "Scheduled Monuments": 341,
+          "Battlefields": 1
+        },
+        "cells": {
+          "TQ": 11250,
+          "SP": 8010,
+          "SU": 8010,
+          "TL": 8010,
+          "ST": 8010,
+          "SE": 5220,
+          "SK": 5220,
+          "SO": 5130,
+          "SX": 4140,
+          "SJ": 4050,
+          "SD": 2970,
+          "TM": 2790,
+          "NZ": 2610,
+          "TF": 2070,
+          "NY": 1796,
+          "SS": 1780,
+          "SW": 1780,
+          "TR": 1691,
+          "SY": 1602,
+          "TG": 1157,
+          "SZ": 979,
+          "TA": 801,
+          "NU": 445,
+          "NT": 255,
+          "SV": 89,
+          "NX": 64,
+          "TV": 60,
+          "none": 11
+        },
+        "sourceIds": {
+          "historic-england-nhle": 90000
+        },
+        "uniqueSourceRecordIds": 89999,
+        "sharedSourceRecordIds": 1
+      },
+      "exactRadiusCandidates": 6603614,
+      "registerPrunedCandidates": 6591581,
+      "finalMatcherCandidates": 12033,
+      "conflicts": 0
+    },
+    {
+      "size": 100000,
+      "composition": {
+        "records": 100000,
+        "layers": {
+          "Listed Building points": 94537,
+          "Protected Wreck Sites": 19,
+          "Scheduled Monuments": 4994,
+          "Battlefields": 10,
+          "Parks and Gardens": 435,
+          "World Heritage Sites": 5
+        },
+        "designations": {
+          "Listed Building points": 94537,
+          "Protected Wreck Sites": 19,
+          "Scheduled Monuments": 4994,
+          "Battlefields": 10,
+          "Parks and Gardens": 435,
+          "World Heritage Sites": 5
+        },
+        "cells": {
+          "TQ": 12499,
+          "SP": 8927,
+          "SU": 8926,
+          "TL": 8906,
+          "ST": 8868,
+          "SE": 5820,
+          "SK": 5782,
+          "SO": 5671,
+          "SX": 4564,
+          "SJ": 4526,
+          "SD": 3349,
+          "TM": 3099,
+          "NZ": 2866,
+          "TF": 2332,
+          "NY": 1987,
+          "SS": 1976,
+          "SW": 1951,
+          "TR": 1888,
+          "SY": 1796,
+          "TG": 1276,
+          "SZ": 1128,
+          "TA": 868,
+          "NU": 504,
+          "NT": 255,
+          "SV": 93,
+          "NX": 64,
+          "TV": 60,
+          "none": 19
+        },
+        "sourceIds": {
+          "historic-england-nhle": 100000
+        },
+        "uniqueSourceRecordIds": 99971,
+        "sharedSourceRecordIds": 29
+      },
+      "exactRadiusCandidates": 7741644,
+      "registerPrunedCandidates": 7324465,
+      "finalMatcherCandidates": 417179,
+      "conflicts": 37,
+      "pairMatrix": {
+        "scheduled_monument": {
+          "listed_building": 360105,
+          "scheduled_monument": 19,
+          "registered_park_garden": 3
+        },
+        "listed_building": {
+          "scheduled_monument": 311
+        },
+        "registered_battlefield": {
+          "listed_building": 746,
+          "scheduled_monument": 35,
+          "registered_park_garden": 2
+        },
+        "registered_park_garden": {
+          "listed_building": 52675,
+          "scheduled_monument": 1443,
+          "registered_park_garden": 8
+        },
+        "world_heritage_site": {
+          "listed_building": 1767,
+          "scheduled_monument": 59,
+          "registered_park_garden": 6
+        }
+      }
+    },
+    {
+      "size": 125000,
+      "composition": {
+        "records": 125000,
+        "layers": {
+          "Listed Building points": 119530,
+          "Protected Wreck Sites": 26,
+          "Scheduled Monuments": 4994,
+          "Battlefields": 10,
+          "Parks and Gardens": 435,
+          "World Heritage Sites": 5
+        },
+        "designations": {
+          "Listed Building points": 119530,
+          "Protected Wreck Sites": 26,
+          "Scheduled Monuments": 4994,
+          "Battlefields": 10,
+          "Parks and Gardens": 435,
+          "World Heritage Sites": 5
+        },
+        "cells": {
+          "TQ": 15333,
+          "SP": 11054,
+          "SU": 11348,
+          "TL": 10968,
+          "ST": 10986,
+          "SE": 7424,
+          "SK": 7298,
+          "SO": 7014,
+          "SX": 5980,
+          "SJ": 5635,
+          "SD": 4130,
+          "TM": 3734,
+          "NZ": 3578,
+          "TF": 2935,
+          "NY": 2642,
+          "SS": 2486,
+          "SW": 2473,
+          "TR": 2301,
+          "SY": 2307,
+          "TG": 1580,
+          "SZ": 1417,
+          "TA": 1067,
+          "NU": 647,
+          "NT": 382,
+          "SV": 124,
+          "NX": 64,
+          "TV": 67,
+          "none": 26
+        },
+        "sourceIds": {
+          "historic-england-nhle": 125000
+        },
+        "uniqueSourceRecordIds": 124971,
+        "sharedSourceRecordIds": 29
+      },
+      "exactRadiusCandidates": 10307575,
+      "registerPrunedCandidates": 9779845,
+      "finalMatcherCandidates": 527730,
+      "conflicts": 50
+    },
+    {
+      "size": 150000,
+      "composition": {
+        "records": 150000,
+        "layers": {
+          "Listed Building points": 144509,
+          "Protected Wreck Sites": 26,
+          "Scheduled Monuments": 5015,
+          "Battlefields": 10,
+          "Parks and Gardens": 435,
+          "World Heritage Sites": 5
+        },
+        "designations": {
+          "Listed Building points": 144509,
+          "Protected Wreck Sites": 26,
+          "Scheduled Monuments": 5015,
+          "Battlefields": 10,
+          "Parks and Gardens": 435,
+          "World Heritage Sites": 5
+        },
+        "cells": {
+          "TQ": 18583,
+          "SP": 13381,
+          "SU": 13608,
+          "TL": 13104,
+          "ST": 13110,
+          "SE": 8816,
+          "SK": 8690,
+          "SO": 8370,
+          "SX": 7072,
+          "SJ": 6727,
+          "SD": 4970,
+          "TM": 4540,
+          "NZ": 4319,
+          "TF": 3546,
+          "NY": 3162,
+          "SS": 3006,
+          "SW": 2980,
+          "TR": 2795,
+          "SY": 2775,
+          "TG": 1918,
+          "SZ": 1716,
+          "TA": 1288,
+          "NU": 777,
+          "NT": 423,
+          "SV": 144,
+          "NX": 74,
+          "TV": 80,
+          "none": 26
+        },
+        "sourceIds": {
+          "historic-england-nhle": 150000
+        },
+        "uniqueSourceRecordIds": 149971,
+        "sharedSourceRecordIds": 29
+      },
+      "exactRadiusCandidates": 13608393,
+      "registerPrunedCandidates": 12990649,
+      "finalMatcherCandidates": 617744,
+      "conflicts": 62
+    },
+    {
+      "size": 175000,
+      "composition": {
+        "records": 175000,
+        "layers": {
+          "Listed Building points": 169485,
+          "Protected Wreck Sites": 26,
+          "Scheduled Monuments": 5039,
+          "Battlefields": 10,
+          "Parks and Gardens": 435,
+          "World Heritage Sites": 5
+        },
+        "designations": {
+          "Listed Building points": 169485,
+          "Protected Wreck Sites": 26,
+          "Scheduled Monuments": 5039,
+          "Battlefields": 10,
+          "Parks and Gardens": 435,
+          "World Heritage Sites": 5
+        },
+        "cells": {
+          "TQ": 21583,
+          "SP": 15529,
+          "SU": 15823,
+          "TL": 15418,
+          "ST": 15411,
+          "SE": 10324,
+          "SK": 10198,
+          "SO": 9839,
+          "SX": 8255,
+          "SJ": 7910,
+          "SD": 5841,
+          "TM": 5316,
+          "NZ": 5003,
+          "TF": 4110,
+          "NY": 3642,
+          "SS": 3486,
+          "SW": 3448,
+          "TR": 3251,
+          "SY": 3207,
+          "TG": 2230,
+          "SZ": 1992,
+          "TA": 1492,
+          "NU": 897,
+          "NT": 423,
+          "SV": 168,
+          "NX": 86,
+          "TV": 92,
+          "none": 26
+        },
+        "sourceIds": {
+          "historic-england-nhle": 175000
+        },
+        "uniqueSourceRecordIds": 174971,
+        "sharedSourceRecordIds": 29
+      },
+      "exactRadiusCandidates": 19044942,
+      "registerPrunedCandidates": 18324168,
+      "finalMatcherCandidates": 720774,
+      "conflicts": 67
+    },
+    {
+      "size": 199980,
+      "composition": {
+        "records": 199980,
+        "layers": {
+          "Listed Building points": 189067,
+          "Protected Wreck Sites": 26,
+          "Scheduled Monuments": 9989,
+          "Battlefields": 21,
+          "Parks and Gardens": 865,
+          "World Heritage Sites": 12
+        },
+        "designations": {
+          "Listed Building points": 189067,
+          "Protected Wreck Sites": 26,
+          "Scheduled Monuments": 9989,
+          "Battlefields": 21,
+          "Parks and Gardens": 865,
+          "World Heritage Sites": 12
+        },
+        "cells": {
+          "TQ": 24994,
+          "SP": 17857,
+          "SU": 17850,
+          "TL": 17814,
+          "ST": 17736,
+          "SE": 11644,
+          "SK": 11562,
+          "SO": 11341,
+          "SX": 9128,
+          "SJ": 9053,
+          "SD": 6696,
+          "TM": 6196,
+          "NZ": 5735,
+          "TF": 4667,
+          "NY": 3973,
+          "SS": 3951,
+          "SW": 3902,
+          "TR": 3776,
+          "SY": 3591,
+          "TG": 2552,
+          "SZ": 2258,
+          "TA": 1731,
+          "NU": 1007,
+          "NT": 509,
+          "SV": 184,
+          "NX": 127,
+          "TV": 120,
+          "none": 26
+        },
+        "sourceIds": {
+          "historic-england-nhle": 199980
+        },
+        "uniqueSourceRecordIds": 199930,
+        "sharedSourceRecordIds": 49
+      },
+      "exactRadiusCandidates": 27552345,
+      "registerPrunedCandidates": 26043490,
+      "finalMatcherCandidates": 1508855,
+      "conflicts": 134,
+      "pairMatrix": {
+        "scheduled_monument": {
+          "listed_building": 917736,
+          "scheduled_monument": 29,
+          "registered_park_garden": 806,
+          "world_heritage_site": 23,
+          "registered_battlefield": 16
+        },
+        "listed_building": {
+          "scheduled_monument": 349728,
+          "registered_battlefield": 426,
+          "registered_park_garden": 44768,
+          "world_heritage_site": 439
+        },
+        "registered_battlefield": {
+          "listed_building": 2521,
+          "scheduled_monument": 97,
+          "registered_park_garden": 5,
+          "registered_battlefield": 1,
+          "world_heritage_site": 1
+        },
+        "registered_park_garden": {
+          "listed_building": 180722,
+          "scheduled_monument": 4205,
+          "registered_park_garden": 15,
+          "registered_battlefield": 2
+        },
+        "world_heritage_site": {
+          "listed_building": 7137,
+          "scheduled_monument": 154,
+          "registered_park_garden": 22,
+          "world_heritage_site": 2
+        }
+      }
+    }
+  ],
+  "compositionControlledLadder": {
+    "status": "DESIGNED",
+    "strata": "OS 100km cell × NHLE layer",
+    "algorithm": "For each requested size, allocate largest-remainder quotas proportional to the full persisted capture, take that many records from each stratum in persisted order, and concatenate strata by stable key. The authoritative order is not overwritten.",
+    "examples": [
+      25000,
+      50000,
+      100000,
+      199980
+    ],
+    "sample": 100
+  },
+  "officialScaleClassification": {
+    "maximumProvenSafeScale": "PROVEN_SAFE_TO_50K",
+    "nationalExpansionClassification": "REMEDIATION_INSUFFICIENT"
+  }
+}

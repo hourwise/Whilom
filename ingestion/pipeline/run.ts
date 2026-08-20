@@ -71,6 +71,7 @@ export interface RunObserver {
     validateMs: number;
     matchMs: number;
     candidate: PlaceCandidate;
+    shortlist: readonly CanonicalPlaceRef[];
     shortlistSize: number;
     candidateGeneration?: CandidateGenerationDelta;
   }): void;
@@ -396,6 +397,7 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
         validateMs,
         matchMs,
         candidate,
+        shortlist,
         shortlistSize: shortlist.length,
         candidateGeneration,
       });

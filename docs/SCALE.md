@@ -512,6 +512,168 @@ The unchanged normalized-growth calculations, using the recorded ladder values, 
 
 Batch 18 should investigate exactly one bounded remaining dense-region work source, selected from per-region candidate/matcher measurements, with exhaustive decision-digest equivalence and no cache-limit increase. It must not move additional matcher vetoes into candidate generation until that experiment is separately justified.
 
+## Batch 19A — national checkpoint composition and workload phase audit
+
+Batch 19A is diagnostic-only and is stacked directly on Batch 18 at
+`1048d3ccc5120999a62f24b9f12dff042ffd73ac`. It does not change matcher
+semantics, candidate vetoes, cache limits, scale gates, canonical data, hosted
+Supabase, or publication. It reads the existing 199,980-record persisted
+national order; it does not recapture the source or rerun the authoritative
+performance ladder.
+
+### Checkpoint composition
+
+**MEASURED:** The actual ordered prefixes, rather than the manifest's final
+composition, have the following layer/designation mix:
+
+| Checkpoint | Listed building | Scheduled monument | Park/garden | Battlefield | World Heritage | Protected wreck |
+| ---------: | --------------: | -----------------: | ----------: | ----------: | -------------: | ---------------: |
+| 25,000     | 24,989 (99.956%) | 0 (0%)            | 0 (0%)     | 0 (0%)     | 0 (0%)        | 11 (0.044%)    |
+| 50,000     | 49,972 (99.944%) | 17 (0.034%)       | 0 (0%)     | 0 (0%)     | 0 (0%)        | 11 (0.022%)    |
+| 100,000    | 94,537 (94.537%) | 4,994 (4.994%)    | 435 (0.435%)| 10 (0.01%)| 5 (0.005%)    | 19 (0.019%)    |
+| 199,980    | 189,067 (94.543%)| 9,989 (4.995%)    | 865 (0.4325%)| 21 (0.0105%)| 12 (0.006%) | 26 (0.013%) |
+
+The 100km-cell distribution is also measured from the same ordered prefix.
+The largest cells at 25k / 50k / 100k / 199,980 are respectively:
+
+| Checkpoint | TQ | SP | SU | TL | ST |
+| ---------: | -: | -: | -: | -: | -: |
+| 25,000     | 3,125 (12.50%) | 2,225 (8.90%) | 2,225 (8.90%) | 2,225 (8.90%) | 2,225 (8.90%) |
+| 50,000     | 6,250 (12.50%) | 4,450 (8.90%) | 4,450 (8.90%) | 4,450 (8.90%) | 4,450 (8.90%) |
+| 100,000    | 12,499 (12.499%) | 8,927 (8.927%) | 8,926 (8.926%) | 8,906 (8.906%) | 8,868 (8.868%) |
+| 199,980    | 24,994 (12.4987%) | 17,857 (8.9294%) | 17,850 (8.9259%) | 17,814 (8.9079%) | 17,736 (8.8699%) |
+
+**MEASURED:** Every prefix is one source (`historic-england-nhle`). The
+25k and 50k prefixes have no repeated source record IDs across layers; the
+199,980 prefix has 199,930 unique source record IDs and 49 IDs represented in
+more than one layer. The complete per-cell maps, percentages, source identity
+counts, and raw aggregate output are in
+`ingestion/national-workload-audit.json`.
+
+### First appearance and transition
+
+**MEASURED:** First ordered appearances are:
+
+| Layer / designation | First ordered index | First checkpoint present | 25k | 50k | 100k | 199,980 |
+| ------------------- | ------------------: | ----------------------- | --: | ---: | ----: | ------: |
+| Listed Building points / `listed_building` | 1 | 25k | 24,989 | 49,972 | 94,537 | 189,067 |
+| Protected Wreck Sites / `protected_wreck` | 1,003 | 25k | 11 | 11 | 19 | 26 |
+| Scheduled Monuments / `scheduled_monument` | 33,075 | 50k | 0 | 17 | 4,994 | 9,989 |
+| Battlefields / `registered_battlefield` | 85,134 | 100k | 0 | 0 | 10 | 21 |
+| Parks and Gardens / `registered_park_garden` | 97,082 | 100k | 0 | 0 | 435 | 865 |
+| World Heritage Sites / `world_heritage_site` | 98,899 | 100k | 0 | 0 | 5 | 12 |
+
+The records immediately around index 50,000 are still listed buildings plus
+the already-present wreck layer. The first scheduled monuments begin at
+index 33,075 but remain only 17 records by 50k. The park, battlefield, and WHS
+layers first enter the persisted order at 97,082, 85,134, and 98,899. Thus the
+100k prefix is the first checkpoint containing substantial mixed-register
+interaction, not merely a larger copy of the 50k workload.
+
+### Surviving candidate pair matrix
+
+**MEASURED:** The matrix below counts final post-register-pruning candidate
+pairs as `candidate designation → existing canonical designation`. A 50k
+prefix has 345 pairs in total, or `0.0069` per source record, which rounds to
+the authoritative ladder's reported `0.0` candidates/record. The only 50k
+class is scheduled monument → listed building.
+
+| Candidate → existing | 50k | 100k | 199,980 |
+| -------------------- | ---: | ----: | ------: |
+| scheduled monument → listed building | 345 | 360,105 | 917,736 |
+| scheduled monument → scheduled monument | 0 | 19 | 29 |
+| scheduled monument → park/garden | 0 | 3 | 806 |
+| scheduled monument → battlefield | 0 | 0 | 16 |
+| scheduled monument → WHS | 0 | 0 | 23 |
+| listed building → scheduled monument | 0 | 311 | 349,728 |
+| listed building → park/garden | 0 | 0 | 44,768 |
+| listed building → battlefield | 0 | 0 | 426 |
+| listed building → WHS | 0 | 0 | 439 |
+| park/garden → listed building | 0 | 52,675 | 180,722 |
+| park/garden → scheduled monument | 0 | 1,443 | 4,205 |
+| park/garden → park/garden | 0 | 8 | 15 |
+| park/garden → battlefield | 0 | 0 | 2 |
+| battlefield → listed building | 0 | 746 | 2,521 |
+| battlefield → scheduled monument | 0 | 35 | 97 |
+| battlefield → park/garden | 0 | 2 | 5 |
+| battlefield → battlefield | 0 | 0 | 1 |
+| battlefield → WHS | 0 | 0 | 1 |
+| WHS → listed building | 0 | 1,767 | 7,137 |
+| WHS → scheduled monument | 0 | 59 | 154 |
+| WHS → park/garden | 0 | 6 | 22 |
+| WHS → WHS | 0 | 0 | 2 |
+| **Total final pairs** | **345** | **417,179** | **1,508,855** |
+
+**INFERRED:** The 100k workload is dominated by mixed-designation pairs,
+especially scheduled monument → listed building, park/garden → listed
+building, and WHS → listed building. These pairs survive the existing
+same-register veto because they are different NHLE designation classes; they
+are therefore a new class of matcher work, not evidence that the old listed-
+building-only workload became proportionally slower.
+
+### Workload onset curve
+
+**MEASURED:** The diagnostic path used the same register-pruned candidate
+generation and canonical insertion behavior, but recorded only accounting
+metrics. It did not assign performance classifications.
+
+| Prefix | Final candidates | Candidates/record | Exact-radius candidates | Register-pruned candidates | Conflicts |
+| -----: | ---------------: | ----------------: | ----------------------: | -------------------------: | --------: |
+| 25k | 0 | 0.0000 | 1,163,464 | 1,163,464 | 0 |
+| 40k | 142 | 0.0036 | 1,980,077 | 1,979,935 | 0 |
+| 50k | 345 | 0.0069 | 2,705,460 | 2,705,115 | 0 |
+| 60k | 976 | 0.0163 | 3,744,361 | 3,743,385 | 0 |
+| 70k | 1,818 | 0.0260 | 4,933,297 | 4,931,479 | 0 |
+| 80k | 2,395 | 0.0299 | 5,654,572 | 5,652,177 | 0 |
+| 90k | 12,033 | 0.1337 | 6,603,614 | 6,591,581 | 0 |
+| 100k | 417,179 | 4.1718 | 7,741,644 | 7,324,465 | 37 |
+| 125k | 527,730 | 4.2218 | 10,307,575 | 9,779,845 | 50 |
+| 150k | 617,744 | 4.1183 | 13,608,393 | 12,990,649 | 62 |
+| 175k | 720,774 | 4.1187 | 19,044,942 | 18,324,168 | 67 |
+| 199,980 | 1,508,855 | 7.5450 | 27,552,345 | 26,043,490 | 134 |
+
+The answer to the discontinuity is therefore measured composition, not a
+new scale classification: 50k is effectively all listed-building work, with
+only 345 surviving pairs across 50,000 rows; 100k contains 417,179 surviving
+mixed-designation pairs, or 4.1718 per row. The 90k→100k onset is abrupt in
+the preserved ordering and coincides with the first substantial presence of
+the non-dominant statutory layers.
+
+**WORKLOAD_COMPOSITION_CLASSIFICATION = WORKLOAD_COMPOSITION_PHASE_CHANGE_CONFIRMED**
+
+This confirms B — the appearance of new classes of work at larger prefixes.
+It does not prove A — scalability of equivalent work — because no
+composition-controlled performance ladder was run. The official gate and
+scale result are intentionally unchanged:
+
+**COMPOSITION_CONTROLLED_LADDER = DESIGNED** — a deterministic secondary
+sampler was implemented and tested. It stratifies by OS 100km cell × NHLE
+layer, allocates largest-remainder quotas from the full persisted capture,
+retains within-stratum persisted order, and never overwrites the authoritative
+order. It was **NOT RUN** because it would require another multi-stage
+matcher run; no controlled scalability claim is made.
+
+**NOT PROVEN:** equivalent-work scalability beyond 50k, continuous national
+safety beyond 50k, or any inference to the ~401,539-record source.
+
+**NOT RUN:** hosted Supabase, Docker/local database lane, national
+publication, full source capture, Historic England description retrieval, and
+the composition-controlled performance ladder.
+
+**MAXIMUM_PROVEN_SAFE_SCALE = PROVEN_SAFE_TO_50K**
+
+**NATIONAL_EXPANSION_CLASSIFICATION = REMEDIATION_INSUFFICIENT**
+
+**NATIONAL_PUBLICATION_PERFORMED = NO**
+
+### Batch 19A recommendation
+
+The next action should be one owner-reviewed governance batch to **run the
+composition-controlled benchmark** using the deterministic sampler. It must
+keep the existing 50k/100k/200k gate unchanged and report separately whether
+equivalent mixed-designation work scales, without treating a passing
+composition-controlled lane as publication authorization.
+
 ## Batch 18 — same-register pre-hydration pruning and national re-measurement
 
 Batch 18 is stacked directly on Batch 17 at
