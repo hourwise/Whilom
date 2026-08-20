@@ -21,7 +21,18 @@
 
 /** Words that carry no identifying force in an English heritage name. */
 const STOPWORDS = new Set([
-  'the', 'of', 'and', 'a', 'an', 'at', 'in', 'on', 'to', 'near', 'by', 'with',
+  'the',
+  'of',
+  'and',
+  'a',
+  'an',
+  'at',
+  'in',
+  'on',
+  'to',
+  'near',
+  'by',
+  'with',
 ]);
 
 /**
@@ -31,24 +42,132 @@ const STOPWORDS = new Set([
  */
 const GENERIC_TOKENS = new Set([
   // Building / site words
-  'church', 'chapel', 'churchyard', 'cross', 'monument', 'memorial', 'milestone',
-  'bridge', 'barn', 'house', 'farm', 'farmhouse', 'cottage', 'cottages', 'hall',
-  'mill', 'windmill', 'station', 'castle', 'abbey', 'priory', 'grange', 'lodge',
-  'gate', 'gates', 'wall', 'walls', 'stocks', 'well', 'tower', 'school', 'inn',
-  'village', 'green', 'manor', 'court', 'park', 'garden', 'gardens', 'site',
-  'remains', 'ruins', 'former', 'building', 'buildings', 'works', 'yard',
-  'boundary', 'marker', 'lock', 'aqueduct', 'canal', 'railway', 'signal', 'box',
-  'pillbox', 'shelter', 'barrow', 'cairn', 'earthwork', 'enclosure', 'settlement',
+  'church',
+  'chapel',
+  'churchyard',
+  'cross',
+  'monument',
+  'memorial',
+  'milestone',
+  'bridge',
+  'barn',
+  'house',
+  'farm',
+  'farmhouse',
+  'cottage',
+  'cottages',
+  'hall',
+  'mill',
+  'windmill',
+  'station',
+  'castle',
+  'abbey',
+  'priory',
+  'grange',
+  'lodge',
+  'gate',
+  'gates',
+  'wall',
+  'walls',
+  'stocks',
+  'well',
+  'tower',
+  'school',
+  'inn',
+  'village',
+  'green',
+  'manor',
+  'court',
+  'park',
+  'garden',
+  'gardens',
+  'site',
+  'remains',
+  'ruins',
+  'former',
+  'building',
+  'buildings',
+  'works',
+  'yard',
+  'boundary',
+  'marker',
+  'lock',
+  'aqueduct',
+  'canal',
+  'railway',
+  'signal',
+  'box',
+  'pillbox',
+  'shelter',
+  'barrow',
+  'cairn',
+  'earthwork',
+  'enclosure',
+  'settlement',
   // Saints and dedications
-  'st', 'saint', 'saints', 'all', 'holy', 'trinity', 'mary', 'virgin', 'john',
-  'peter', 'paul', 'james', 'andrew', 'michael', 'george', 'nicholas', 'margaret',
-  'helen', 'lawrence', 'laurence', 'martin', 'giles', 'oswald', 'cuthbert',
-  'bartholomew', 'gregory', 'matthew', 'hilda', 'edmund', 'leonard', 'chad',
-  'magdalene', 'baptist', 'evangelist', 'stephen', 'thomas', 'anne', 'ann',
+  'st',
+  'saint',
+  'saints',
+  'all',
+  'holy',
+  'trinity',
+  'mary',
+  'virgin',
+  'john',
+  'peter',
+  'paul',
+  'james',
+  'andrew',
+  'michael',
+  'george',
+  'nicholas',
+  'margaret',
+  'helen',
+  'lawrence',
+  'laurence',
+  'martin',
+  'giles',
+  'oswald',
+  'cuthbert',
+  'bartholomew',
+  'gregory',
+  'matthew',
+  'hilda',
+  'edmund',
+  'leonard',
+  'chad',
+  'magdalene',
+  'baptist',
+  'evangelist',
+  'stephen',
+  'thomas',
+  'anne',
+  'ann',
   // Position / scale words
-  'north', 'south', 'east', 'west', 'northern', 'southern', 'eastern', 'western',
-  'great', 'little', 'upper', 'lower', 'old', 'new', 'high', 'low', 'middle',
-  'number', 'no', 'approximately', 'metres', 'metre', 'yards', 'yard',
+  'north',
+  'south',
+  'east',
+  'west',
+  'northern',
+  'southern',
+  'eastern',
+  'western',
+  'great',
+  'little',
+  'upper',
+  'lower',
+  'old',
+  'new',
+  'high',
+  'low',
+  'middle',
+  'number',
+  'no',
+  'approximately',
+  'metres',
+  'metre',
+  'yards',
+  'yard',
 ]);
 
 /**
@@ -113,6 +232,21 @@ export interface NameAnalysis {
   streetNumbers: string[];
 }
 
+export interface PreparedName {
+  raw: string;
+  analysis: NameAnalysis;
+  generic: boolean;
+}
+
+export type PreparedNames = readonly PreparedName[];
+
+export function prepareNames(values: readonly string[]): PreparedNames {
+  return values.map((raw) => {
+    const analysis = analyseName(raw);
+    return { raw, analysis, generic: isGenericAnalysis(analysis) };
+  });
+}
+
 function tokenise(value: string): string[] {
   return normaliseName(value)
     .split(' ')
@@ -131,7 +265,10 @@ export function analyseName(value: string): NameAnalysis {
 
   const streetMatch = STREET_NUMBER_PATTERN.exec(beforeSemicolon);
   const streetNumbers = streetMatch
-    ? (streetMatch[1] ?? '').split(/\s*(?:-|–|and|&)\s*/i).map((n) => n.trim().toLowerCase()).filter(Boolean)
+    ? (streetMatch[1] ?? '')
+        .split(/\s*(?:-|–|and|&)\s*/i)
+        .map((n) => n.trim().toLowerCase())
+        .filter(Boolean)
     : [];
 
   const relationMatch = RELATION_PATTERN.exec(beforeSemicolon);
@@ -177,9 +314,17 @@ export function nameTokens(value: string): string[] {
  * the same place.
  */
 export function isGenericName(value: string): boolean {
-  const tokens = nameTokens(value);
+  return isGenericAnalysis(analyseName(value));
+}
+
+function isGenericAnalysis(analysis: NameAnalysis): boolean {
+  const tokens = analysis.headTokens;
   if (tokens.length === 0) return true;
   return tokens.every((token) => GENERIC_TOKENS.has(token) || /^\d+$/.test(token));
+}
+
+export function isPreparedNameGeneric(value: PreparedName): boolean {
+  return value.generic;
 }
 
 function bigrams(value: string): Map<string, number> {
@@ -238,10 +383,7 @@ export interface DistinctVerdict {
  * Every rule here can only ever SPLIT two records, never merge them, which is
  * the direction the matcher is allowed to be wrong in.
  */
-export function namesDenoteDistinctThings(a: string, b: string): DistinctVerdict {
-  const left = analyseName(a);
-  const right = analyseName(b);
-
+function namesDenoteDistinctAnalyses(left: NameAnalysis, right: NameAnalysis): DistinctVerdict {
   // --- Different street numbers on the same street -------------------------
   // "2, Westfield Road" and "8, Westfield Road" are two houses. Character
   // bigrams score them 0.93 because they differ by one character, which is
@@ -275,10 +417,7 @@ export function namesDenoteDistinctThings(a: string, b: string): DistinctVerdict
   // "Sundial to South of Church of St Mary" versus "Church of St Mary": the
   // name states that the subject sits beside the other record, not that it is
   // the other record.
-  const positionedAgainst = (
-    subject: NameAnalysis,
-    other: NameAnalysis,
-  ): string | null => {
+  const positionedAgainst = (subject: NameAnalysis, other: NameAnalysis): string | null => {
     if (subject.relation === null || subject.relationObjectTokens.length === 0) return null;
     if (other.relation !== null) return null;
     // The other record must be the thing this one is positioned against …
@@ -295,6 +434,17 @@ export function namesDenoteDistinctThings(a: string, b: string): DistinctVerdict
   if (rightAgainstLeft) return { distinct: true, reason: rightAgainstLeft };
 
   return { distinct: false };
+}
+
+export function namesDenoteDistinctThings(a: string, b: string): DistinctVerdict {
+  return namesDenoteDistinctAnalyses(analyseName(a), analyseName(b));
+}
+
+export function preparedNamesDenoteDistinctThings(
+  a: PreparedName,
+  b: PreparedName,
+): DistinctVerdict {
+  return namesDenoteDistinctAnalyses(a.analysis, b.analysis);
 }
 
 /**
@@ -328,9 +478,7 @@ export interface NameSimilarityBreakdown {
   carriedByContainment: boolean;
 }
 
-export function nameSimilarityBreakdown(a: string, b: string): NameSimilarityBreakdown {
-  const left = analyseName(a);
-  const right = analyseName(b);
+function nameSimilarityAnalyses(left: NameAnalysis, right: NameAnalysis): NameSimilarityBreakdown {
   const tokensA = left.headTokens;
   const tokensB = right.headTokens;
   if (tokensA.length === 0 || tokensB.length === 0) {
@@ -351,6 +499,17 @@ export function nameSimilarityBreakdown(a: string, b: string): NameSimilarityBre
   return { score, dice, containment, carriedByContainment: weighted > dice };
 }
 
+export function nameSimilarityBreakdown(a: string, b: string): NameSimilarityBreakdown {
+  return nameSimilarityAnalyses(analyseName(a), analyseName(b));
+}
+
+export function preparedNameSimilarityBreakdown(
+  a: PreparedName,
+  b: PreparedName,
+): NameSimilarityBreakdown {
+  return nameSimilarityAnalyses(a.analysis, b.analysis);
+}
+
 export function nameSimilarity(a: string, b: string): number {
   return nameSimilarityBreakdown(a, b).score;
 }
@@ -368,10 +527,25 @@ export function bestNameSimilarityBreakdown(
   candidateNames: readonly string[],
   existingNames: readonly string[],
 ): NameSimilarityBreakdown {
-  let best: NameSimilarityBreakdown = { score: 0, dice: 0, containment: 0, carriedByContainment: false };
+  return bestPreparedNameSimilarityBreakdown(
+    prepareNames(candidateNames),
+    prepareNames(existingNames),
+  );
+}
+
+export function bestPreparedNameSimilarityBreakdown(
+  candidateNames: PreparedNames,
+  existingNames: PreparedNames,
+): NameSimilarityBreakdown {
+  let best: NameSimilarityBreakdown = {
+    score: 0,
+    dice: 0,
+    containment: 0,
+    carriedByContainment: false,
+  };
   for (const a of candidateNames) {
     for (const b of existingNames) {
-      const breakdown = nameSimilarityBreakdown(a, b);
+      const breakdown = preparedNameSimilarityBreakdown(a, b);
       if (breakdown.score > best.score) best = breakdown;
     }
   }
@@ -383,10 +557,17 @@ export function allNamePairsDistinct(
   candidateNames: readonly string[],
   existingNames: readonly string[],
 ): DistinctVerdict {
+  return allPreparedNamePairsDistinct(prepareNames(candidateNames), prepareNames(existingNames));
+}
+
+export function allPreparedNamePairsDistinct(
+  candidateNames: PreparedNames,
+  existingNames: PreparedNames,
+): DistinctVerdict {
   let reason: string | undefined;
   for (const a of candidateNames) {
     for (const b of existingNames) {
-      const verdict = namesDenoteDistinctThings(a, b);
+      const verdict = preparedNamesDenoteDistinctThings(a, b);
       if (!verdict.distinct) return { distinct: false };
       reason ??= verdict.reason;
     }
