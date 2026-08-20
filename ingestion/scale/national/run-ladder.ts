@@ -21,7 +21,8 @@
  */
 
 import { writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { CandidateMode } from '../../matching/candidates';
 import { ChunkedCandidateIndex } from '../../matching/chunked-candidates';
 import { MatchOutcome } from '../../pipeline/candidate';
@@ -29,6 +30,8 @@ import { executeTier, buildTierMetrics } from '../run-tier';
 import type { TierMetrics } from '../metrics';
 import { buildNationalTier, nationalSampleSize } from './tier';
 import { NATIONAL_CHECKPOINTS } from './capture';
+
+const INGESTION_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
 /** How a checkpoint ended up, in the vocabulary the brief asks for. */
 export type StageClassification =
@@ -59,6 +62,8 @@ export interface StageResult {
   conflictRate: number;
   heapUsedMb: number;
   rssMb: number;
+  peakHeapUsedMb: number;
+  shortlist: TierMetrics['matching']['work']['shortlist'];
   externalMb: number;
   gcAvailable: boolean;
   workingSet?: {
@@ -177,6 +182,7 @@ function conflictCount(metrics: TierMetrics): number {
 export async function runNationalLadder(
   largest?: number,
   only?: number,
+  cacheLimit = Number(process.env['WHILOM_CACHE_LIMIT'] ?? 65_536),
 ): Promise<{
   sampleSize: number;
   checkpoints: number[];
@@ -208,13 +214,15 @@ export async function runNationalLadder(
   for (const size of requested) {
     if (globalThis.gc) globalThis.gc();
     const store = new ChunkedCandidateIndex(
-      resolve(process.cwd(), '.national-chunk-cache', `${size}-${process.pid}`),
+      resolve(INGESTION_ROOT, '.national-chunk-cache', `${size}-${process.pid}`),
+      cacheLimit,
     );
     const execution = await executeTier(size, CandidateMode.Bounded, buildNationalTier, {
       candidateStore: store,
       chunkSize: 4_096,
       retainDecided: false,
     });
+    globalThis.gc?.();
     const metrics = buildTierMetrics(execution, size);
 
     const memory = process.memoryUsage();
@@ -248,9 +256,11 @@ export async function runNationalLadder(
           : 0,
       heapUsedMb,
       rssMb: Math.round(memory.rss / 1_048_576),
+      peakHeapUsedMb: Math.max(execution.peakHeapUsedMb, heapUsedMb),
       externalMb: Math.round(memory.external / 1_048_576),
       gcAvailable: typeof globalThis.gc === 'function',
       ...(execution.workingSet ? { workingSet: execution.workingSet } : {}),
+      shortlist: metrics.matching.work.shortlist,
       classification: 'NOT_RUN',
       reason: '',
     };
@@ -275,7 +285,13 @@ export async function runNationalLadder(
   const maxProvenScale = lastPass
     ? fullDatasetExercised
       ? 'PROVEN_SAFE_TO_FULL_DATASET'
-      : `PROVEN_SAFE_TO_${provenFloor}K`
+      : lastPass.stage >= 199_980
+        ? 'PROVEN_SAFE_TO_200K'
+        : lastPass.stage >= 100_000
+          ? 'PROVEN_SAFE_TO_100K'
+          : lastPass.stage >= 50_000
+            ? 'PROVEN_SAFE_TO_50K'
+            : `PROVEN_SAFE_TO_${provenFloor}K`
     : `NOT_PROVEN_BEYOND_${(stages[0]?.stage ?? 0) / 1000}K`;
 
   return { sampleSize: available, checkpoints: requested, stages, maxProvenScale };
@@ -290,7 +306,7 @@ if (invokedDirectly) {
   runNationalLadder(largest, only)
     .then((result) => {
       writeFileSync(
-        resolve(process.cwd(), 'national-ladder.json'),
+        resolve(INGESTION_ROOT, 'national-ladder.json'),
         JSON.stringify(result, null, 2) + '\n',
       );
       console.log(`sample ${result.sampleSize.toLocaleString()} records\n`);

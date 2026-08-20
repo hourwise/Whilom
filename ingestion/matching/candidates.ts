@@ -116,6 +116,8 @@ export interface CandidateGenerationStats {
   cellsInspected: number;
   /** Time spent generating candidates, milliseconds. */
   generationMs: number;
+  /** Shortlist length for each valid source row, retained for bounded diagnostics. */
+  shortlistSizes: number[];
 }
 
 /**
@@ -157,6 +159,7 @@ export function emptyCandidateStats(): CandidateGenerationStats {
     fromIdentifierOnly: 0,
     cellsInspected: 0,
     generationMs: 0,
+    shortlistSizes: [],
   };
 }
 
@@ -267,6 +270,7 @@ export class CandidateIndex {
       if (stats) {
         stats.candidatePairs += this.records.length;
         stats.fromSpatial += this.records.length;
+        stats.shortlistSizes.push(this.records.length);
       }
       return this.records;
     }
@@ -332,6 +336,7 @@ export class CandidateIndex {
       stats.fromSpatial += spatial;
       stats.fromIdentifierOnly += identifierOnly;
       stats.cellsInspected += cells;
+      stats.shortlistSizes.push(ordered.length);
       stats.generationMs += performance.now() - started;
     }
     return ordered;

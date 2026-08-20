@@ -65,7 +65,13 @@ export interface RunObserver {
   /** Accumulates candidate-generation work across the whole run. */
   candidateStats?: CandidateGenerationStats;
   /** Called once per record that reached the matcher. */
-  onRecord?(timings: { normaliseMs: number; validateMs: number; matchMs: number }): void;
+  onRecord?(timings: {
+    normaliseMs: number;
+    validateMs: number;
+    matchMs: number;
+    candidate: PlaceCandidate;
+    shortlistSize: number;
+  }): void;
   /** Called once for every matcher decision, including streamed runs. */
   onDecision?(decided: DecidedCandidate): void;
 }
@@ -317,7 +323,13 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
       const matchStart = performance.now();
       const decision = matchCandidate(candidate, shortlist, observer?.matchStats);
       const matchMs = performance.now() - matchStart;
-      observer?.onRecord?.({ normaliseMs, validateMs, matchMs });
+      observer?.onRecord?.({
+        normaliseMs,
+        validateMs,
+        matchMs,
+        candidate,
+        shortlistSize: shortlist.length,
+      });
       const withinRun =
         decision.matchedPlaceId !== undefined && !preexistingIds.has(decision.matchedPlaceId);
 

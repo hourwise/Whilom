@@ -35,6 +35,46 @@ export interface MatchWorkStats extends TimingStats {
   vetoedByRegister: number;
   /** Comparisons beyond the plausible-distance limit: the spatial pre-filter prize. */
   beyondMaxDistance: number;
+  shortlist: {
+    p50: number;
+    p90: number;
+    p95: number;
+    p99: number;
+    max: number;
+    zero: number;
+    one: number;
+    twoOrMore: number;
+  };
+  profile?: MatchProfile;
+}
+
+export interface MatchProfile {
+  enabled: boolean;
+  timingSampleEvery: number;
+  timedComparisons: number;
+  timingsMs: {
+    identifierPhase: number;
+    registerVeto: number;
+    distance: number;
+    nameDistinctness: number;
+    nameSimilarity: number;
+    scoringAndConflicts: number;
+    scoredResultAllocation: number;
+    filtering: number;
+    sortingOrTopTwo: number;
+    outcomeConstruction: number;
+  };
+  counts: {
+    comparisons: number;
+    survivingRegister: number;
+    survivingDistance: number;
+    reachingNameComparison: number;
+    reachingFullScoring: number;
+    scoredCandidates: number;
+    zeroViable: number;
+    oneViable: number;
+    twoOrMoreViable: number;
+  };
 }
 
 export interface ReviewPressure {
@@ -106,6 +146,7 @@ export interface WorkingSetStats {
   physicalReadsPerPayloadLookup: number;
   pageCacheRecords: number;
   maxPageCachePages: number;
+  payloadResolutionMs?: number;
 }
 
 /** What candidate generation cost, and what it saved. */
@@ -122,6 +163,13 @@ export interface CandidateMetrics {
   fromIdentifierOnly: number;
   cellsInspected: number;
   generationMs: number;
+  shortlist: {
+    p50: number;
+    p90: number;
+    p95: number;
+    p99: number;
+    max: number;
+  };
 }
 
 export interface TierMetrics {
@@ -129,6 +177,7 @@ export interface TierMetrics {
   startedAt: string;
   finishedAt: string;
   environment: { node: string; platform: string; cpus: number; ci: boolean };
+  peakHeapUsedMb?: number;
 
   composition: Record<string, number>;
 
@@ -159,6 +208,7 @@ export interface TierMetrics {
     work: MatchWorkStats;
     /** Field-level conflict counts, so "conflicts" is not one opaque number. */
     conflictFields: { field: string; count: number }[];
+    profile?: MatchProfile;
   };
 
   candidates: CandidateMetrics;
@@ -166,6 +216,7 @@ export interface TierMetrics {
   review: ReviewPressure;
 
   quality: QualitySample[];
+  geography?: Record<string, { records: number; meanMsPerRecord: number; meanShortlist: number }>;
 
   /** Present only when the tier ran against a database. */
   queries?: QueryTiming[];

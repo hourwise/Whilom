@@ -14,7 +14,7 @@
  */
 
 import { writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CandidateMode } from '../matching/candidates';
 import { executeTier } from './run-tier';
@@ -22,6 +22,8 @@ import { buildOracle, compareOracles } from './oracle';
 import type { DecisionDifference, Oracle } from './oracle';
 import { ORACLE_TIER_SIZES, isOracleTierSize } from './tier';
 import { round } from './metrics';
+
+const INGESTION_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
 export interface EquivalenceResult {
   tier: number;
@@ -112,7 +114,10 @@ export async function checkEquivalence(tier: number): Promise<EquivalenceRun> {
       pairsRemoved: bounded.candidateStats.possiblePairs - bounded.candidateStats.candidatePairs,
       pruningRate:
         bounded.candidateStats.possiblePairs > 0
-          ? round(1 - bounded.candidateStats.candidatePairs / bounded.candidateStats.possiblePairs, 5)
+          ? round(
+              1 - bounded.candidateStats.candidatePairs / bounded.candidateStats.possiblePairs,
+              5,
+            )
           : 0,
       candidatePairsPerRecord: round(
         bounded.candidateStats.candidatePairs / Math.max(1, bounded.matchSamples.length),
@@ -152,15 +157,15 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
 
   checkEquivalence(tier)
     .then(({ result, exhaustiveOracle, boundedOracle }) => {
-      const out = resolve(process.cwd(), `scale-equivalence-${tier}.json`);
+      const out = resolve(INGESTION_ROOT, `scale-equivalence-${tier}.json`);
       writeFileSync(out, JSON.stringify(result, null, 2) + '\n');
       if (writeOracles) {
         writeFileSync(
-          resolve(process.cwd(), `scale-oracle-${tier}.json`),
+          resolve(INGESTION_ROOT, `scale-oracle-${tier}.json`),
           JSON.stringify(exhaustiveOracle, null, 2) + '\n',
         );
         writeFileSync(
-          resolve(process.cwd(), `scale-oracle-bounded-${tier}.json`),
+          resolve(INGESTION_ROOT, `scale-oracle-bounded-${tier}.json`),
           JSON.stringify(boundedOracle, null, 2) + '\n',
         );
       }
