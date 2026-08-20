@@ -434,3 +434,80 @@ The low absolute times and the passing 100k/200k isolated gates do not erase the
 **INFERRED:** The strongest remaining measured bottleneck is dense-region shortlist/matcher work after page resolution: TQ/London's shortlist is 4.45× the sparse-group mean and the 50k → 100k normalized matcher growth remains above 1.0 despite name preparation and duplicate-veto removal.
 
 Batch 17 should run one narrowly scoped density-aware matcher remediation experiment: reduce repeated candidate comparisons inside dense geographic cells while proving exact insertion-order, global-identifier, veto, conflict, and decision-digest equivalence. It should not increase the cache without a bounded-memory model, weaken the growth gate, or authorize national publication.
+
+## Batch 17 — exact-radius candidate pruning and national scale re-measurement
+
+Batch 17 is stacked directly on Batch 16 at `8a25a0fbd18b567b0a4177280c39e730061d37f7`. The national capture, source ordering, page size, cache limit, matcher thresholds, scoring, name logic, and governance were unchanged.
+
+### Hypothesis and implementation
+
+**MEASURED:** Batch 16 identified coarse 0.05-degree spatial cells as a safe superset: records in the selected cells could still be more than 5 km away, after which the matcher discarded them. The fixed-100k cell-superset mean shortlist was `204.68`, with TQ/London at `702.47`.
+
+**INFERRED:** A non-identifier candidate that is beyond `THRESHOLDS.maxPlausibleDistanceMeters` cannot affect identity, scoring, runner-up ambiguity, conflicts, or insertion-order behavior because the matcher already returns `null` for it. The same radius therefore can be applied before payload hydration.
+
+**IMPLEMENTED:** The coarse cell lookup remains unchanged. Its integer pointer results now receive the same `distanceMeters()` calculation used by the matcher before canonical payload hydration. Only surviving spatial pointers are hydrated. Global external-identifier and designation-reference lookup remains geographically unbounded, is unioned afterward, deduplicated, and sorted by original insertion sequence.
+
+The disk-backed pointer adds only compact `lat` and `lng` numeric metadata: approximately 16 bytes of numeric payload per pointer before ordinary JavaScript object overhead. No duplicate full location object is stored and no cache limit changed.
+
+### Exact-radius equivalence
+
+**MEASURED:** The 5,000-record harness now runs three strategies: exhaustive oracle, pre-Batch-17 cell superset, and exact-radius bounded. All three produced digest prefix `b91e746c25ba2545`, zero decision differences, and the same outcome summary:
+
+```text
+NEW_CANONICAL: 4,971
+MATCH_REVIEW: 18
+MATCH_CONFIDENT: 4
+CONFLICT_REVIEW: 4
+```
+
+Candidate pairs were reduced from `12,463,987` exhaustive pairs to `145,331` exact-radius pairs, with `98.83%` pruning. The existing global identifier tests and new focused cases cover near-boundary candidates, the exact-boundary decision, ordinary distant pruning, distant external identifiers, distant designation references, duplicate discovery, insertion ordering, and chunked pre-hydration rejection.
+
+### Fixed-100k pruning evidence
+
+Both runs used a fresh process, a 65,536-record cache limit, and the same fixed-100k capture. The non-profiled before/after results were:
+
+| Region            | Mean shortlist before → after | p50 before → after | p95 before → after | p99 before → after | max before → after | comparisons/record before → after | exact-radius pruning |
+| ----------------- | ----------------------------: | -----------------: | -----------------: | -----------------: | -----------------: | --------------------------------: | -------------------: |
+| Overall           |                204.68 → 77.45 |           136 → 44 |          544 → 227 |        1,651 → 773 |      2,944 → 1,813 |                      204.6 → 77.4 |              62.159% |
+| TQ / London       |               702.47 → 296.38 |          331 → 101 |      2,325 → 1,279 |      2,770 → 1,572 |      2,944 → 1,813 |                                 — |              57.808% |
+| ST / Bristol-Bath |                278.69 → 94.34 |           233 → 69 |          663 → 291 |          910 → 398 |        1,044 → 447 |                                 — |              66.149% |
+| Sparse comparison |                157.87 → 56.72 |           136 → 43 |          383 → 162 |          524 → 245 |          728 → 420 |                                 — |              64.072% |
+
+**MEASURED:** Overall, `12,716,854` of `20,458,498` cell-superset candidates were rejected by the exact radius. TQ/London retained `2,147,593` of `5,090,085` candidates, answering the primary density question: approximately `296.38` of its prior `702.47` mean candidates were actually within 5 km.
+
+**MEASURED:** At fixed 100k, page misses fell from `3,242` to `2,486`, bytes read from `289,208,479` to `212,596,194`, records decoded from `632,150` to `464,742`, and payload lookups from `20,458,498` to `7,741,644`. `IDENTIFIER_RESCUED_BEYOND_RADIUS = 0` in this national sample because its identifier candidates were not distant; focused tests prove the global rescue path independently.
+
+### Authoritative fresh-process ladder
+
+| Stage | Records |   rec/s | ms/record | comparisons/record | µs/comparison | cell superset / exact / rejected per record | heap / RSS MB |  reads |    bytes read |   decoded | integrity       | classification              |
+| ----: | ------: | ------: | --------: | -----------------: | ------------: | ------------------------------------------: | ------------: | -----: | ------------: | --------: | --------------- | --------------------------- |
+|   25k |  25,000 | 2,348.7 |     0.096 |               46.6 |         2.060 |                         113.1 / 46.6 / 66.5 |     135 / 428 |    158 |        93,535 |       206 | 25,000/25,000   | PASS                        |
+|   50k |  50,000 | 2,175.7 |     0.114 |               54.1 |         2.107 |                         133.7 / 54.1 / 79.6 |     175 / 449 |    252 |       143,001 |       314 | 50,000/50,000   | PASS                        |
+| ~100k | 100,000 | 1,488.4 |     0.268 |               77.4 |         3.463 |                        204.7 / 77.5 / 127.2 |     458 / 808 |  2,486 |   212,596,194 |   464,742 | 100,000/100,000 | FAIL_PERFORMANCE transition |
+| ~200k | 199,980 |   821.3 |     0.538 |              137.8 |         3.904 |                       358.6 / 137.8 / 220.8 |   426 / 1,302 | 23,878 | 2,494,735,931 | 5,444,491 | 199,980/199,980 | adjacent-only diagnostic    |
+
+The unchanged normalized-growth calculations, using the recorded ladder values, are:
+
+```text
+(0.114 / 0.096) / (50000 / 25000) = 0.593750  PASS
+(0.268 / 0.114) / (100000 / 50000) = 1.175439  FAIL (> 1.0)
+(0.538 / 0.268) / (199980 / 100000) = 1.003831  FAIL using recorded values; NOT PROVEN
+```
+
+**INFERRED:** Exact-radius pruning removes the dominant coarse-cell false-positive work and materially improves absolute throughput, but it does not clear the required 50k → 100k architectural transition. No second optimization was added.
+
+**MAXIMUM_PROVEN_SAFE_SCALE = PROVEN_SAFE_TO_50K**
+
+**NATIONAL_EXPANSION_CLASSIFICATION = REMEDIATION_INSUFFICIENT**
+
+**EPHEMERAL_DATABASE_LANE = DEFERRED** — Docker remains unavailable; no local database lane was run.
+
+**NATIONAL_PUBLICATION_PERFORMED = NO**
+
+### Limitations and Batch 18 recommendation
+
+**NOT RUN:** full ~401,539-record capture, database lane, hosted Supabase, national publication, Historic England description retrieval, and production deployment.
+
+**NOT PROVEN:** continuous safe scale beyond 50k. The ~200k result is diagnostic only because the 50k → 100k transition failed the unchanged gate.
+
+Batch 18 should investigate exactly one bounded remaining dense-region work source, selected from per-region candidate/matcher measurements, with exhaustive decision-digest equivalence and no cache-limit increase. It must not move additional matcher vetoes into candidate generation until that experiment is separately justified.
