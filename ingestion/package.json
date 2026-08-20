@@ -23,7 +23,9 @@
     "national:audit": "tsx scale/national/audit.ts",
     "national:capture": "tsx scale/national/capture.ts",
     "national:ladder": "tsx scale/national/run-ladder.ts",
-    "national:workload-audit": "tsx scale/national/workload-audit.ts"
+    "national:workload-audit": "tsx scale/national/workload-audit.ts",
+    "national:controlled": "tsx scale/national/controlled-run.ts",
+    "national:controlled-summary": "tsx scale/national/controlled-summary.ts"
   },
   "dependencies": {
     "@whilom/database": "workspace:*",

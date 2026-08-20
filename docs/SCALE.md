@@ -852,3 +852,153 @@ with fixed per-record matcher overhead. A Batch 19 experiment should isolate
 that one remaining transition with bounded candidate-density accounting; it
 must not add a second veto optimization, increase the cache, weaken the gate,
 or authorize national publication.
+
+## Batch 19B — composition-controlled national scale benchmark
+
+Batch 19B is a secondary evidence lane stacked directly on Batch 19A at
+`0f38567de1e1c34d9a4d9a75ce214d9bf2739d35`. It does not replace the
+authoritative prefix ladder and does not alter matcher semantics, candidate
+pruning, cache limits, thresholds, gates, canonical data, hosted Supabase, or
+publication state.
+
+### Controlled sampling
+
+**CONTROLLED / MEASURED:** The existing 199,980-record capture was partitioned
+by OS 100km cell × NHLE layer. Each controlled size received a
+largest-remainder quota proportional to the full capture. Records within each
+stratum retained their persisted order; strata were concatenated by stable key.
+The authoritative order was never overwritten.
+
+| Stage | Listed buildings | Scheduled monuments | Parks/gardens | Battlefields | WHS | Protected wrecks | Sample digest |
+| ----: | ----------------: | ------------------: | ------------: | -----------: | ---: | ---------------: | ------------- |
+| 25k | 23,638 — 94.552% | 1,251 — 5.004% | 107 — 0.428% | 1 — 0.004% | 0 — 0% | 3 — 0.012% | `7bef48b0753acbcd41bccba9b54ae28e3d4248b3ad11a1b8869a154a45a593b8` |
+| 50k | 47,270 — 94.540% | 2,499 — 4.998% | 220 — 0.440% | 3 — 0.006% | 1 — 0.002% | 7 — 0.014% | `a850f335d94230baa7b55d6301452e133c18a75c78bd92fce605a8367ffc2759` |
+| 100k | 94,547 — 94.547% | 5,002 — 5.002% | 428 — 0.428% | 6 — 0.006% | 4 — 0.004% | 13 — 0.013% | `73cbe02f6f60afc8ee54a38acae394fda09c488fcb21838c7bc724af3c9df95a` |
+| 199,980 | 189,067 — 94.543% | 9,989 — 4.995% | 865 — 0.4325% | 21 — 0.0105% | 12 — 0.006% | 26 — 0.013% | `631100d50055eedeecae8c6bd8f40b894f067bde2c80f683902324ff6608e28c` |
+
+The controlled layer proportions differ from the complete-capture target by
+less than `0.01` percentage points at the small tiers. The OS-cell map is
+included in `ingestion/controlled-national-scale.json`; TQ is 12.496%,
+12.500%, 12.498%, and 12.4982% at the four stages respectively. Rare layers
+are represented where largest-remainder rounding permits: WHS is absent at
+25k but present at 50k and above.
+
+**MEASURED:** Duplicate source-record accounting was preserved rather than
+deduplicated by the sampler:
+
+| Stage | Records | Unique source record IDs | IDs represented more than once |
+| ----: | ------: | -----------------------: | -----------------------------: |
+| 25k | 25,000 | 24,996 | 4 |
+| 50k | 50,000 | 49,991 | 9 |
+| 100k | 100,000 | 99,976 | 24 |
+| 199,980 | 199,980 | 199,930 | 49 |
+
+First and last stable references, plus the full cell percentages and digests,
+are recorded in the aggregate evidence artifact.
+
+### Controlled workload comparability
+
+**CONTROLLED / MEASURED:** All four controlled tiers contain the mixed
+designation classes that appear only at the larger authoritative prefixes.
+Final candidate work rises with sample size rather than appearing as a
+near-zero-to-large discontinuity:
+
+| Stage | Exact-radius candidates/record | Register-pruned candidates/record | Final candidates/record | Conflicts |
+| ----: | ----------------------------: | --------------------------------: | ----------------------: | --------: |
+| 25k | 45.0092 | 44.4313 | 0.5779 | 4 |
+| 50k | 52.5601 | 50.9527 | 1.6074 | 11 |
+| 100k | 77.4349 | 73.2811 | 4.1538 | 38 |
+| 199,980 | 138.1487 | 130.4179 | 7.7308 | 126 |
+
+The complete candidate-designation × canonical-designation matrices are in
+`ingestion/controlled-national-scale.json`. The dominant classes are
+scheduled monument → listed building, park/garden → listed building, and
+listed building → scheduled monument. For example, scheduled monument →
+listed building contributes 11,990 pairs at 25k, 69,069 at 50k, 354,928 at
+100k, and 1,275,642 at 199,980.
+
+**CONTROLLED_WORKLOAD_COMPARABILITY = PASS**
+
+The very rare battlefield and WHS classes have small integer counts at the
+lower tiers, but the dominant mixed-designation workload is present from 25k.
+This is sufficient for the controlled comparison; it is not a claim that each
+rare class has statistically stable estimates at every size.
+
+### Controlled performance ladder
+
+Each stage ran in a fresh Node process through the ordinary ingestion,
+exact-radius, register-pruned, disk-backed candidate, and matcher paths. The
+canonical cache limit remained 65,536 records.
+
+| Stage | Records | Valid/rejected | Conflicts | rec/s | Total ms/record | Matcher ms/record | Final candidates/record | Comparisons/record | Heap after GC / peak / RSS MB | Reads | Bytes read | Integrity |
+| ----: | ------: | -------------: | --------: | ----: | --------------: | ----------------: | ----------------------: | -----------------: | ---------------------------: | ----: | ----------: | ---------: |
+| 25k | 25,000 | 24,990 / 10 | 4 | 1,839.0 | 0.5438 | 0.065 | 0.5779 | 0.5767 | 67 / 291 / 344 | 126 | 8,664,123 | 25,000/25,000 |
+| 50k | 50,000 | 49,980 / 20 | 11 | 1,656.1 | 0.6038 | 0.113 | 1.6074 | 1.6055 | 108 / 338 / 356 | 238 | 18,945,330 | 50,000/50,000 |
+| 100k | 100,000 | 99,962 / 38 | 38 | 1,279.8 | 0.7814 | 0.223 | 4.1538 | 4.1481 | 189 / 432 / 416 | 428 | 39,721,877 | 100,000/100,000 |
+| 199,980 | 199,980 | 199,914 / 66 | 126 | 1,148.4 | 0.8708 | 0.289 | 7.7308 | 7.7080 | 272 / 617 / 654 | 867 | 89,379,075 | 199,980/199,980 |
+
+**MEASURED:** The controlled lane has no abrupt matcher-time threshold at
+100k. Matcher time increases from `0.065` to `0.113` to `0.223` to `0.289`
+ms/record while the mixed workload is present throughout.
+
+### Normalized growth
+
+The existing formula and threshold were used without modification:
+
+```text
+normalized_growth =
+  (later matcher ms/record / earlier matcher ms/record)
+  / (later records / earlier records)
+
+perRecordGrowthVsSizeMax = 1.0
+```
+
+```text
+(0.113 / 0.065) / (50000 / 25000) = 0.869231  PASS
+(0.223 / 0.113) / (100000 / 50000) = 0.986726  PASS
+(0.289 / 0.223) / (199980 / 100000) = 0.648047  PASS
+```
+
+**CONTROLLED_SCALE_CLASSIFICATION = EQUIVALENT_WORK_SCALES_TO_200K**
+
+### Authoritative versus controlled
+
+| Stage | Authoritative composition | Authoritative final candidates/record | Authoritative matcher ms/record | Controlled composition | Controlled final candidates/record | Controlled matcher ms/record |
+| ----: | ------------------------- | ------------------------------------: | ------------------------------: | ---------------------- | ---------------------------------: | -----------------------------: |
+| 25k | 99.956% listed; no scheduled/parks | 0.0 | 0.033 | 94.552% listed; 5.004% scheduled; 0.428% parks | 0.5779 | 0.065 |
+| 50k | 99.944% listed; 0.034% scheduled | 0.0 | 0.030 | 94.540% listed; 4.998% scheduled; 0.440% parks | 1.6074 | 0.113 |
+| 100k | 94.537% listed; 4.994% scheduled; 0.435% parks | 4.2 | 0.148 | 94.547% listed; 5.002% scheduled; 0.428% parks | 4.1538 | 0.223 |
+| 199,980 | 94.543% listed; 4.995% scheduled; 0.4325% parks | 7.5 | 0.244 | 94.543% listed; 4.995% scheduled; 0.4325% parks | 7.7308 | 0.289 |
+
+**INFERRED:** The authoritative 50k → 100k failure is absent when the
+designation and geographic workload is controlled. The controlled lane passes
+the same growth gate through 200k, while the historical prefix lane fails at
+50k → 100k because its 50k stage has effectively no surviving mixed-register
+matcher work.
+
+This is evidence that the ingestion architecture scales under comparable
+mixed-designation workload. It does not retroactively erase the authoritative
+prefix gate, does not prove safety at the ~401,539-record national source, and
+does not authorize publication.
+
+**AUTHORITATIVE:**
+
+```text
+MAXIMUM_PROVEN_SAFE_SCALE = PROVEN_SAFE_TO_50K
+NATIONAL_EXPANSION_CLASSIFICATION = REMEDIATION_INSUFFICIENT
+```
+
+**NOT RUN:** full ~401,539-record NHLE run, hosted Supabase, local database
+lane, Docker installation, publication, and authoritative-ladder replacement.
+
+**EPHEMERAL_DATABASE_LANE = DEFERRED** — Docker is unavailable.
+
+**NATIONAL_PUBLICATION_PERFORMED = NO**
+
+### Batch 20 recommendation
+
+Batch 20 should conduct an owner-reviewed benchmark-contract and governance
+review: decide whether the authoritative scale gate must remain a fixed-prefix
+test, or whether a controlled-composition lane should be a formally recognized
+secondary gate. No publication or gate change should occur implicitly from this
+evidence.
