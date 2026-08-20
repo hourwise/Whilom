@@ -19,7 +19,9 @@
     "mobile": "turbo run dev --filter=@whilom/mobile",
     "db:types": "supabase gen types typescript --local > packages/database/src/generated/database.types.ts",
     "check:workflows": "node scripts/check-workflows.mjs",
-    "check:pgtap": "node scripts/check-pgtap-plans.mjs"
+    "check:pgtap": "node scripts/check-pgtap-plans.mjs",
+    "check:migration-inventory": "node scripts/check-migration-inventory.mjs",
+    "check:backend-contract": "node scripts/check-backend-contract.mjs"
   },
   "pnpm": {
     "comment": "Single React version across the workspace (Expo 52 needs 18.3.x; Next 15 supports it) to avoid duplicate-React runtime errors.",
