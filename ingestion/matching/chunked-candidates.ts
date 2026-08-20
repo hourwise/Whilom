@@ -18,13 +18,9 @@ import { closeSync, mkdirSync, openSync, readFileSync, writeSync } from 'node:fs
 import { resolve } from 'node:path';
 import type { CanonicalPlaceRef, PlaceCandidate } from '../pipeline/candidate';
 import { distanceMeters } from '../transforms/osgb';
-import {
-  CandidateMode,
-  candidateRadiusMeters,
-  observeRegisterClass,
-} from './candidates';
+import { CandidateMode, candidateRadiusMeters, observeRegisterClass } from './candidates';
 import type { CandidateGenerationStats } from './candidates';
-import { classifyRegisterCandidate } from './source-relation';
+import { classifyRegisterCandidate, RegisterCandidateClass } from './source-relation';
 
 const METRES_PER_DEGREE_LATITUDE = 111_320;
 const CELL_DEGREES = 0.05;
@@ -179,7 +175,7 @@ export class ChunkedCandidateIndex {
   constructor(
     directory: string,
     private readonly maxCachedPayloadRecords = 65_536,
-    private readonly mode: CandidateMode = CandidateMode.Bounded,
+    private readonly mode: CandidateMode = CandidateMode.RegisterPruned,
   ) {
     this.pagesDirectory = resolve(directory, 'payload-pages');
     mkdirSync(this.pagesDirectory, { recursive: true });
@@ -348,7 +344,7 @@ export class ChunkedCandidateIndex {
       }
     }
 
-    const exact = this.mode === CandidateMode.Bounded;
+    const exact = this.mode === CandidateMode.Bounded || this.mode === CandidateMode.RegisterPruned;
     let rejectedByExactRadius = 0;
     let spatial = 0;
     if (exact) {
@@ -387,8 +383,21 @@ export class ChunkedCandidateIndex {
 
     // Spatial pages are read in their locality order, but the matcher receives
     // exactly the old canonical insertion order. This sort is intentional.
-    const ordered = [...selected]
-      .sort((a, b) => a - b);
+    const orderedBeforeRegister = [...selected].sort((a, b) => a - b);
+    const registerClasses = orderedBeforeRegister.map((sequence) => {
+      const pointer = this.pointers[sequence]!;
+      return classifyRegisterCandidate(candidate, { sourceIdentity: pointer.sourceIdentity });
+    });
+    if (stats) {
+      for (const classification of registerClasses) observeRegisterClass(stats, classification);
+    }
+    const ordered =
+      this.mode === CandidateMode.RegisterPruned
+        ? orderedBeforeRegister.filter(
+            (_, position) =>
+              registerClasses[position] !== RegisterCandidateClass.SameRegisterDifferentEntry,
+          )
+        : orderedBeforeRegister;
     if (stats) {
       stats.candidatePairs += ordered.length;
       stats.fromSpatial += spatial;
@@ -403,13 +412,6 @@ export class ChunkedCandidateIndex {
       stats.cellsInspected += cells;
       stats.shortlistSizes.push(ordered.length);
       stats.generationMs += performance.now() - started;
-      for (const sequence of ordered) {
-        const pointer = this.pointers[sequence]!;
-        observeRegisterClass(
-          stats,
-          classifyRegisterCandidate(candidate, { sourceIdentity: pointer.sourceIdentity }),
-        );
-      }
     }
     return ordered.map((sequence) => this.load(sequence).canonical);
   }

@@ -50,10 +50,7 @@
 import type { CanonicalPlaceRef, PlaceCandidate } from '../pipeline/candidate';
 import { THRESHOLDS } from './matcher';
 import { distanceMeters } from '../transforms/osgb';
-import {
-  classifyRegisterCandidate,
-  RegisterCandidateClass,
-} from './source-relation';
+import { classifyRegisterCandidate, RegisterCandidateClass } from './source-relation';
 
 /**
  * The radius within which the matcher might still say "same place".
@@ -258,6 +255,8 @@ export const CandidateMode = {
   CellSuperset: 'cell-superset',
   /** Exact-radius spatial candidates plus global identifier lookups. */
   Bounded: 'bounded',
+  /** Exact-radius candidates with the existing register hard veto pre-applied. */
+  RegisterPruned: 'register-pruned',
 } as const;
 export type CandidateMode = (typeof CandidateMode)[keyof typeof CandidateMode];
 
@@ -265,7 +264,8 @@ export function isCandidateMode(value: string): value is CandidateMode {
   return (
     value === CandidateMode.Exhaustive ||
     value === CandidateMode.CellSuperset ||
-    value === CandidateMode.Bounded
+    value === CandidateMode.Bounded ||
+    value === CandidateMode.RegisterPruned
   );
 }
 
@@ -292,7 +292,7 @@ export class CandidateIndex {
   private readonly grid = new Map<string, number[]>();
   private readonly byIdentifier = new Map<string, number[]>();
 
-  constructor(private readonly mode: CandidateMode = CandidateMode.Bounded) {}
+  constructor(private readonly mode: CandidateMode = CandidateMode.RegisterPruned) {}
 
   get size(): number {
     return this.records.length;
@@ -409,7 +409,7 @@ export class CandidateIndex {
       }
     }
 
-    const exact = this.mode === CandidateMode.Bounded;
+    const exact = this.mode === CandidateMode.Bounded || this.mode === CandidateMode.RegisterPruned;
     let rejectedByExactRadius = 0;
     let spatial = 0;
     if (exact) {
@@ -452,10 +452,25 @@ export class CandidateIndex {
       }
     }
 
-    const ordered = [...selected].sort((a, b) => a - b).map((index) => this.records[index]!);
+    const orderedBeforeRegister = [...selected].sort((a, b) => a - b);
+    const registerClasses = orderedBeforeRegister.map((index) => {
+      const record = this.records[index]!;
+      return classifyRegisterCandidate(candidate, record);
+    });
+    if (stats) {
+      for (const classification of registerClasses) observeRegisterClass(stats, classification);
+    }
+    const ordered =
+      this.mode === CandidateMode.RegisterPruned
+        ? orderedBeforeRegister.filter(
+            (_, position) =>
+              registerClasses[position] !== RegisterCandidateClass.SameRegisterDifferentEntry,
+          )
+        : orderedBeforeRegister;
+    const orderedRecords = ordered.map((index) => this.records[index]!);
 
     if (stats) {
-      stats.candidatePairs += ordered.length;
+      stats.candidatePairs += orderedRecords.length;
       stats.fromSpatial += spatial;
       stats.fromIdentifierOnly += identifierOnly;
       stats.cellSupersetCandidates += cellSupersetCandidates;
@@ -466,12 +481,9 @@ export class CandidateIndex {
       stats.identifierRescuedBeyondRadius += identifierRescuedBeyondRadius;
       stats.finalCandidatePairs += ordered.length;
       stats.cellsInspected += cells;
-      stats.shortlistSizes.push(ordered.length);
+      stats.shortlistSizes.push(orderedRecords.length);
       stats.generationMs += performance.now() - started;
-      for (const record of ordered) {
-        observeRegisterClass(stats, classifyRegisterCandidate(candidate, record));
-      }
     }
-    return ordered;
+    return orderedRecords;
   }
 }

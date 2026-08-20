@@ -374,6 +374,244 @@ describe('candidate sets are well formed', () => {
   });
 });
 
+describe('same-register pre-hydration pruning', () => {
+  const registerIndex = () => new CandidateIndex(CandidateMode.RegisterPruned);
+
+  it('prunes a different record under the same designation', () => {
+    const index = registerIndex();
+    index.add(
+      existing({
+        id: 'other-entry',
+        name: 'Other Entry',
+        sourceIdentity: {
+          sourceId: 'historic-england-nhle',
+          sourceRecordId: 'other-entry',
+          designations: ['listed_building'],
+        },
+        location: { lng: -1.5, lat: 54 },
+      }),
+    );
+    const stats = emptyCandidateStats();
+    expect(
+      index.candidatesFor(candidate({ name: 'Subject', location: { lng: -1.5, lat: 54 } }), stats),
+    ).toEqual([]);
+    expect(stats.registerVetoCandidates).toBe(1);
+    expect(stats.candidatePairs).toBe(0);
+  });
+
+  it('retains same-record multipart geometry', () => {
+    const index = registerIndex();
+    index.add(
+      existing({
+        id: 'same-entry',
+        name: 'Same Entry',
+        sourceIdentity: {
+          sourceId: 'historic-england-nhle',
+          sourceRecordId: '9999999',
+          designations: ['listed_building'],
+        },
+        location: { lng: -1.5, lat: 54 },
+      }),
+    );
+    expect(
+      index.candidatesFor(candidate({ name: 'Subject', location: { lng: -1.5, lat: 54 } })),
+    ).toHaveLength(1);
+  });
+
+  it('retains same-source entries with different designations', () => {
+    const index = registerIndex();
+    index.add(
+      existing({
+        id: 'different-designation',
+        name: 'Different Designation',
+        sourceIdentity: {
+          sourceId: 'historic-england-nhle',
+          sourceRecordId: 'other-entry',
+          designations: ['listed_building'],
+        },
+        location: { lng: -1.5, lat: 54 },
+      }),
+    );
+    expect(
+      index.candidatesFor(
+        candidate({
+          name: 'Subject',
+          location: { lng: -1.5, lat: 54 },
+          designations: [{ designation: 'scheduled_monument' }],
+        }),
+      ),
+    ).toHaveLength(1);
+  });
+
+  it('retains cross-source records and records without source identity', () => {
+    const index = registerIndex();
+    index.add(
+      existing({
+        id: 'cross-source',
+        name: 'Cross Source',
+        sourceIdentity: {
+          sourceId: 'wikidata',
+          sourceRecordId: 'Q1',
+          designations: ['listed_building'],
+        },
+        location: { lng: -1.5, lat: 54 },
+      }),
+    );
+    index.add(
+      existing({
+        id: 'missing-source',
+        name: 'Missing Source',
+        sourceIdentity: undefined,
+        location: { lng: -1.5, lat: northOf(54, 10) },
+      }),
+    );
+    const found = index.candidatesFor(
+      candidate({ name: 'Subject', location: { lng: -1.5, lat: 54 } }),
+    );
+    expect(found.map((record) => record.id)).toEqual(['cross-source', 'missing-source']);
+  });
+
+  it('keeps a zero-designation candidate and a no-overlap designation set', () => {
+    const index = registerIndex();
+    index.add(
+      existing({
+        id: 'no-overlap',
+        name: 'No Overlap',
+        sourceIdentity: {
+          sourceId: 'historic-england-nhle',
+          sourceRecordId: 'other-entry',
+          designations: ['listed_building'],
+        },
+        location: { lng: -1.5, lat: 54 },
+      }),
+    );
+    expect(
+      index.candidatesFor(
+        candidate({ name: 'Subject', location: { lng: -1.5, lat: 54 }, designations: [] }),
+      ),
+    ).toHaveLength(1);
+  });
+
+  it('prunes a same-register candidate even when an external id is shared', () => {
+    const index = registerIndex();
+    index.add(
+      existing({
+        id: 'same-register-id',
+        name: 'Same Register',
+        externalIds: [{ scheme: 'wikidata', value: 'Q1' }],
+        sourceIdentity: {
+          sourceId: 'historic-england-nhle',
+          sourceRecordId: 'other-entry',
+          designations: ['listed_building'],
+        },
+        location: { lng: -1.5, lat: 54 },
+      }),
+    );
+    expect(
+      index.candidatesFor(
+        candidate({
+          name: 'Subject',
+          location: { lng: -1.5, lat: 54 },
+          externalIds: [{ scheme: 'wikidata', value: 'Q1' }],
+        }),
+      ),
+    ).toHaveLength(0);
+  });
+
+  it('prunes a same-register candidate even when a designation reference is shared', () => {
+    const index = registerIndex();
+    index.add(
+      existing({
+        id: 'same-register-reference',
+        name: 'Same Register',
+        designationReferences: ['REF-1'],
+        sourceIdentity: {
+          sourceId: 'historic-england-nhle',
+          sourceRecordId: 'other-entry',
+          designations: ['listed_building'],
+        },
+        location: { lng: -1.5, lat: 54 },
+      }),
+    );
+    expect(
+      index.candidatesFor(
+        candidate({
+          name: 'Subject',
+          location: { lng: -1.5, lat: 54 },
+          designations: [{ designation: 'listed_building', reference: 'REF-1' }],
+        }),
+      ),
+    ).toHaveLength(0);
+  });
+
+  it('retains a distant cross-source identifier globally and preserves order', () => {
+    const index = registerIndex();
+    index.add(
+      existing({
+        id: 'first',
+        name: 'First',
+        externalIds: [{ scheme: 'wikidata', value: 'Q1' }],
+        sourceIdentity: { sourceId: 'wikidata', sourceRecordId: 'Q1', designations: [] },
+        location: { lng: -3.5, lat: 51.5 },
+      }),
+    );
+    index.add(
+      existing({
+        id: 'second',
+        name: 'Second',
+        externalIds: [{ scheme: 'wikidata', value: 'Q2' }],
+        sourceIdentity: { sourceId: 'wikidata', sourceRecordId: 'Q2', designations: [] },
+        location: { lng: -3.4, lat: 51.6 },
+      }),
+    );
+    const found = index.candidatesFor(
+      candidate({
+        name: 'Subject',
+        location: { lng: -1.5, lat: 54 },
+        externalIds: [
+          { scheme: 'wikidata', value: 'Q1' },
+          { scheme: 'wikidata', value: 'Q2' },
+        ],
+      }),
+    );
+    expect(found.map((record) => record.id)).toEqual(['first', 'second']);
+  });
+
+  it('preserves a surviving candidate outcome and insertion order', () => {
+    const index = registerIndex();
+    index.add(
+      existing({
+        id: 'vetoed',
+        name: 'Vetoed',
+        sourceIdentity: {
+          sourceId: 'historic-england-nhle',
+          sourceRecordId: 'other-entry',
+          designations: ['listed_building'],
+        },
+        location: { lng: -1.5, lat: 54 },
+      }),
+    );
+    index.add(
+      existing({
+        id: 'survivor',
+        name: 'Survivor Hall',
+        placeType: 'church' as PlaceType,
+        sourceIdentity: { sourceId: 'wikidata', sourceRecordId: 'Q-survivor', designations: [] },
+        location: { lng: -1.5, lat: 54 },
+      }),
+    );
+    const subject = candidate({
+      name: 'Survivor Hall',
+      placeType: 'building' as PlaceType,
+      placeTypeConfidence: 0.9,
+      location: { lng: -1.5, lat: 54 },
+    });
+    const found = index.candidatesFor(subject);
+    expect(found.map((record) => record.id)).toEqual(['survivor']);
+    expect(matchCandidate(subject, found).outcome).toBe(MatchOutcome.ConflictReview);
+  });
+});
+
 describe('exhaustive mode', () => {
   it('returns everything, so it can serve as the equivalence oracle', () => {
     const index = new CandidateIndex(CandidateMode.Exhaustive);

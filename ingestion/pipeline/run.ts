@@ -218,7 +218,7 @@ export function candidateAsCanonical(candidate: PlaceCandidate, id: string): Can
 
 export async function runIngestion(options: RunOptions): Promise<RunReport> {
   const { importRunId, sources, enrichmentSource, maxRecords, observer } = options;
-  const candidateMode = options.candidateMode ?? CandidateMode.Bounded;
+  const candidateMode = options.candidateMode ?? CandidateMode.RegisterPruned;
   const startedAt = new Date();
 
   const report: RunReport = {
@@ -331,8 +331,7 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
             identifierRescuedBeyondRadius: observer.candidateStats.identifierRescuedBeyondRadius,
             finalCandidatePairs: observer.candidateStats.finalCandidatePairs,
             registerVetoCandidates: observer.candidateStats.registerVetoCandidates,
-            sameSourceSameRecordCandidates:
-              observer.candidateStats.sameSourceSameRecordCandidates,
+            sameSourceSameRecordCandidates: observer.candidateStats.sameSourceSameRecordCandidates,
             sameSourceDifferentDesignationCandidates:
               observer.candidateStats.sameSourceDifferentDesignationCandidates,
             crossSourceCandidates: observer.candidateStats.crossSourceCandidates,

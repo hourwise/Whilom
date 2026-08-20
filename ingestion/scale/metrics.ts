@@ -238,7 +238,7 @@ export interface TierMetrics {
       records: number;
       meanMsPerRecord: number;
       meanShortlist: number;
-      shortlist: { mean: number; p50: number; p95: number; p99: number; max: number };
+      shortlist: { mean: number; p50: number; p90: number; p95: number; p99: number; max: number };
       candidate: {
         candidatePairs: number;
         cellSupersetCandidates: number;

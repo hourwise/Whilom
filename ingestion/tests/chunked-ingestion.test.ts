@@ -104,6 +104,36 @@ describe('chunked candidate boundaries', () => {
       chunked.workingSetStats().payloadLookups,
     );
   });
+
+  it('rejects a same-register identifier candidate before payload hydration', async () => {
+    const chunked = makeStore(1);
+    const registered = candidate({
+      name: 'Registered Entry',
+      location: { lng: -1.5, lat: 54 },
+      provenance: {
+        sourceId: 'test-source',
+        sourceRecordId: 'registered',
+        retrievedAt: '2026-08-19T00:00:00.000Z',
+        importerVersion: 'test',
+        importRunId: 'test-run',
+      },
+      designations: [{ designation: 'listed_building', reference: 'REF-1' }],
+      externalIds: [{ scheme: 'wikidata', value: 'Q-REGISTERED' }],
+    });
+    chunked.add(existing('registered', registered), registered);
+
+    const subject = candidate({
+      name: 'Subject',
+      location: { lng: -1.5, lat: 54 },
+      designations: [{ designation: 'listed_building', reference: 'REF-1' }],
+      externalIds: [{ scheme: 'wikidata', value: 'Q-REGISTERED' }],
+    });
+    const stats = emptyCandidateStats();
+    expect(await chunked.candidatesFor(subject, stats)).toEqual([]);
+    expect(stats.registerVetoCandidates).toBe(1);
+    expect(chunked.workingSetStats().payloadLookups).toBe(0);
+    expect(chunked.workingSetStats().physicalReadCalls).toBe(0);
+  });
 });
 
 describe('chunked pipeline equivalence', () => {

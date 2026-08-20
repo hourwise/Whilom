@@ -133,8 +133,12 @@ export function classifyRegisterCandidate(
     return RegisterCandidateClass.SameSourceSameRecord;
   }
 
-  const ours = new Set(candidate.designations.map(designationName));
-  const shared = theirs.designations.some((designation) => ours.has(designationName(designation)));
+  const shared = candidate.designations.some((candidateDesignation) =>
+    theirs.designations.some(
+      (existingDesignation) =>
+        designationName(candidateDesignation) === designationName(existingDesignation),
+    ),
+  );
   return shared
     ? RegisterCandidateClass.SameRegisterDifferentEntry
     : RegisterCandidateClass.SameSourceDifferentDesignation;
@@ -145,7 +149,10 @@ export function sameRegisterDifferentEntries(
   candidate: RegisterCandidateRecord,
   existing: RegisterExistingRecord,
 ): boolean {
-  return classifyRegisterCandidate(candidate, existing) === RegisterCandidateClass.SameRegisterDifferentEntry;
+  return (
+    classifyRegisterCandidate(candidate, existing) ===
+    RegisterCandidateClass.SameRegisterDifferentEntry
+  );
 }
 
 /**
@@ -156,7 +163,10 @@ export function sameRegisterDifferentEntries(
  * twice, disjoint designations are one site protected two ways, and anything
  * else is two genuinely different things.
  */
-export function classifySameSourceOverlap(a: SameSourceRecord, b: SameSourceRecord): SameSourceOverlap {
+export function classifySameSourceOverlap(
+  a: SameSourceRecord,
+  b: SameSourceRecord,
+): SameSourceOverlap {
   if (a.provenance.sourceRecordId === b.provenance.sourceRecordId) {
     return SameSourceOverlap.RepeatedEntry;
   }
