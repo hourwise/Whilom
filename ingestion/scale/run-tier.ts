@@ -26,6 +26,7 @@ import type { MatchStats } from '../matching/matcher';
 import type { CandidateStore } from '../matching/candidates';
 import { CandidateMode, emptyCandidateStats } from '../matching/candidates';
 import type { CandidateGenerationStats } from '../matching/candidates';
+import type { CandidateGenerationDelta } from '../matching/candidates';
 import { GATES, mayProceed } from './gates';
 import type { GateResult } from './gates';
 import { TIER_SIZES, buildTierFixture, isTierSize } from './tier';
@@ -261,7 +262,16 @@ export interface TierExecution {
   retainedDecided: boolean;
   workingSet?: WorkingSetStats;
   profile?: MatchProfile;
-  geography: Record<string, { records: number; matchMs: number; shortlist: number }>;
+  geography: Record<
+    string,
+    {
+      records: number;
+      matchMs: number;
+      shortlist: number;
+      shortlistSizes: number[];
+      candidate: CandidateGenerationDelta;
+    }
+  >;
   peakHeapUsedMb: number;
 }
 
@@ -347,7 +357,16 @@ export async function executeTier(
   const validateSamples: number[] = [];
   const matchSamples: number[] = [];
   const decisionAggregates = emptyDecisionAggregates();
-  const geography: Record<string, { records: number; matchMs: number; shortlist: number }> = {};
+  const geography: Record<
+    string,
+    {
+      records: number;
+      matchMs: number;
+      shortlist: number;
+      shortlistSizes: number[];
+      candidate: CandidateGenerationDelta;
+    }
+  > = {};
   let peakHeapUsedBytes = process.memoryUsage().heapUsed;
 
   const report = await runIngestion({
@@ -365,15 +384,43 @@ export async function executeTier(
     observer: {
       matchStats,
       candidateStats,
-      onRecord: ({ normaliseMs, validateMs, matchMs, candidate, shortlistSize }) => {
+      onRecord: ({
+        normaliseMs,
+        validateMs,
+        matchMs,
+        candidate,
+        shortlistSize,
+        candidateGeneration,
+      }) => {
         normaliseSamples.push(normaliseMs);
         validateSamples.push(validateMs);
         matchSamples.push(matchMs);
         const bucket = geographyBucket(candidate.location.lat, candidate.location.lng);
-        const current = geography[bucket] ?? { records: 0, matchMs: 0, shortlist: 0 };
+        const current = geography[bucket] ?? {
+          records: 0,
+          matchMs: 0,
+          shortlist: 0,
+          shortlistSizes: [],
+          candidate: {
+            candidatePairs: 0,
+            cellSupersetCandidates: 0,
+            rejectedByExactRadius: 0,
+            exactSpatialCandidates: 0,
+            identifierCandidates: 0,
+            identifierOnlyCandidates: 0,
+            identifierRescuedBeyondRadius: 0,
+            finalCandidatePairs: 0,
+          },
+        };
         current.records += 1;
         current.matchMs += matchMs;
         current.shortlist += shortlistSize;
+        current.shortlistSizes.push(shortlistSize);
+        if (candidateGeneration) {
+          for (const key of Object.keys(current.candidate) as (keyof CandidateGenerationDelta)[]) {
+            current.candidate[key] += candidateGeneration[key];
+          }
+        }
         geography[bucket] = current;
         if (matchSamples.length % 4_096 === 0) {
           peakHeapUsedBytes = Math.max(peakHeapUsedBytes, process.memoryUsage().heapUsed);
@@ -516,6 +563,11 @@ export function buildTierMetrics(execution: TierExecution, tier: number): TierMe
         vetoedByRegister: matchStats.vetoedByRegister,
         beyondMaxDistance: matchStats.beyondMaxDistance,
         shortlist: {
+          mean: round(
+            candidateStats.shortlistSizes.reduce((sum, value) => sum + value, 0) /
+              Math.max(1, candidateStats.shortlistSizes.length),
+            2,
+          ),
           p50: percentile(
             [...candidateStats.shortlistSizes].sort((a, b) => a - b),
             50,
@@ -558,9 +610,25 @@ export function buildTierMetrics(execution: TierExecution, tier: number): TierMe
       ),
       fromSpatial: candidateStats.fromSpatial,
       fromIdentifierOnly: candidateStats.fromIdentifierOnly,
+      cellSupersetCandidates: candidateStats.cellSupersetCandidates,
+      rejectedByExactRadius: candidateStats.rejectedByExactRadius,
+      exactSpatialCandidates: candidateStats.exactSpatialCandidates,
+      identifierCandidates: candidateStats.identifierCandidates,
+      identifierOnlyCandidates: candidateStats.identifierOnlyCandidates,
+      identifierRescuedBeyondRadius: candidateStats.identifierRescuedBeyondRadius,
+      finalCandidatePairs: candidateStats.finalCandidatePairs,
+      exactRadiusPruningRatio:
+        candidateStats.cellSupersetCandidates > 0
+          ? round(candidateStats.rejectedByExactRadius / candidateStats.cellSupersetCandidates, 5)
+          : 0,
       cellsInspected: candidateStats.cellsInspected,
       generationMs: round(candidateStats.generationMs),
       shortlist: {
+        mean: round(
+          candidateStats.shortlistSizes.reduce((sum, value) => sum + value, 0) /
+            Math.max(1, candidateStats.shortlistSizes.length),
+          2,
+        ),
         p50: percentile(
           [...candidateStats.shortlistSizes].sort((a, b) => a - b),
           50,
@@ -618,6 +686,33 @@ export function buildTierMetrics(execution: TierExecution, tier: number): TierMe
                 records: value.records,
                 meanMsPerRecord: round(value.matchMs / Math.max(1, value.records), 4),
                 meanShortlist: round(value.shortlist / Math.max(1, value.records), 2),
+                shortlist: {
+                  mean: round(value.shortlist / Math.max(1, value.records), 2),
+                  p50: percentile(
+                    [...value.shortlistSizes].sort((a, b) => a - b),
+                    50,
+                  ),
+                  p95: percentile(
+                    [...value.shortlistSizes].sort((a, b) => a - b),
+                    95,
+                  ),
+                  p99: percentile(
+                    [...value.shortlistSizes].sort((a, b) => a - b),
+                    99,
+                  ),
+                  max: maxOrZero(value.shortlistSizes),
+                },
+                candidate: {
+                  ...value.candidate,
+                  exactRadiusPruningRatio:
+                    value.candidate.cellSupersetCandidates > 0
+                      ? round(
+                          value.candidate.rejectedByExactRadius /
+                            value.candidate.cellSupersetCandidates,
+                          5,
+                        )
+                      : 0,
+                },
               },
             ]),
           ),

@@ -49,6 +49,7 @@
 
 import type { CanonicalPlaceRef, PlaceCandidate } from '../pipeline/candidate';
 import { THRESHOLDS } from './matcher';
+import { distanceMeters } from '../transforms/osgb';
 
 /**
  * The radius within which the matcher might still say "same place".
@@ -118,6 +119,31 @@ export interface CandidateGenerationStats {
   generationMs: number;
   /** Shortlist length for each valid source row, retained for bounded diagnostics. */
   shortlistSizes: number[];
+  /** Candidates found by the coarse cell lookup before exact-radius filtering. */
+  cellSupersetCandidates: number;
+  /** Coarse spatial candidates rejected by the exact matcher radius. */
+  rejectedByExactRadius: number;
+  /** Spatial candidates surviving the exact-radius test. */
+  exactSpatialCandidates: number;
+  /** Unique candidates found through identifier lookup, including overlaps. */
+  identifierCandidates: number;
+  /** Identifier candidates added after spatial selection. */
+  identifierOnlyCandidates: number;
+  /** Identifier candidates restored despite being beyond the spatial radius. */
+  identifierRescuedBeyondRadius: number;
+  /** Final unique candidates delivered to the matcher. */
+  finalCandidatePairs: number;
+}
+
+export interface CandidateGenerationDelta {
+  candidatePairs: number;
+  cellSupersetCandidates: number;
+  rejectedByExactRadius: number;
+  exactSpatialCandidates: number;
+  identifierCandidates: number;
+  identifierOnlyCandidates: number;
+  identifierRescuedBeyondRadius: number;
+  finalCandidatePairs: number;
 }
 
 /**
@@ -160,6 +186,13 @@ export function emptyCandidateStats(): CandidateGenerationStats {
     cellsInspected: 0,
     generationMs: 0,
     shortlistSizes: [],
+    cellSupersetCandidates: 0,
+    rejectedByExactRadius: 0,
+    exactSpatialCandidates: 0,
+    identifierCandidates: 0,
+    identifierOnlyCandidates: 0,
+    identifierRescuedBeyondRadius: 0,
+    finalCandidatePairs: 0,
   };
 }
 
@@ -167,13 +200,19 @@ export function emptyCandidateStats(): CandidateGenerationStats {
 export const CandidateMode = {
   /** Every known record. The original behaviour; the equivalence oracle. */
   Exhaustive: 'exhaustive',
-  /** Spatially bounded plus identifier lookups. */
+  /** The pre-Batch-17 coarse cell superset, retained for causal diagnostics. */
+  CellSuperset: 'cell-superset',
+  /** Exact-radius spatial candidates plus global identifier lookups. */
   Bounded: 'bounded',
 } as const;
 export type CandidateMode = (typeof CandidateMode)[keyof typeof CandidateMode];
 
 export function isCandidateMode(value: string): value is CandidateMode {
-  return value === CandidateMode.Exhaustive || value === CandidateMode.Bounded;
+  return (
+    value === CandidateMode.Exhaustive ||
+    value === CandidateMode.CellSuperset ||
+    value === CandidateMode.Bounded
+  );
 }
 
 /**
@@ -271,6 +310,7 @@ export class CandidateIndex {
         stats.candidatePairs += this.records.length;
         stats.fromSpatial += this.records.length;
         stats.shortlistSizes.push(this.records.length);
+        stats.finalCandidatePairs += this.records.length;
       }
       return this.records;
     }
@@ -296,7 +336,7 @@ export class CandidateIndex {
     const centreLat = latCell(candidate.location.lat);
     const centreLng = lngCell(candidate.location.lng);
 
-    let spatial = 0;
+    let cellSupersetCandidates = 0;
     let cells = 0;
     for (let dLat = -latSteps; dLat <= latSteps; dLat += 1) {
       for (let dLng = -lngSteps; dLng <= lngSteps; dLng += 1) {
@@ -306,10 +346,27 @@ export class CandidateIndex {
         for (const index of bucket) {
           if (!selected.has(index)) {
             selected.add(index);
-            spatial += 1;
+            cellSupersetCandidates += 1;
           }
         }
       }
+    }
+
+    const exact = this.mode === CandidateMode.Bounded;
+    let rejectedByExactRadius = 0;
+    let spatial = 0;
+    if (exact) {
+      for (const index of selected) {
+        const record = this.records[index]!;
+        if (distanceMeters(candidate.location, record.location) <= radius) {
+          spatial += 1;
+        } else {
+          selected.delete(index);
+          rejectedByExactRadius += 1;
+        }
+      }
+    } else {
+      spatial = cellSupersetCandidates;
     }
 
     // --- Identifier candidates, regardless of locality ----------------------
@@ -317,14 +374,23 @@ export class CandidateIndex {
     // A Wikidata item and a listed building 200 km apart that assert the same
     // identifier must still reach the matcher, which will then decide whether
     // that assertion survives the names and the coordinates.
+    let identifierCandidates = 0;
     let identifierOnly = 0;
+    let identifierRescuedBeyondRadius = 0;
+    const identifierSeen = new Set<number>();
     for (const key of identifierKeysOfCandidate(candidate)) {
       const bucket = this.byIdentifier.get(key);
       if (!bucket) continue;
       for (const index of bucket) {
+        if (identifierSeen.has(index)) continue;
+        identifierSeen.add(index);
+        identifierCandidates += 1;
         if (!selected.has(index)) {
           selected.add(index);
           identifierOnly += 1;
+          if (distanceMeters(candidate.location, this.records[index]!.location) > radius) {
+            identifierRescuedBeyondRadius += 1;
+          }
         }
       }
     }
@@ -335,6 +401,13 @@ export class CandidateIndex {
       stats.candidatePairs += ordered.length;
       stats.fromSpatial += spatial;
       stats.fromIdentifierOnly += identifierOnly;
+      stats.cellSupersetCandidates += cellSupersetCandidates;
+      stats.rejectedByExactRadius += rejectedByExactRadius;
+      stats.exactSpatialCandidates += spatial;
+      stats.identifierCandidates += identifierCandidates;
+      stats.identifierOnlyCandidates += identifierOnly;
+      stats.identifierRescuedBeyondRadius += identifierRescuedBeyondRadius;
+      stats.finalCandidatePairs += ordered.length;
       stats.cellsInspected += cells;
       stats.shortlistSizes.push(ordered.length);
       stats.generationMs += performance.now() - started;

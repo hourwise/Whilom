@@ -50,7 +50,7 @@ afterEach(() => {
 });
 
 describe('chunked candidate boundaries', () => {
-  it('matches same, adjacent and diagonal cells while excluding distant records', async () => {
+  it('matches exact-radius records while excluding coarse-cell false positives', async () => {
     const memory = new CandidateIndex(CandidateMode.Bounded);
     const chunked = makeStore();
     const records = [
@@ -68,14 +68,14 @@ describe('chunked candidate boundaries', () => {
 
     const subject = candidate({ name: 'subject', location: { lng: -1.5, lat: 54.0 } });
     const expected = memory.candidatesFor(subject).map((item) => item.id);
-    const actual = (await chunked.candidatesFor(subject, emptyCandidateStats())).map(
-      (item) => item.id,
-    );
+    const stats = emptyCandidateStats();
+    const actual = (await chunked.candidatesFor(subject, stats)).map((item) => item.id);
     expect(actual).toEqual(expected);
     expect(actual).toContain('same-cell');
     expect(actual).toContain('adjacent-cell');
-    expect(actual).toContain('diagonal-cell');
+    expect(actual).not.toContain('diagonal-cell');
     expect(actual).not.toContain('distant');
+    expect(stats.rejectedByExactRadius).toBe(1);
   });
 
   it('keeps global identifier matches and deterministic insertion order across chunks', async () => {

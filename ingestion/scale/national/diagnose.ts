@@ -10,7 +10,7 @@ import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CandidateMode } from '../../matching/candidates';
+import { CandidateMode, isCandidateMode } from '../../matching/candidates';
 import { ChunkedCandidateIndex } from '../../matching/chunked-candidates';
 import { executeTier, buildTierMetrics } from '../run-tier';
 import { buildNationalTier } from './tier';
@@ -25,9 +25,20 @@ function argument(name: string, fallback: number): number {
   return value;
 }
 
+function modeArgument(): CandidateMode {
+  const index = process.argv.indexOf('--mode');
+  const value = index >= 0 ? process.argv[index + 1] : CandidateMode.Bounded;
+  if (value !== CandidateMode.Bounded && value !== CandidateMode.CellSuperset) {
+    throw new Error(`--mode must be ${CandidateMode.CellSuperset} or ${CandidateMode.Bounded}`);
+  }
+  if (!isCandidateMode(value)) throw new Error(`unsupported candidate mode: ${value}`);
+  return value;
+}
+
 async function main(): Promise<void> {
   const cacheLimit = argument('--cache-limit', 65_536);
   const size = argument('--records', 100_000);
+  const mode = modeArgument();
   globalThis.gc?.();
   const store = new ChunkedCandidateIndex(
     resolve(
@@ -36,13 +47,12 @@ async function main(): Promise<void> {
       `diagnostic-${size}-${cacheLimit}-${process.pid}`,
     ),
     cacheLimit,
+    mode,
   );
-  const execution = await executeTier(size, CandidateMode.Bounded, buildNationalTier, {
+  const execution = await executeTier(size, mode, buildNationalTier, {
     candidateStore: store,
     chunkSize: 4_096,
     retainDecided: false,
-    profile: true,
-    profileSampleEvery: 100,
   });
   globalThis.gc?.();
   const metrics = buildTierMetrics(execution, size);
@@ -58,7 +68,7 @@ async function main(): Promise<void> {
       peakHeapUsedMb: execution.peakHeapUsedMb,
     },
   };
-  const output = resolve(INGESTION_ROOT, `national-diagnostic-${cacheLimit}.json`);
+  const output = resolve(INGESTION_ROOT, `national-radius-diagnostic-${mode}-${cacheLimit}.json`);
   writeFileSync(output, JSON.stringify(result, null, 2) + '\n');
   console.log(
     JSON.stringify(
@@ -69,6 +79,7 @@ async function main(): Promise<void> {
         meanMsPerRecord: metrics.matching.work.meanMsPerRecord,
         meanComparisonsPerRecord: metrics.matching.work.meanComparisonsPerRecord,
         shortlist: metrics.matching.work.shortlist,
+        candidateMetrics: metrics.candidates,
         workingSet: metrics.workingSet,
         memory: result.memory,
         geography: metrics.geography,
