@@ -1002,3 +1002,117 @@ review: decide whether the authoritative scale gate must remain a fixed-prefix
 test, or whether a controlled-composition lane should be a formally recognized
 secondary gate. No publication or gate change should occur implicitly from this
 evidence.
+
+## Batch 20 — national scale benchmark governance
+
+Batch 20 is a governance and test-contract change stacked on Batch 19B. It
+does not rerun the expensive ladder, change matcher behaviour, change the
+candidate store, change cache limits, or replace any earlier evidence.
+
+### Two permanent evidence lanes
+
+**GOVERNED / HISTORICAL:** `AUTHORITATIVE_PREFIX_REGRESSION` preserves the
+existing persisted national order, sample identity, deterministic accounting,
+integrity checks, and historical measurements. It remains valuable for
+detecting regressions against Batches 13–19 and for exposing changes in the
+real ordered source. It is not, by itself, an equivalent-work scalability
+experiment when the workload changes between prefixes.
+
+**GOVERNED / CONTROLLED:** `COMPOSITION_CONTROLLED_SCALE` uses the committed
+`composition-controlled-v1` sampler: OS 100km cell × NHLE layer strata,
+largest-remainder quotas, persisted order within each stratum, and stable
+lexicographic stratum order. The authoritative order is never overwritten.
+This lane compares equivalent geography and designation workload classes using
+the unchanged normalized-growth formula and `perRecordGrowthVsSizeMax = 1.0`.
+
+The machine-readable contract is
+`ingestion/scale/national/benchmark-contract.ts`; its deterministic aggregate
+report is `ingestion/national-scale-governance.json`. The controlled sample
+digests remain pinned to the Batch 19B evidence. The canonical payload cache
+limit remains `65,536` records and the page bound remains `256` records.
+
+### Composition-drift contract
+
+**MEASURED / GOVERNED:** Adjacent checkpoints compare the union of observed
+designation and OS-cell keys. For each key, the guard calculates the absolute
+percentage-point difference. `COMPARABLE_WORKLOAD` requires every designation
+drift to be at most `0.05` percentage points and every geography drift to be at
+most `0.05` percentage points. Any violation is
+`WORKLOAD_PHASE_CHANGE`. This is an explanatory guard, not a way to convert a
+performance failure into a pass.
+
+| Lane | Transition | Composition classification | Normalized growth | Gate result |
+| ---- | ----------: | -------------------------- | ----------------: | ----------- |
+| Historical | 25k → 50k | `COMPARABLE_WORKLOAD` | 0.454545 | PASS |
+| Historical | 50k → 100k | `WORKLOAD_PHASE_CHANGE` | 2.466667 | FAIL; historical evidence retained |
+| Historical | 100k → 199,980 | `COMPARABLE_WORKLOAD` | 0.824407 | adjacent-only PASS |
+| Controlled | 25k → 50k | `COMPARABLE_WORKLOAD` | 0.869231 | PASS |
+| Controlled | 50k → 100k | `COMPARABLE_WORKLOAD` | 0.986726 | PASS |
+| Controlled | 100k → 199,980 | `COMPARABLE_WORKLOAD` | 0.648047 | PASS |
+
+The known historical 50k → 100k transition is therefore a measured workload
+phase change: the 50k prefix has effectively no surviving mixed-designation
+matcher work, while the 100k prefix introduces it. The controlled lane already
+contains the mixed workload at 25k and remains comparable at every transition.
+
+### Current governed evidence state
+
+These are deliberately independent fields; no single “safe scale” field is
+used to collapse unlike evidence.
+
+```text
+HISTORICAL_PREFIX_STATUS = WORKLOAD_PHASE_CHANGE_AT_50K_TO_100K
+CONTROLLED_EQUIVALENT_WORK_SCALE = PASS_TO_200K
+ARCHITECTURAL_SCALE_EVIDENCE = EQUIVALENT_WORK_PROVEN_TO_200K
+FULL_NATIONAL_401K_SCALE = NOT_PROVEN
+DATABASE_SCALE = NOT_RUN
+NATIONAL_PUBLICATION = NOT_AUTHORIZED
+perRecordGrowthVsSizeMax = 1.0  # unchanged
+```
+
+The controlled result is **MEASURED / CONTROLLED** evidence that the ingestion
+architecture scales through 199,980 records under comparable mixed-designation
+workload. It is **NOT PROVEN** evidence for the approximately 401,539-record
+source, does not erase the **HISTORICAL** prefix result
+`PROVEN_SAFE_TO_50K`, and does not authorize publication.
+
+### CI contract
+
+The ordinary pull-request tier in `.github/workflows/national-scale.yml` now
+runs only the contract, composition-drift, deterministic-report tests, and a
+staleness check for the committed governance report. It does not ingest the
+national source. The existing national pilot remains an explicit
+`workflow_dispatch` or scheduled job; its four-stage ingestion ladder is not
+added to ordinary PR cost. A heavy run remains evidence collection, not a
+publication workflow.
+
+### Future backend handoff
+
+**NOT RUN / DESIGN HANDOFF:** Future production ingestion should use indexed
+PostGIS spatial lookup over bounded geographic work units, with neighbouring
+work-unit/halo reads sufficient for the existing 5 km matcher radius. Global
+identifier lookup must remain independent of geography. Canonical insertion
+and governance semantics must remain explicit, and ingestion should use
+controlled batches rather than retaining the whole national payload in memory.
+These are logical ingestion tiles/work units, not a mandate to create hundreds
+of physical PostgreSQL tables. Physical partitioning is a later,
+evidence-based database decision.
+
+### Limitations and next milestone
+
+**NOT RUN:** full 401,539-record ingestion, local/ephemeral PostGIS, hosted
+Supabase, production writes, publication, description retrieval, and deployment.
+
+**NOT PROVEN:** full-national scale and database scale. The historical lane
+still reports its exact regression result; the controlled lane is a secondary
+equivalent-work assessment.
+
+**NOT AUTHORIZED:** national publication remains a separate owner-approved
+decision after backend implementation, database/query measurements,
+migration/recovery validation, provenance/licensing review, and governance
+review.
+
+The next milestone is **WHILOM BACKEND BOOTSTRAP + EPHEMERAL POSTGIS QUERY
+VALIDATION**. It should validate the geographic work-unit/5 km halo and global
+identifier design against representative read paths before any publication
+decision.
