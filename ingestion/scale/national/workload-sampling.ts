@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 /**
  * Deterministic secondary sampling for composition-controlled diagnostics.
  *
@@ -10,6 +12,12 @@
 export interface OrderedStratumRecord {
   index: number;
   stratum: string;
+}
+
+export function stableSampleDigest<T>(records: readonly T[], referenceOf: (record: T) => string): string {
+  return createHash('sha256')
+    .update(records.map(referenceOf).join('\n'))
+    .digest('hex');
 }
 
 export function compositionControlledPrefix<T>(

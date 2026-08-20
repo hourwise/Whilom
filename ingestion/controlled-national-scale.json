@@ -1,0 +1,683 @@
+{
+  "gate": {
+    "perRecordGrowthVsSizeMax": 1
+  },
+  "stages": [
+    {
+      "stage": 25000,
+      "sample": {
+        "records": 25000,
+        "layers": {
+          "Protected Wreck Sites": 3,
+          "Listed Building points": 23638,
+          "Scheduled Monuments": 1251,
+          "Parks and Gardens": 107,
+          "Battlefields": 1
+        },
+        "layerPercentages": {
+          "Protected Wreck Sites": 0.012,
+          "Listed Building points": 94.552,
+          "Scheduled Monuments": 5.004,
+          "Parks and Gardens": 0.428,
+          "Battlefields": 0.004
+        },
+        "designations": {
+          "protected_wreck": 3,
+          "listed_building": 23638,
+          "scheduled_monument": 1251,
+          "registered_park_garden": 107,
+          "registered_battlefield": 1
+        },
+        "designationPercentages": {
+          "protected_wreck": 0.012,
+          "listed_building": 94.552,
+          "scheduled_monument": 5.004,
+          "registered_park_garden": 0.428,
+          "registered_battlefield": 0.004
+        },
+        "cells": {
+          "none": 3,
+          "NT": 64,
+          "NU": 126,
+          "NX": 16,
+          "NY": 496,
+          "NZ": 717,
+          "SD": 837,
+          "SE": 1455,
+          "SJ": 1132,
+          "SK": 1445,
+          "SO": 1418,
+          "SP": 2233,
+          "SS": 494,
+          "ST": 2218,
+          "SU": 2231,
+          "SV": 23,
+          "SW": 488,
+          "SX": 1141,
+          "SY": 448,
+          "SZ": 282,
+          "TA": 217,
+          "TF": 584,
+          "TG": 319,
+          "TL": 2227,
+          "TM": 775,
+          "TQ": 3124,
+          "TR": 472,
+          "TV": 15
+        },
+        "cellPercentages": {
+          "none": 0.012,
+          "NT": 0.256,
+          "NU": 0.504,
+          "NX": 0.064,
+          "NY": 1.984,
+          "NZ": 2.868,
+          "SD": 3.348,
+          "SE": 5.82,
+          "SJ": 4.528,
+          "SK": 5.78,
+          "SO": 5.672,
+          "SP": 8.932,
+          "SS": 1.976,
+          "ST": 8.872,
+          "SU": 8.924,
+          "SV": 0.092,
+          "SW": 1.952,
+          "SX": 4.564,
+          "SY": 1.792,
+          "SZ": 1.128,
+          "TA": 0.868,
+          "TF": 2.336,
+          "TG": 1.276,
+          "TL": 8.908,
+          "TM": 3.1,
+          "TQ": 12.496,
+          "TR": 1.888,
+          "TV": 0.06
+        },
+        "sampleDigest": "7bef48b0753acbcd41bccba9b54ae28e3d4248b3ad11a1b8869a154a45a593b8",
+        "firstReference": "9:1000063",
+        "lastReference": "6:1002207",
+        "uniqueSourceRecordIds": 24996,
+        "duplicateSourceRecordIds": 4
+      },
+      "ingestion": {
+        "records": 25000,
+        "valid": 24990,
+        "rejected": 10,
+        "conflicts": 4,
+        "integrity": {
+          "sourceRows": 25000,
+          "accountedFor": 25000,
+          "valid": 24990,
+          "rejected": 10
+        },
+        "recordsPerSecond": 1839,
+        "totalMsPerRecord": 0.5438,
+        "matcherMsPerRecord": 0.065,
+        "comparisonsPerRecord": 0.5767106842737095
+      },
+      "candidates": {
+        "exactRadiusCandidates": 1124780,
+        "registerPrunedCandidates": 1110339,
+        "finalMatcherCandidates": 14441,
+        "exactRadiusCandidatesPerRecord": 45.00920368147259,
+        "registerPrunedCandidatesPerRecord": 44.431332533013205,
+        "finalMatcherCandidatesPerRecord": 0.5778711484593837,
+        "pairMatrix": {
+          "scheduled_monument": {
+            "listed_building": 11990,
+            "registered_park_garden": 86,
+            "scheduled_monument": 4
+          },
+          "listed_building": {
+            "scheduled_monument": 173,
+            "registered_park_garden": 29
+          },
+          "registered_park_garden": {
+            "listed_building": 2158,
+            "scheduled_monument": 1
+          }
+        }
+      },
+      "memory": {
+        "heapAfterGcMb": 67,
+        "peakHeapMb": 291,
+        "rssMb": 344
+      },
+      "io": {
+        "pageReads": 126,
+        "bytesRead": 8664123,
+        "recordsDecoded": 19058,
+        "payloadLookups": 14441,
+        "cacheLimit": 65536
+      }
+    },
+    {
+      "stage": 50000,
+      "sample": {
+        "records": 50000,
+        "layers": {
+          "Protected Wreck Sites": 7,
+          "Listed Building points": 47270,
+          "Scheduled Monuments": 2499,
+          "Parks and Gardens": 220,
+          "Battlefields": 3,
+          "World Heritage Sites": 1
+        },
+        "layerPercentages": {
+          "Protected Wreck Sites": 0.014,
+          "Listed Building points": 94.54,
+          "Scheduled Monuments": 4.998,
+          "Parks and Gardens": 0.44,
+          "Battlefields": 0.006,
+          "World Heritage Sites": 0.002
+        },
+        "designations": {
+          "protected_wreck": 7,
+          "listed_building": 47270,
+          "scheduled_monument": 2499,
+          "registered_park_garden": 220,
+          "registered_battlefield": 3,
+          "world_heritage_site": 1
+        },
+        "designationPercentages": {
+          "protected_wreck": 0.014,
+          "listed_building": 94.54,
+          "scheduled_monument": 4.998,
+          "registered_park_garden": 0.44,
+          "registered_battlefield": 0.006,
+          "world_heritage_site": 0.002
+        },
+        "cells": {
+          "none": 7,
+          "NT": 127,
+          "NU": 252,
+          "NX": 32,
+          "NY": 992,
+          "NZ": 1434,
+          "SD": 1674,
+          "SE": 2911,
+          "SJ": 2263,
+          "SK": 2892,
+          "SO": 2835,
+          "SP": 4465,
+          "SS": 988,
+          "ST": 4434,
+          "SU": 4462,
+          "SV": 46,
+          "SW": 976,
+          "SX": 2282,
+          "SY": 898,
+          "SZ": 565,
+          "TA": 433,
+          "TF": 1166,
+          "TG": 638,
+          "TL": 4454,
+          "TM": 1550,
+          "TQ": 6250,
+          "TR": 944,
+          "TV": 30
+        },
+        "cellPercentages": {
+          "none": 0.014,
+          "NT": 0.254,
+          "NU": 0.504,
+          "NX": 0.064,
+          "NY": 1.984,
+          "NZ": 2.868,
+          "SD": 3.348,
+          "SE": 5.822,
+          "SJ": 4.526,
+          "SK": 5.784,
+          "SO": 5.67,
+          "SP": 8.93,
+          "SS": 1.976,
+          "ST": 8.868,
+          "SU": 8.924,
+          "SV": 0.092,
+          "SW": 1.952,
+          "SX": 4.564,
+          "SY": 1.796,
+          "SZ": 1.13,
+          "TA": 0.866,
+          "TF": 2.332,
+          "TG": 1.276,
+          "TL": 8.908,
+          "TM": 3.1,
+          "TQ": 12.5,
+          "TR": 1.888,
+          "TV": 0.06
+        },
+        "sampleDigest": "a850f335d94230baa7b55d6301452e133c18a75c78bd92fce605a8367ffc2759",
+        "firstReference": "9:1000063",
+        "lastReference": "6:1002244",
+        "uniqueSourceRecordIds": 49991,
+        "duplicateSourceRecordIds": 9
+      },
+      "ingestion": {
+        "records": 50000,
+        "valid": 49980,
+        "rejected": 20,
+        "conflicts": 11,
+        "integrity": {
+          "sourceRows": 50000,
+          "accountedFor": 50000,
+          "valid": 49980,
+          "rejected": 20
+        },
+        "recordsPerSecond": 1656.1,
+        "totalMsPerRecord": 0.60382,
+        "matcherMsPerRecord": 0.113,
+        "comparisonsPerRecord": 1.6055222088835535
+      },
+      "candidates": {
+        "exactRadiusCandidates": 2626953,
+        "registerPrunedCandidates": 2546617,
+        "finalMatcherCandidates": 80336,
+        "exactRadiusCandidatesPerRecord": 52.56008403361344,
+        "registerPrunedCandidatesPerRecord": 50.952721088435375,
+        "finalMatcherCandidatesPerRecord": 1.6073629451780713,
+        "pairMatrix": {
+          "scheduled_monument": {
+            "listed_building": 69069,
+            "registered_park_garden": 372,
+            "scheduled_monument": 7,
+            "registered_battlefield": 2
+          },
+          "listed_building": {
+            "scheduled_monument": 1164,
+            "registered_battlefield": 82,
+            "registered_park_garden": 159
+          },
+          "registered_park_garden": {
+            "listed_building": 9230,
+            "registered_park_garden": 2,
+            "scheduled_monument": 4
+          },
+          "world_heritage_site": {
+            "listed_building": 205,
+            "registered_park_garden": 1,
+            "scheduled_monument": 39
+          }
+        }
+      },
+      "memory": {
+        "heapAfterGcMb": 108,
+        "peakHeapMb": 338,
+        "rssMb": 356
+      },
+      "io": {
+        "pageReads": 238,
+        "bytesRead": 18945330,
+        "recordsDecoded": 41553,
+        "payloadLookups": 80336,
+        "cacheLimit": 65536
+      }
+    },
+    {
+      "stage": 100000,
+      "sample": {
+        "records": 100000,
+        "layers": {
+          "Protected Wreck Sites": 13,
+          "Listed Building points": 94547,
+          "Scheduled Monuments": 5002,
+          "Parks and Gardens": 428,
+          "World Heritage Sites": 4,
+          "Battlefields": 6
+        },
+        "layerPercentages": {
+          "Protected Wreck Sites": 0.013,
+          "Listed Building points": 94.547,
+          "Scheduled Monuments": 5.002,
+          "Parks and Gardens": 0.428,
+          "World Heritage Sites": 0.004,
+          "Battlefields": 0.006
+        },
+        "designations": {
+          "protected_wreck": 13,
+          "listed_building": 94547,
+          "scheduled_monument": 5002,
+          "registered_park_garden": 428,
+          "world_heritage_site": 4,
+          "registered_battlefield": 6
+        },
+        "designationPercentages": {
+          "protected_wreck": 0.013,
+          "listed_building": 94.547,
+          "scheduled_monument": 5.002,
+          "registered_park_garden": 0.428,
+          "world_heritage_site": 0.004,
+          "registered_battlefield": 0.006
+        },
+        "cells": {
+          "none": 13,
+          "NT": 255,
+          "NU": 503,
+          "NX": 64,
+          "NY": 1987,
+          "NZ": 2866,
+          "SD": 3348,
+          "SE": 5823,
+          "SJ": 4526,
+          "SK": 5781,
+          "SO": 5670,
+          "SP": 8929,
+          "SS": 1976,
+          "ST": 8869,
+          "SU": 8927,
+          "SV": 93,
+          "SW": 1952,
+          "SX": 4563,
+          "SY": 1796,
+          "SZ": 1129,
+          "TA": 866,
+          "TF": 2334,
+          "TG": 1276,
+          "TL": 8909,
+          "TM": 3099,
+          "TQ": 12498,
+          "TR": 1888,
+          "TV": 60
+        },
+        "cellPercentages": {
+          "none": 0.013,
+          "NT": 0.255,
+          "NU": 0.503,
+          "NX": 0.064,
+          "NY": 1.987,
+          "NZ": 2.866,
+          "SD": 3.348,
+          "SE": 5.823,
+          "SJ": 4.526,
+          "SK": 5.781,
+          "SO": 5.67,
+          "SP": 8.929,
+          "SS": 1.976,
+          "ST": 8.869,
+          "SU": 8.927,
+          "SV": 0.093,
+          "SW": 1.952,
+          "SX": 4.563,
+          "SY": 1.796,
+          "SZ": 1.129,
+          "TA": 0.866,
+          "TF": 2.334,
+          "TG": 1.276,
+          "TL": 8.909,
+          "TM": 3.099,
+          "TQ": 12.498,
+          "TR": 1.888,
+          "TV": 0.06
+        },
+        "sampleDigest": "73cbe02f6f60afc8ee54a38acae394fda09c488fcb21838c7bc724af3c9df95a",
+        "firstReference": "9:1000063",
+        "lastReference": "6:1007892",
+        "uniqueSourceRecordIds": 99976,
+        "duplicateSourceRecordIds": 24
+      },
+      "ingestion": {
+        "records": 100000,
+        "valid": 99962,
+        "rejected": 38,
+        "conflicts": 38,
+        "integrity": {
+          "sourceRows": 100000,
+          "accountedFor": 100000,
+          "valid": 99962,
+          "rejected": 38
+        },
+        "recordsPerSecond": 1279.8,
+        "totalMsPerRecord": 0.78138,
+        "matcherMsPerRecord": 0.223,
+        "comparisonsPerRecord": 4.148076268982213
+      },
+      "candidates": {
+        "exactRadiusCandidates": 7740550,
+        "registerPrunedCandidates": 7325328,
+        "finalMatcherCandidates": 415222,
+        "exactRadiusCandidatesPerRecord": 77.4349252716032,
+        "registerPrunedCandidatesPerRecord": 73.28112682819472,
+        "finalMatcherCandidatesPerRecord": 4.153798443408495,
+        "pairMatrix": {
+          "scheduled_monument": {
+            "listed_building": 354928,
+            "scheduled_monument": 19,
+            "registered_park_garden": 1235,
+            "registered_battlefield": 5
+          },
+          "listed_building": {
+            "scheduled_monument": 5172,
+            "registered_battlefield": 461,
+            "registered_park_garden": 335,
+            "world_heritage_site": 3
+          },
+          "registered_park_garden": {
+            "listed_building": 51375,
+            "scheduled_monument": 11,
+            "registered_park_garden": 3
+          },
+          "world_heritage_site": {
+            "listed_building": 1530,
+            "scheduled_monument": 49,
+            "registered_park_garden": 6
+          },
+          "registered_battlefield": {
+            "listed_building": 89,
+            "scheduled_monument": 1
+          }
+        }
+      },
+      "memory": {
+        "heapAfterGcMb": 189,
+        "peakHeapMb": 432,
+        "rssMb": 416
+      },
+      "io": {
+        "pageReads": 428,
+        "bytesRead": 39721877,
+        "recordsDecoded": 86750,
+        "payloadLookups": 415222,
+        "cacheLimit": 65536
+      }
+    },
+    {
+      "stage": 199980,
+      "sample": {
+        "records": 199980,
+        "layers": {
+          "Protected Wreck Sites": 26,
+          "Battlefields": 21,
+          "Listed Building points": 189067,
+          "Scheduled Monuments": 9989,
+          "Parks and Gardens": 865,
+          "World Heritage Sites": 12
+        },
+        "layerPercentages": {
+          "Protected Wreck Sites": 0.013,
+          "Battlefields": 0.0105,
+          "Listed Building points": 94.543,
+          "Scheduled Monuments": 4.995,
+          "Parks and Gardens": 0.4325,
+          "World Heritage Sites": 0.006
+        },
+        "designations": {
+          "protected_wreck": 26,
+          "registered_battlefield": 21,
+          "listed_building": 189067,
+          "scheduled_monument": 9989,
+          "registered_park_garden": 865,
+          "world_heritage_site": 12
+        },
+        "designationPercentages": {
+          "protected_wreck": 0.013,
+          "registered_battlefield": 0.0105,
+          "listed_building": 94.543,
+          "scheduled_monument": 4.995,
+          "registered_park_garden": 0.4325,
+          "world_heritage_site": 0.006
+        },
+        "cells": {
+          "none": 26,
+          "NT": 509,
+          "NU": 1007,
+          "NX": 127,
+          "NY": 3973,
+          "NZ": 5735,
+          "SD": 6696,
+          "SE": 11644,
+          "SJ": 9053,
+          "SK": 11562,
+          "SO": 11341,
+          "SP": 17857,
+          "SS": 3951,
+          "ST": 17736,
+          "SU": 17850,
+          "SV": 184,
+          "SW": 3902,
+          "SX": 9128,
+          "SY": 3591,
+          "SZ": 2258,
+          "TA": 1731,
+          "TF": 4667,
+          "TG": 2552,
+          "TL": 17814,
+          "TM": 6196,
+          "TQ": 24994,
+          "TR": 3776,
+          "TV": 120
+        },
+        "cellPercentages": {
+          "none": 0.013,
+          "NT": 0.2545,
+          "NU": 0.5036,
+          "NX": 0.0635,
+          "NY": 1.9867,
+          "NZ": 2.8678,
+          "SD": 3.3483,
+          "SE": 5.8226,
+          "SJ": 4.527,
+          "SK": 5.7816,
+          "SO": 5.6711,
+          "SP": 8.9294,
+          "SS": 1.9757,
+          "ST": 8.8689,
+          "SU": 8.9259,
+          "SV": 0.092,
+          "SW": 1.9512,
+          "SX": 4.5645,
+          "SY": 1.7957,
+          "SZ": 1.1291,
+          "TA": 0.8656,
+          "TF": 2.3337,
+          "TG": 1.2761,
+          "TL": 8.9079,
+          "TM": 3.0983,
+          "TQ": 12.4982,
+          "TR": 1.8882,
+          "TV": 0.06
+        },
+        "sampleDigest": "631100d50055eedeecae8c6bd8f40b894f067bde2c80f683902324ff6608e28c",
+        "firstReference": "9:1000063",
+        "lastReference": "6:1009472",
+        "uniqueSourceRecordIds": 199930,
+        "duplicateSourceRecordIds": 49
+      },
+      "ingestion": {
+        "records": 199980,
+        "valid": 199914,
+        "rejected": 66,
+        "conflicts": 126,
+        "integrity": {
+          "sourceRows": 199980,
+          "accountedFor": 199980,
+          "valid": 199914,
+          "rejected": 66
+        },
+        "recordsPerSecond": 1148.4,
+        "totalMsPerRecord": 0.8707870787078708,
+        "matcherMsPerRecord": 0.289,
+        "comparisonsPerRecord": 7.707999439759097
+      },
+      "candidates": {
+        "exactRadiusCandidates": 27617864,
+        "registerPrunedCandidates": 26072360,
+        "finalMatcherCandidates": 1545504,
+        "exactRadiusCandidatesPerRecord": 138.14872395129905,
+        "registerPrunedCandidatesPerRecord": 130.41787968826594,
+        "finalMatcherCandidatesPerRecord": 7.730844263033104,
+        "pairMatrix": {
+          "listed_building": {
+            "registered_battlefield": 2677,
+            "scheduled_monument": 18536,
+            "registered_park_garden": 1737,
+            "world_heritage_site": 6
+          },
+          "scheduled_monument": {
+            "registered_battlefield": 113,
+            "listed_building": 1275642,
+            "scheduled_monument": 29,
+            "registered_park_garden": 3475
+          },
+          "registered_park_garden": {
+            "listed_building": 233710,
+            "scheduled_monument": 64,
+            "registered_battlefield": 9,
+            "registered_park_garden": 12
+          },
+          "world_heritage_site": {
+            "listed_building": 9034,
+            "scheduled_monument": 172,
+            "world_heritage_site": 2,
+            "registered_battlefield": 1,
+            "registered_park_garden": 23
+          },
+          "registered_battlefield": {
+            "listed_building": 257,
+            "scheduled_monument": 4,
+            "registered_battlefield": 1
+          }
+        }
+      },
+      "memory": {
+        "heapAfterGcMb": 272,
+        "peakHeapMb": 617,
+        "rssMb": 654
+      },
+      "io": {
+        "pageReads": 867,
+        "bytesRead": 89379075,
+        "recordsDecoded": 195101,
+        "payloadLookups": 1545504,
+        "cacheLimit": 65536
+      }
+    }
+  ],
+  "normalizedGrowth": [
+    {
+      "from": 25000,
+      "to": 50000,
+      "normalizedGrowth": 0.8692307692307693,
+      "pass": true
+    },
+    {
+      "from": 50000,
+      "to": 100000,
+      "normalizedGrowth": 0.9867256637168141,
+      "pass": true
+    },
+    {
+      "from": 100000,
+      "to": 199980,
+      "normalizedGrowth": 0.6480468674670158,
+      "pass": true
+    }
+  ],
+  "equivalentWorkScale": "PASS_TO_200K",
+  "controlledWorkloadComparability": "PASS",
+  "officialScaleClassification": {
+    "maximumProvenSafeScale": "PROVEN_SAFE_TO_50K",
+    "nationalExpansionClassification": "REMEDIATION_INSUFFICIENT"
+  }
+}
