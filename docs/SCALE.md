@@ -1116,3 +1116,46 @@ The next milestone is **WHILOM BACKEND BOOTSTRAP + EPHEMERAL POSTGIS QUERY
 VALIDATION**. It should validate the geographic work-unit/5 km halo and global
 identifier design against representative read paths before any publication
 decision.
+
+## Batch 21A — backend bootstrap readiness
+
+**MEASURED / GOVERNED:** Batch 21A audited the 42-migration chain, existing
+PostGIS discovery paths, generated database types, regional activation lane,
+and public/admin RLS boundaries. The machine-readable migration inventory is
+`supabase/bootstrap/migration-inventory.json`; the migration directory is
+checked for ordered filename, byte-length, and SHA-256 drift by
+`scripts/check-migration-inventory.mjs`.
+
+**MEASURED:** the repository already contains `places.location` as PostGIS
+geography with `places_location_gix`, route and coverage spatial indexes,
+full-text search indexes, and RPCs for `search_places`, `map_places`,
+`map_clusters`, `coverage_for_viewport`, `period_counts_for_viewport`, and
+people/temporal discovery. The migration chain is statically blank-database
+ready in order, but **NOT RUN** against a disposable Postgres/PostGIS instance
+in this batch. Supabase-provided `auth` objects and a live catalog replay still
+need validation.
+
+**DESIGNED / NOT PROVEN:** the first logical work-unit proposal is
+`OSGB10_EPSG27700_V1`, a derived 10km British National Grid key. It is a
+locality/batching hint only. A 5km-expanded envelope enumerates all touched
+cells, including corners, and PostGIS `ST_DWithin` remains authoritative. No
+physical PostgreSQL partitioning was created or decided.
+
+**MEASURED / GAP:** the existing public schema is suitable for application
+map/search reads, but it has no dedicated compact national matcher candidate
+index combining location, source-record identity, designation identities,
+identifier/reference lookup keys, and canonical insertion sequence. This is
+`BACKEND_SCHEMA_GAP`, deferred to Batch 21B; no migration was added in Batch
+21A. The candidate contract is recorded in
+`supabase/bootstrap/postgis-query-contract.json`.
+
+**READY_WITH_GAPS:** the governed Yorkshire regional manifest and activation
+lane provide a deterministic 23,315-row artifact, provenance, review/conflict
+gates, batch size 500, verification SQL, and an idempotency design. Actual
+database replay, RLS smoke tests, and repeat-activation evidence remain
+**NOT RUN**.
+
+**NOT AUTHORIZED:** no hosted project, remote migration, national import,
+production write, 401k run, or publication occurred. The next milestone is
+the owner-approved **WHILOM BACKEND BOOTSTRAP + EPHEMERAL POSTGIS QUERY
+VALIDATION** described in `docs/BACKEND_BOOTSTRAP.md`.
