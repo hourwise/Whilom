@@ -50,6 +50,10 @@
 import type { CanonicalPlaceRef, PlaceCandidate } from '../pipeline/candidate';
 import { THRESHOLDS } from './matcher';
 import { distanceMeters } from '../transforms/osgb';
+import {
+  classifyRegisterCandidate,
+  RegisterCandidateClass,
+} from './source-relation';
 
 /**
  * The radius within which the matcher might still say "same place".
@@ -133,6 +137,18 @@ export interface CandidateGenerationStats {
   identifierRescuedBeyondRadius: number;
   /** Final unique candidates delivered to the matcher. */
   finalCandidatePairs: number;
+  /** Exact-radius shortlist candidates matching the existing register veto. */
+  registerVetoCandidates: number;
+  /** Same-source candidates with the same source record id. */
+  sameSourceSameRecordCandidates: number;
+  /** Same-source candidates with different, non-overlapping designations. */
+  sameSourceDifferentDesignationCandidates: number;
+  /** Candidates with source identities on both sides but different sources. */
+  crossSourceCandidates: number;
+  /** Candidates whose canonical side has no source identity. */
+  missingSourceIdentityCandidates: number;
+  /** Exact-radius shortlist candidates surviving the register predicate. */
+  survivingRegisterCandidates: number;
 }
 
 export interface CandidateGenerationDelta {
@@ -144,6 +160,38 @@ export interface CandidateGenerationDelta {
   identifierOnlyCandidates: number;
   identifierRescuedBeyondRadius: number;
   finalCandidatePairs: number;
+  registerVetoCandidates: number;
+  sameSourceSameRecordCandidates: number;
+  sameSourceDifferentDesignationCandidates: number;
+  crossSourceCandidates: number;
+  missingSourceIdentityCandidates: number;
+  survivingRegisterCandidates: number;
+}
+
+export function observeRegisterClass(
+  stats: CandidateGenerationStats | CandidateGenerationDelta,
+  classification: RegisterCandidateClass,
+): void {
+  switch (classification) {
+    case RegisterCandidateClass.SameRegisterDifferentEntry:
+      stats.registerVetoCandidates += 1;
+      break;
+    case RegisterCandidateClass.SameSourceSameRecord:
+      stats.sameSourceSameRecordCandidates += 1;
+      break;
+    case RegisterCandidateClass.SameSourceDifferentDesignation:
+      stats.sameSourceDifferentDesignationCandidates += 1;
+      break;
+    case RegisterCandidateClass.CrossSource:
+      stats.crossSourceCandidates += 1;
+      break;
+    case RegisterCandidateClass.MissingSourceIdentity:
+      stats.missingSourceIdentityCandidates += 1;
+      break;
+  }
+  if (classification !== RegisterCandidateClass.SameRegisterDifferentEntry) {
+    stats.survivingRegisterCandidates += 1;
+  }
 }
 
 /**
@@ -193,6 +241,12 @@ export function emptyCandidateStats(): CandidateGenerationStats {
     identifierOnlyCandidates: 0,
     identifierRescuedBeyondRadius: 0,
     finalCandidatePairs: 0,
+    registerVetoCandidates: 0,
+    sameSourceSameRecordCandidates: 0,
+    sameSourceDifferentDesignationCandidates: 0,
+    crossSourceCandidates: 0,
+    missingSourceIdentityCandidates: 0,
+    survivingRegisterCandidates: 0,
   };
 }
 
@@ -311,6 +365,9 @@ export class CandidateIndex {
         stats.fromSpatial += this.records.length;
         stats.shortlistSizes.push(this.records.length);
         stats.finalCandidatePairs += this.records.length;
+        for (const record of this.records) {
+          observeRegisterClass(stats, classifyRegisterCandidate(candidate, record));
+        }
       }
       return this.records;
     }
@@ -411,6 +468,9 @@ export class CandidateIndex {
       stats.cellsInspected += cells;
       stats.shortlistSizes.push(ordered.length);
       stats.generationMs += performance.now() - started;
+      for (const record of ordered) {
+        observeRegisterClass(stats, classifyRegisterCandidate(candidate, record));
+      }
     }
     return ordered;
   }

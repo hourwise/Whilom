@@ -18,8 +18,13 @@ import { closeSync, mkdirSync, openSync, readFileSync, writeSync } from 'node:fs
 import { resolve } from 'node:path';
 import type { CanonicalPlaceRef, PlaceCandidate } from '../pipeline/candidate';
 import { distanceMeters } from '../transforms/osgb';
-import { CandidateMode, candidateRadiusMeters } from './candidates';
+import {
+  CandidateMode,
+  candidateRadiusMeters,
+  observeRegisterClass,
+} from './candidates';
 import type { CandidateGenerationStats } from './candidates';
+import { classifyRegisterCandidate } from './source-relation';
 
 const METRES_PER_DEGREE_LATITUDE = 111_320;
 const CELL_DEGREES = 0.05;
@@ -383,8 +388,7 @@ export class ChunkedCandidateIndex {
     // Spatial pages are read in their locality order, but the matcher receives
     // exactly the old canonical insertion order. This sort is intentional.
     const ordered = [...selected]
-      .sort((a, b) => a - b)
-      .map((sequence) => this.load(sequence).canonical);
+      .sort((a, b) => a - b);
     if (stats) {
       stats.candidatePairs += ordered.length;
       stats.fromSpatial += spatial;
@@ -399,8 +403,15 @@ export class ChunkedCandidateIndex {
       stats.cellsInspected += cells;
       stats.shortlistSizes.push(ordered.length);
       stats.generationMs += performance.now() - started;
+      for (const sequence of ordered) {
+        const pointer = this.pointers[sequence]!;
+        observeRegisterClass(
+          stats,
+          classifyRegisterCandidate(candidate, { sourceIdentity: pointer.sourceIdentity }),
+        );
+      }
     }
-    return ordered;
+    return ordered.map((sequence) => this.load(sequence).canonical);
   }
 
   getCandidate(id: string): PlaceCandidate | undefined {

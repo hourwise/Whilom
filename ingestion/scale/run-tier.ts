@@ -401,16 +401,22 @@ export async function executeTier(
           matchMs: 0,
           shortlist: 0,
           shortlistSizes: [],
-          candidate: {
-            candidatePairs: 0,
-            cellSupersetCandidates: 0,
-            rejectedByExactRadius: 0,
-            exactSpatialCandidates: 0,
-            identifierCandidates: 0,
-            identifierOnlyCandidates: 0,
-            identifierRescuedBeyondRadius: 0,
-            finalCandidatePairs: 0,
-          },
+            candidate: {
+              candidatePairs: 0,
+              cellSupersetCandidates: 0,
+              rejectedByExactRadius: 0,
+              exactSpatialCandidates: 0,
+              identifierCandidates: 0,
+              identifierOnlyCandidates: 0,
+              identifierRescuedBeyondRadius: 0,
+              finalCandidatePairs: 0,
+              registerVetoCandidates: 0,
+              sameSourceSameRecordCandidates: 0,
+              sameSourceDifferentDesignationCandidates: 0,
+              crossSourceCandidates: 0,
+              missingSourceIdentityCandidates: 0,
+              survivingRegisterCandidates: 0,
+            },
         };
         current.records += 1;
         current.matchMs += matchMs;
@@ -617,6 +623,13 @@ export function buildTierMetrics(execution: TierExecution, tier: number): TierMe
       identifierOnlyCandidates: candidateStats.identifierOnlyCandidates,
       identifierRescuedBeyondRadius: candidateStats.identifierRescuedBeyondRadius,
       finalCandidatePairs: candidateStats.finalCandidatePairs,
+      registerVetoCandidates: candidateStats.registerVetoCandidates,
+      sameSourceSameRecordCandidates: candidateStats.sameSourceSameRecordCandidates,
+      sameSourceDifferentDesignationCandidates:
+        candidateStats.sameSourceDifferentDesignationCandidates,
+      crossSourceCandidates: candidateStats.crossSourceCandidates,
+      missingSourceIdentityCandidates: candidateStats.missingSourceIdentityCandidates,
+      survivingRegisterCandidates: candidateStats.survivingRegisterCandidates,
       exactRadiusPruningRatio:
         candidateStats.cellSupersetCandidates > 0
           ? round(candidateStats.rejectedByExactRadius / candidateStats.cellSupersetCandidates, 5)

@@ -170,6 +170,12 @@ export interface CandidateMetrics {
   identifierRescuedBeyondRadius: number;
   finalCandidatePairs: number;
   exactRadiusPruningRatio: number;
+  registerVetoCandidates: number;
+  sameSourceSameRecordCandidates: number;
+  sameSourceDifferentDesignationCandidates: number;
+  crossSourceCandidates: number;
+  missingSourceIdentityCandidates: number;
+  survivingRegisterCandidates: number;
   cellsInspected: number;
   generationMs: number;
   shortlist: {
@@ -243,6 +249,12 @@ export interface TierMetrics {
         identifierRescuedBeyondRadius: number;
         finalCandidatePairs: number;
         exactRadiusPruningRatio: number;
+        registerVetoCandidates: number;
+        sameSourceSameRecordCandidates: number;
+        sameSourceDifferentDesignationCandidates: number;
+        crossSourceCandidates: number;
+        missingSourceIdentityCandidates: number;
+        survivingRegisterCandidates: number;
       };
     }
   >;
