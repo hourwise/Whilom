@@ -337,7 +337,7 @@ function maxOrZero(values: readonly number[]): number {
  */
 export async function executeTier(
   tier: number,
-  candidateMode: CandidateMode = CandidateMode.Bounded,
+  candidateMode: CandidateMode = CandidateMode.RegisterPruned,
   buildFixture: (size: number) => ReturnType<typeof buildTierFixture> = buildTierFixture,
   options: TierExecutionOptions = {},
 ): Promise<TierExecution> {
@@ -410,6 +410,12 @@ export async function executeTier(
             identifierOnlyCandidates: 0,
             identifierRescuedBeyondRadius: 0,
             finalCandidatePairs: 0,
+            registerVetoCandidates: 0,
+            sameSourceSameRecordCandidates: 0,
+            sameSourceDifferentDesignationCandidates: 0,
+            crossSourceCandidates: 0,
+            missingSourceIdentityCandidates: 0,
+            survivingRegisterCandidates: 0,
           },
         };
         current.records += 1;
@@ -460,7 +466,7 @@ export async function executeTier(
 
 export async function runTier(
   tier: number,
-  candidateMode: CandidateMode = CandidateMode.Bounded,
+  candidateMode: CandidateMode = CandidateMode.RegisterPruned,
   buildFixture: (size: number) => ReturnType<typeof buildTierFixture> = buildTierFixture,
   options: TierExecutionOptions = {},
 ): Promise<TierMetrics> {
@@ -617,6 +623,13 @@ export function buildTierMetrics(execution: TierExecution, tier: number): TierMe
       identifierOnlyCandidates: candidateStats.identifierOnlyCandidates,
       identifierRescuedBeyondRadius: candidateStats.identifierRescuedBeyondRadius,
       finalCandidatePairs: candidateStats.finalCandidatePairs,
+      registerVetoCandidates: candidateStats.registerVetoCandidates,
+      sameSourceSameRecordCandidates: candidateStats.sameSourceSameRecordCandidates,
+      sameSourceDifferentDesignationCandidates:
+        candidateStats.sameSourceDifferentDesignationCandidates,
+      crossSourceCandidates: candidateStats.crossSourceCandidates,
+      missingSourceIdentityCandidates: candidateStats.missingSourceIdentityCandidates,
+      survivingRegisterCandidates: candidateStats.survivingRegisterCandidates,
       exactRadiusPruningRatio:
         candidateStats.cellSupersetCandidates > 0
           ? round(candidateStats.rejectedByExactRadius / candidateStats.cellSupersetCandidates, 5)
@@ -691,6 +704,10 @@ export function buildTierMetrics(execution: TierExecution, tier: number): TierMe
                   p50: percentile(
                     [...value.shortlistSizes].sort((a, b) => a - b),
                     50,
+                  ),
+                  p90: percentile(
+                    [...value.shortlistSizes].sort((a, b) => a - b),
+                    90,
                   ),
                   p95: percentile(
                     [...value.shortlistSizes].sort((a, b) => a - b),

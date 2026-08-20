@@ -511,3 +511,182 @@ The unchanged normalized-growth calculations, using the recorded ladder values, 
 **NOT PROVEN:** continuous safe scale beyond 50k. The ~200k result is diagnostic only because the 50k → 100k transition failed the unchanged gate.
 
 Batch 18 should investigate exactly one bounded remaining dense-region work source, selected from per-region candidate/matcher measurements, with exhaustive decision-digest equivalence and no cache-limit increase. It must not move additional matcher vetoes into candidate generation until that experiment is separately justified.
+
+## Batch 18 — same-register pre-hydration pruning and national re-measurement
+
+Batch 18 is stacked directly on Batch 17 at
+`b50e4465fac0257cb8958b17b37010b20e36e587`. The national capture, source
+ordering, 65,536-record cache bound, page size, radius threshold, scoring,
+name logic, governance and publication state were unchanged.
+
+### Register-veto diagnosis
+
+**MEASURED:** The fixed 100k exact-radius path was first run without register
+pruning. The existing same-register matcher veto accounted for the following
+shortlist work:
+
+| Region            | Exact-radius candidates | Same-register veto candidates | Veto ratio | Same-source same-record | Same-source different designation | Cross-source | Missing source identity | Surviving register |
+| ----------------- | ----------------------: | ----------------------------: | ---------: | ----------------------: | --------------------------------: | -----------: | ----------------------: | -----------------: |
+| Overall           |               7,741,644 |                     7,324,465 |    94.611% |                      27 |                           417,152 |            0 |                       0 |            417,179 |
+| TQ / London       |               2,147,593 |                     2,048,121 |    95.368% |                       1 |                            99,471 |            0 |                       0 |             99,472 |
+| ST / Bristol-Bath |                 434,710 |                       419,033 |    96.394% |                       2 |                            15,675 |            0 |                       0 |             15,677 |
+| Sparse comparison |               1,612,287 |                     1,492,880 |    92.594% |                      10 |                           119,397 |            0 |                       0 |            119,407 |
+
+`REGISTER_VETO_RATIO_OF_EXACT_RADIUS = 0.946112`
+
+`REGISTER_VETO_RATIO_OF_MATCHER_COMPARISONS = 0.946112`
+
+**REGISTER_PREPRUNING_CLASSIFICATION = REGISTER_PREPRUNING_MATERIAL**
+
+The same-register population is therefore not a marginal optimization target:
+it is the dominant remaining exact-radius comparison class. **INFERRED:**
+because the matcher already rejects these pairs unconditionally before scoring,
+removing them from candidate generation cannot affect best match, runner-up,
+ambiguity, conflicts, or insertion-order results.
+
+### Implementation
+
+**IMPLEMENTED:** The existing predicate is now defined once in
+`ingestion/matching/source-relation.ts` as `sameRegisterDifferentEntries`, with
+`classifyRegisterCandidate` providing the diagnostic classification. Both the
+matcher's identifier and scored passes call the shared predicate. Both
+`CandidateIndex` and `ChunkedCandidateIndex` use the same predicate.
+
+The disk-backed path evaluates the predicate from compact pointer metadata
+(`sourceId`, `sourceRecordId`, designation identities, and existing page/index
+metadata) after exact-radius and identifier union but before
+`this.load(sequence).canonical`. Same-register rows are therefore rejected
+before page hydration, JSON decode, name preparation, score allocation, and
+matcher invocation. The in-memory path applies the same membership filter,
+although its payload is already resident.
+
+Global identifiers do not rescue same-register-different-entry rows: this is
+the existing matcher behavior for both exact external identifiers and
+designation references. Same-source same-record multipart geometry remains;
+same-source rows with disjoint designations remain; cross-source rows remain;
+missing source identity remains unpruned. The final sequence is still sorted
+by canonical insertion sequence.
+
+The old Batch 17 exact-radius mode remains available as `bounded` for causal
+comparison. Production and national ladder paths use `register-pruned`.
+No cache limit or compact metadata storage model was enlarged.
+
+### Four-way equivalence
+
+**MEASURED:** The 5,000-record gate compared exhaustive, cell-superset,
+exact-radius, and exact-radius-plus-register-pruning modes. All produced digest
+prefix `b91e746c25ba2545`, with zero decision differences. The outcome summary
+remained:
+
+```text
+NEW_CANONICAL: 4,971
+MATCH_REVIEW: 18
+MATCH_CONFIDENT: 4
+CONFLICT_REVIEW: 4
+REQUIRES_REVIEW: 22
+```
+
+The gate covered boundary-radius candidates, same-register external-ID and
+designation-reference candidates, distant cross-source identifiers,
+same-record multipart rows, disjoint designations, duplicate discovery,
+insertion ordering, and surviving conflict outcomes.
+
+### Fixed-100k pruning effect
+
+Both runs below are fresh processes over the same fixed 100k capture with the
+same 65,536-record cache limit. The before path is Batch 17 exact-radius
+generation; the after path is register-pruned generation.
+
+| Region            | Mean shortlist before → after |     p50 |     p90 |       p95 |         p99 |           max |         Comparisons/record | Matcher ms/record | µs/comparison |
+| ----------------- | ----------------------------: | ------: | ------: | --------: | ----------: | ------------: | -------------------------: | ----------------: | ------------: |
+| Overall           |                  77.45 → 4.17 |  44 → 0 | 150 → 0 |   227 → 2 |   773 → 108 | 1,813 → 1,810 |                 77.4 → 4.2 |     0.275 → 0.146 |  3.55 → 34.76 |
+| TQ / London       |                296.38 → 13.73 | 101 → 0 | 986 → 0 | 1,279 → 0 | 1,572 → 283 | 1,813 → 1,810 | **MEASURED via shortlist** |   0.8391 → 0.3842 |   **NOT RUN** |
+| ST / Bristol-Bath |                  94.34 → 3.40 |  69 → 0 | 213 → 0 |   291 → 0 |   398 → 136 |     447 → 378 | **MEASURED via shortlist** |   0.2879 → 0.1343 |   **NOT RUN** |
+| Sparse comparison |                  56.72 → 4.20 |  43 → 0 | 121 → 0 |  162 → 18 |   245 → 116 |     420 → 417 | **MEASURED via shortlist** |   0.2430 → 0.1481 |   **NOT RUN** |
+
+The per-region comparison/record column is marked **NOT RUN** because the
+existing geographic diagnostic records shortlist/candidate counts rather than
+separate matcher comparison totals; the overall count is exact and equals the
+final candidate-pair count.
+
+**MEASURED:** Overall register pruning removed `7,324,465` of the
+`7,741,644` exact-radius candidate pairs. The final 100k path made `417,179`
+payload lookups, versus `7,741,644` before pruning.
+
+`REGISTER_VETO_CANDIDATES = 7,324,465`
+
+`REGISTER_PREPRUNING_RATIO = 0.946112`
+
+`TQ_REGISTER_PREPRUNING_RATIO = 0.953682`
+
+`REGISTER_PRUNING_PAYLOAD_LOOKUPS_AVOIDED = 7,324,465`
+
+`REGISTER_PRUNING_BYTES_AVOIDED = 69,828,249`
+
+Physical page reads fell from `2,486` to `1,342`; physical bytes read fell
+from `212,596,194` to `142,767,945`; decoded records fell from `464,742` to
+`311,744`. The bounded working set remained below the full 99,621-record
+canonical payload corpus: peak cached payload was `62,052` records against the
+unchanged `65,536` limit.
+
+**NOT MATERIAL:** No name, containment, type, postcode, scoring, conflict,
+ambiguity, identifier-pass, or cache-capacity optimization was added. The
+national sample had zero identifier-only candidates and zero identifier rescues
+beyond radius; the cross-source rescue behavior remains covered by focused
+fixtures rather than inferred from the single-source national corpus.
+
+### Final fresh-process national ladder
+
+Each stage was run in a fresh Node process against the established capture;
+`199,980` is the exact available ~200k stage. The isolated `--only` command
+reports a local PASS when it has no preceding stage; the table below applies
+the unchanged adjacent growth gate across the separately captured stages.
+
+| Stage | Records |   rec/s | ms/record | Comparisons/record | µs/comparison | Radius candidates/record | Register-pruned/record | Final matcher candidates/record | Heap/RSS MB | Reads | Integrity       | Classification                 |
+| ----: | ------: | ------: | --------: | -----------------: | ------------: | -----------------------: | ---------------------: | ------------------------------: | ----------: | ----: | --------------- | ------------------------------ |
+|   25k |  25,000 | 2,423.4 |     0.033 |                0.0 |       **N/A** |                     46.6 |                   46.6 |                             0.0 |   472 / 646 |     0 | 25,000/25,000   | PASS                           |
+|   50k |  50,000 | 2,754.7 |     0.030 |                0.0 |       **N/A** |                     54.1 |                   54.1 |                             0.0 |   537 / 684 |     1 | 50,000/50,000   | PASS                           |
+| ~100k | 100,000 | 1,996.3 |     0.148 |                4.2 |         35.24 |                     77.5 |                   73.3 |                             4.2 |   353 / 620 | 1,342 | 100,000/100,000 | PASS isolated; FAIL adjacent   |
+| ~200k | 199,980 | 1,442.6 |     0.244 |                7.5 |         32.53 |                    137.8 |                  130.3 |                             7.5 | 562 / 1,256 | 4,368 | 199,980/199,980 | PASS adjacent-only; NOT PROVEN |
+
+The unchanged normalized-growth calculations are:
+
+```text
+(0.030 / 0.033) / (50000 / 25000) = 0.454545  PASS
+(0.148 / 0.030) / (100000 / 50000) = 2.466667  FAIL (> 1.0)
+(0.244 / 0.148) / (199980 / 100000) = 0.824407  PASS adjacent-only
+```
+
+The 100k stage now passes its isolated absolute/resource checks and the
+100k→~200k transition is sub-linear, but the failed 50k→100k transition still
+prevents continuous proof beyond 50k. The zero-comparison 25k/50k stages are a
+measured consequence of the single-source NHLE corpus: all exact-radius
+different-record candidates at those checkpoints are rejected by the existing
+register rule.
+
+**MAXIMUM_PROVEN_SAFE_SCALE = PROVEN_SAFE_TO_50K**
+
+**NATIONAL_EXPANSION_CLASSIFICATION = REMEDIATION_INSUFFICIENT**
+
+**EPHEMERAL_DATABASE_LANE = DEFERRED** — Docker was unavailable and was not
+installed. The local Supabase/PostGIS/pgTAP lane was not run.
+
+**NATIONAL_PUBLICATION_PERFORMED = NO**
+
+### Limitations and Batch 19 recommendation
+
+**NOT RUN:** full ~401,539-record capture, local database lane, hosted
+Supabase, hosted writes, national publication, Historic England description
+retrieval, and production deployment.
+
+**NOT PROVEN:** continuous safe scale beyond 50k. The ~200k result cannot erase
+the failed 50k→100k transition.
+
+**INFERRED:** Same-register pruning removes the dominant measured comparison
+class and substantially reduces payload work, but the remaining national gate
+failure is now driven by the discontinuous transition from effectively zero
+matcher comparisons at 50k to `4.2` final candidates/record at 100k, together
+with fixed per-record matcher overhead. A Batch 19 experiment should isolate
+that one remaining transition with bounded candidate-density accounting; it
+must not add a second veto optimization, increase the cache, weaken the gate,
+or authorize national publication.

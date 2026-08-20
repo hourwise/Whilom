@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import {
   SameSourceOverlap,
+  RegisterCandidateClass,
   SourcePairRelation,
+  classifyRegisterCandidate,
   classifySameSourceOverlap,
   classifySourcePair,
+  sameRegisterDifferentEntries,
   shouldCompareAcrossSources,
 } from '../matching/source-relation';
 import { ComparisonOutcome } from '../matching/compare';
@@ -83,6 +86,92 @@ describe('describing why one register holds two overlapping entries', () => {
     // that an entry is wrong, because none of them is evidence that one is.
     const values: string[] = Object.values(SameSourceOverlap);
     expect(values.some((v) => v.toLowerCase().includes('conflict'))).toBe(false);
+  });
+});
+
+describe('the shared same-register hard veto', () => {
+  const candidate = (
+    sourceRecordId = 'candidate',
+    designations: string[] = ['listed_building'],
+  ) => ({
+    provenance: { sourceId: 'historic-england-nhle', sourceRecordId },
+    designations: designations.map((designation) => ({ designation })),
+  });
+  const existing = (
+    sourceIdentity:
+      | {
+          sourceId: string;
+          sourceRecordId: string;
+          designations: string[];
+        }
+      | undefined = {
+      sourceId: 'historic-england-nhle',
+      sourceRecordId: 'existing',
+      designations: ['listed_building'],
+    },
+  ) => ({ sourceIdentity });
+
+  it.each([
+    [
+      'same source, shared designation, different record',
+      'SAME_REGISTER_DIFFERENT_ENTRY',
+      candidate(),
+      existing(),
+    ],
+    ['same source, same record', 'SAME_SOURCE_SAME_RECORD', candidate('existing'), existing()],
+    [
+      'same source, different designation',
+      'SAME_SOURCE_DIFFERENT_DESIGNATION',
+      candidate('candidate', ['scheduled_monument']),
+      existing(),
+    ],
+    [
+      'different source',
+      'CROSS_SOURCE',
+      candidate(),
+      existing({
+        sourceId: 'wikidata',
+        sourceRecordId: 'existing',
+        designations: ['listed_building'],
+      }),
+    ],
+    [
+      'missing source identity',
+      'MISSING_SOURCE_IDENTITY',
+      candidate(),
+      { sourceIdentity: undefined },
+    ],
+    [
+      'zero candidate designations',
+      'SAME_SOURCE_DIFFERENT_DESIGNATION',
+      candidate('candidate', []),
+      existing(),
+    ],
+    [
+      'one designation overlaps among several',
+      'SAME_REGISTER_DIFFERENT_ENTRY',
+      candidate('candidate', ['scheduled_monument', 'listed_building']),
+      existing({
+        sourceId: 'historic-england-nhle',
+        sourceRecordId: 'existing',
+        designations: ['listed_building', 'world_heritage_site'],
+      }),
+    ],
+    [
+      'several designations with no overlap',
+      'SAME_SOURCE_DIFFERENT_DESIGNATION',
+      candidate('candidate', ['scheduled_monument', 'world_heritage_site']),
+      existing({
+        sourceId: 'historic-england-nhle',
+        sourceRecordId: 'existing',
+        designations: ['listed_building'],
+      }),
+    ],
+  ])('%s', (_label, expected, subject, record) => {
+    expect(classifyRegisterCandidate(subject, record)).toBe(expected);
+    expect(sameRegisterDifferentEntries(subject, record)).toBe(
+      expected === RegisterCandidateClass.SameRegisterDifferentEntry,
+    );
   });
 });
 

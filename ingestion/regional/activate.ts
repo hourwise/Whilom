@@ -28,7 +28,7 @@ import { normaliseNhleRecord } from '../transforms/normalise-nhle';
 import { runIngestion } from '../pipeline/run';
 import type { RunReport } from '../pipeline/run';
 import { MatchOutcome } from '../pipeline/candidate';
-import { CandidateMode, emptyCandidateStats } from '../matching/candidates';
+import { emptyCandidateStats } from '../matching/candidates';
 import type { MatchStats } from '../matching/matcher';
 import { REGIONAL_CACHE_FILE, readRegionalManifest } from './capture';
 import { extractTemporalClaims } from '../transforms/temporal';
@@ -155,7 +155,6 @@ export async function buildActivation(outDir: string): Promise<ActivationPlan> {
   const started = Date.now();
   const report = await runIngestion({
     importRunId: `${REGIONAL_DATASET_ID}@${REGIONAL_DATASET_VERSION}`,
-    candidateMode: CandidateMode.Bounded,
     sources: [
       {
         adapter: new HistoricEnglandNhleAdapter({ kind: 'file', path: REGIONAL_CACHE_FILE }),

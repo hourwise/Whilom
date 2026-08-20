@@ -27,9 +27,15 @@ function argument(name: string, fallback: number): number {
 
 function modeArgument(): CandidateMode {
   const index = process.argv.indexOf('--mode');
-  const value = index >= 0 ? process.argv[index + 1] : CandidateMode.Bounded;
-  if (value !== CandidateMode.Bounded && value !== CandidateMode.CellSuperset) {
-    throw new Error(`--mode must be ${CandidateMode.CellSuperset} or ${CandidateMode.Bounded}`);
+  const value = index >= 0 ? process.argv[index + 1] : CandidateMode.RegisterPruned;
+  if (
+    value !== CandidateMode.Bounded &&
+    value !== CandidateMode.CellSuperset &&
+    value !== CandidateMode.RegisterPruned
+  ) {
+    throw new Error(
+      `--mode must be ${CandidateMode.CellSuperset}, ${CandidateMode.Bounded} or ${CandidateMode.RegisterPruned}`,
+    );
   }
   if (!isCandidateMode(value)) throw new Error(`unsupported candidate mode: ${value}`);
   return value;

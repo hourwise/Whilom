@@ -53,6 +53,8 @@ export interface StageResult {
   cellSupersetCandidatesPerRecord: number;
   exactSpatialCandidatesPerRecord: number;
   exactRadiusRejectedPerRecord: number;
+  registerPrunedCandidatesPerRecord: number;
+  finalMatcherCandidatesPerRecord: number;
   identifierOnlyCandidatesPerRecord: number;
   identifierRescuedBeyondRadius: number;
   /** Ratio of this stage's per-record match time to the smallest stage's. */
@@ -223,7 +225,7 @@ export async function runNationalLadder(
       resolve(INGESTION_ROOT, '.national-chunk-cache', `${size}-${process.pid}`),
       cacheLimit,
     );
-    const execution = await executeTier(size, CandidateMode.Bounded, buildNationalTier, {
+    const execution = await executeTier(size, CandidateMode.RegisterPruned, buildNationalTier, {
       candidateStore: store,
       chunkSize: 4_096,
       retainDecided: false,
@@ -257,6 +259,14 @@ export async function runNationalLadder(
       ),
       exactRadiusRejectedPerRecord: round(
         metrics.candidates.rejectedByExactRadius / Math.max(1, metrics.ingestion.valid),
+        1,
+      ),
+      registerPrunedCandidatesPerRecord: round(
+        metrics.candidates.registerVetoCandidates / Math.max(1, metrics.ingestion.valid),
+        1,
+      ),
+      finalMatcherCandidatesPerRecord: round(
+        metrics.candidates.finalCandidatePairs / Math.max(1, metrics.ingestion.valid),
         1,
       ),
       identifierOnlyCandidatesPerRecord: round(

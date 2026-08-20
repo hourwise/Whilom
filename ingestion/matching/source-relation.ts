@@ -79,6 +79,82 @@ export interface SameSourceRecord {
   designations: readonly { designation: string }[];
 }
 
+type RegisterDesignation = string | { designation: string };
+
+interface RegisterCandidateRecord {
+  provenance: { sourceId: string; sourceRecordId: string };
+  designations: readonly RegisterDesignation[];
+}
+
+interface RegisterExistingRecord {
+  sourceIdentity?: {
+    provenance?: { sourceId: string; sourceRecordId: string };
+    sourceId?: string;
+    sourceRecordId?: string;
+    designations: readonly RegisterDesignation[];
+  };
+}
+
+/** The compact relationship classification used by the matcher and indexes. */
+export const RegisterCandidateClass = {
+  MissingSourceIdentity: 'MISSING_SOURCE_IDENTITY',
+  CrossSource: 'CROSS_SOURCE',
+  SameSourceSameRecord: 'SAME_SOURCE_SAME_RECORD',
+  SameSourceDifferentDesignation: 'SAME_SOURCE_DIFFERENT_DESIGNATION',
+  SameRegisterDifferentEntry: 'SAME_REGISTER_DIFFERENT_ENTRY',
+} as const;
+export type RegisterCandidateClass =
+  (typeof RegisterCandidateClass)[keyof typeof RegisterCandidateClass];
+
+function designationName(value: RegisterDesignation): string {
+  return typeof value === 'string' ? value : value.designation;
+}
+
+/**
+ * The matcher's unconditional same-register veto, expressed over compact
+ * source metadata so candidate indexes can inspect it before payload loading.
+ * Missing identity is deliberately not a veto.
+ */
+export function classifyRegisterCandidate(
+  candidate: RegisterCandidateRecord,
+  existing: RegisterExistingRecord,
+): RegisterCandidateClass {
+  const theirs = existing.sourceIdentity;
+  if (!theirs) return RegisterCandidateClass.MissingSourceIdentity;
+  const sourceId = theirs.provenance?.sourceId ?? theirs.sourceId;
+  const sourceRecordId = theirs.provenance?.sourceRecordId ?? theirs.sourceRecordId;
+  if (sourceId === undefined || sourceRecordId === undefined) {
+    return RegisterCandidateClass.MissingSourceIdentity;
+  }
+  if (sourceId !== candidate.provenance.sourceId) {
+    return RegisterCandidateClass.CrossSource;
+  }
+  if (sourceRecordId === candidate.provenance.sourceRecordId) {
+    return RegisterCandidateClass.SameSourceSameRecord;
+  }
+
+  const shared = candidate.designations.some((candidateDesignation) =>
+    theirs.designations.some(
+      (existingDesignation) =>
+        designationName(candidateDesignation) === designationName(existingDesignation),
+    ),
+  );
+  return shared
+    ? RegisterCandidateClass.SameRegisterDifferentEntry
+    : RegisterCandidateClass.SameSourceDifferentDesignation;
+}
+
+/** Shared predicate used by both matcher passes and candidate generation. */
+export function sameRegisterDifferentEntries(
+  candidate: RegisterCandidateRecord,
+  existing: RegisterExistingRecord,
+): boolean {
+  return (
+    classifyRegisterCandidate(candidate, existing) ===
+    RegisterCandidateClass.SameRegisterDifferentEntry
+  );
+}
+
 /**
  * Classify a same-source overlap.
  *
@@ -87,7 +163,10 @@ export interface SameSourceRecord {
  * twice, disjoint designations are one site protected two ways, and anything
  * else is two genuinely different things.
  */
-export function classifySameSourceOverlap(a: SameSourceRecord, b: SameSourceRecord): SameSourceOverlap {
+export function classifySameSourceOverlap(
+  a: SameSourceRecord,
+  b: SameSourceRecord,
+): SameSourceOverlap {
   if (a.provenance.sourceRecordId === b.provenance.sourceRecordId) {
     return SameSourceOverlap.RepeatedEntry;
   }

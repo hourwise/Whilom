@@ -15,6 +15,7 @@ import {
   prepareNames,
   type PreparedNames,
 } from './name';
+import { sameRegisterDifferentEntries } from './source-relation';
 import type { MatchProfile } from '../scale/metrics';
 
 /**
@@ -306,20 +307,6 @@ function areaAgainstStructure(ours: readonly string[], theirs: readonly string[]
   const ourArea = ours.every((d) => AREA_DESIGNATIONS.has(d));
   const theirArea = theirs.every((d) => AREA_DESIGNATIONS.has(d));
   return ourArea !== theirArea;
-}
-
-function sameRegisterDifferentEntries(
-  candidate: PlaceCandidate,
-  existing: CanonicalPlaceRef,
-): boolean {
-  const theirs = existing.sourceIdentity;
-  if (!theirs) return false;
-  if (theirs.sourceId !== candidate.provenance.sourceId) return false;
-  if (theirs.sourceRecordId === candidate.provenance.sourceRecordId) return false;
-
-  const ours = candidate.designations.map((d) => d.designation).sort();
-  if (ours.length === 0 || theirs.designations.length === 0) return false;
-  return ours.some((designation) => theirs.designations.includes(designation));
 }
 
 function scoreAgainst(

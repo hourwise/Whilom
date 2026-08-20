@@ -218,7 +218,7 @@ export function candidateAsCanonical(candidate: PlaceCandidate, id: string): Can
 
 export async function runIngestion(options: RunOptions): Promise<RunReport> {
   const { importRunId, sources, enrichmentSource, maxRecords, observer } = options;
-  const candidateMode = options.candidateMode ?? CandidateMode.Bounded;
+  const candidateMode = options.candidateMode ?? CandidateMode.RegisterPruned;
   const startedAt = new Date();
 
   const report: RunReport = {
@@ -330,6 +330,14 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
             identifierOnlyCandidates: observer.candidateStats.identifierOnlyCandidates,
             identifierRescuedBeyondRadius: observer.candidateStats.identifierRescuedBeyondRadius,
             finalCandidatePairs: observer.candidateStats.finalCandidatePairs,
+            registerVetoCandidates: observer.candidateStats.registerVetoCandidates,
+            sameSourceSameRecordCandidates: observer.candidateStats.sameSourceSameRecordCandidates,
+            sameSourceDifferentDesignationCandidates:
+              observer.candidateStats.sameSourceDifferentDesignationCandidates,
+            crossSourceCandidates: observer.candidateStats.crossSourceCandidates,
+            missingSourceIdentityCandidates:
+              observer.candidateStats.missingSourceIdentityCandidates,
+            survivingRegisterCandidates: observer.candidateStats.survivingRegisterCandidates,
           }
         : undefined;
       const shortlist = await existing.candidatesFor(candidate, observer?.candidateStats);
@@ -359,6 +367,24 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
               finalCandidatePairs:
                 observer.candidateStats.finalCandidatePairs -
                 candidateStatsBefore.finalCandidatePairs,
+              registerVetoCandidates:
+                observer.candidateStats.registerVetoCandidates -
+                candidateStatsBefore.registerVetoCandidates,
+              sameSourceSameRecordCandidates:
+                observer.candidateStats.sameSourceSameRecordCandidates -
+                candidateStatsBefore.sameSourceSameRecordCandidates,
+              sameSourceDifferentDesignationCandidates:
+                observer.candidateStats.sameSourceDifferentDesignationCandidates -
+                candidateStatsBefore.sameSourceDifferentDesignationCandidates,
+              crossSourceCandidates:
+                observer.candidateStats.crossSourceCandidates -
+                candidateStatsBefore.crossSourceCandidates,
+              missingSourceIdentityCandidates:
+                observer.candidateStats.missingSourceIdentityCandidates -
+                candidateStatsBefore.missingSourceIdentityCandidates,
+              survivingRegisterCandidates:
+                observer.candidateStats.survivingRegisterCandidates -
+                candidateStatsBefore.survivingRegisterCandidates,
             }
           : undefined;
 
