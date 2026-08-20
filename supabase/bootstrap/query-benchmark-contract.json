@@ -1,0 +1,134 @@
+{
+  "contractVersion": 1,
+  "status": "READY_FOR_DISPOSABLE_POSTGIS",
+  "databaseRequired": true,
+  "latencyThresholdPolicy": "classify measured latency; do not invent a new pass/fail threshold here",
+  "growthGate": {
+    "formula": "(later_ms_per_record / earlier_ms_per_record) / (later_records / earlier_records)",
+    "perRecordGrowthVsSizeMax": 1.0,
+    "continuousStageRequirement": true
+  },
+  "execution": {
+    "repeatCount": 5,
+    "warmupRuns": 2,
+    "captureColdAndWarm": true,
+    "captureExplainAnalyze": true,
+    "captureBuffers": true,
+    "assertNoWrites": true
+  },
+  "requiredPlanEvidence": [
+    "execution time",
+    "planning time",
+    "row count",
+    "shared/local buffer activity",
+    "spatial or text index usage where applicable"
+  ],
+  "scenarios": [
+    {
+      "id": "coverage-uk",
+      "operation": "coverage_for_viewport",
+      "viewport": [-6.5, 49.5, 2.2, 55.9],
+      "expected": "coverage aggregate shape; no mutation"
+    },
+    {
+      "id": "clusters-tq-london",
+      "operation": "map_clusters",
+      "viewport": [-0.55, 51.28, 0.35, 51.7],
+      "expected": "cluster rows with stable cell/category shape; bounded max_cells"
+    },
+    {
+      "id": "places-st-bristol-bath",
+      "operation": "map_places",
+      "viewport": [-3.0, 51.15, -1.35, 52.15],
+      "expected": "place rows with stable map projection shape"
+    },
+    {
+      "id": "places-regional",
+      "operation": "map_places",
+      "viewport": [-2.1, 53.7, -0.1, 54.8],
+      "expected": "place rows with category/period filters preserved"
+    },
+    {
+      "id": "places-city",
+      "operation": "map_places",
+      "viewport": [-1.7, 53.88, -1.0, 54.3],
+      "expected": "small viewport result shape and count"
+    },
+    {
+      "id": "search-filtered",
+      "operation": "search_places",
+      "parameters": {
+        "q": "abbey",
+        "place_types": ["building"],
+        "periods": ["medieval"],
+        "max_rows": 50,
+        "row_offset": 0
+      },
+      "expected": "ranked search rows; limit and offset respected"
+    },
+    {
+      "id": "coverage-time-counts",
+      "operation": "period_counts_for_viewport",
+      "viewport": [-0.55, 51.28, 0.35, 51.7],
+      "expected": "period/count shape and filters agree with viewport"
+    },
+    {
+      "id": "candidate-boundary",
+      "operation": "candidate_spatial_lookup",
+      "fixture": "synthetic point within 5km across OSGB10 boundary",
+      "expected": "candidate at or below exact 5km is returned; beyond exact radius is absent"
+    },
+    {
+      "id": "candidate-corner",
+      "operation": "candidate_spatial_lookup",
+      "fixture": "synthetic point within 5km across OSGB10 corner",
+      "expected": "halo does not omit diagonal work unit; ST_DWithin decides final truth"
+    },
+    {
+      "id": "global-external-id",
+      "operation": "candidate_identifier_lookup",
+      "fixture": "synthetic distant shared external identifier",
+      "expected": "returned without geographic restriction"
+    },
+    {
+      "id": "global-designation-reference",
+      "operation": "candidate_designation_reference_lookup",
+      "fixture": "synthetic distant shared designation reference",
+      "expected": "returned without geographic restriction"
+    }
+  ],
+  "assertions": {
+    "readOnly": true,
+    "integrity": "no duplicate canonical identities after union",
+    "ordering": "canonical insertion sequence is deterministic",
+    "governance": "same-register-different-entry rows are rejected by the shared governance rule; same-record multipart rows remain",
+    "applicationPaths": [
+      "coverage_for_viewport",
+      "map_clusters",
+      "map_places",
+      "search_places",
+      "period_counts_for_viewport",
+      "search_discovery",
+      "people and temporal RPCs where applicable"
+    ]
+  },
+  "indexExpectations": {
+    "placesSpatial": "places_location_gix",
+    "routeSpatial": "route_geometry_gix",
+    "coverageSpatial": "coverage_regions_area_gix",
+    "placeSearch": "places_search_gin",
+    "candidateSpatial": "not yet present; Batch 21B schema decision",
+    "candidateIdentifiers": "not yet present as a dedicated candidate index; Batch 21B schema decision"
+  },
+  "reportFields": [
+    "scenario",
+    "cold_p50_ms",
+    "warm_p50_ms",
+    "p95_ms",
+    "rows",
+    "explain_plan",
+    "buffers",
+    "index_assertion",
+    "correctness_result"
+  ]
+}

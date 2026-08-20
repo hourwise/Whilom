@@ -7,9 +7,9 @@
  * competing senses. One pronunciation, three glosses, two sentences of what the
  * product does with the idea.
  */
-export function WhilomDefinition() {
+export function WhilomDefinition({ compact = false }: { compact?: boolean } = {}) {
   return (
-    <section className="definition" aria-labelledby="whilom-definition-heading">
+    <section className={`definition${compact ? ' is-compact' : ''}`} aria-labelledby="whilom-definition-heading">
       <h2 id="whilom-definition-heading" className="definition-word">
         whilom
       </h2>
@@ -21,9 +21,11 @@ export function WhilomDefinition() {
         An old word for another time. Whilom helps you discover what stood here, who lived here and
         what happened here — from prehistory to the present day.
       </p>
-      <p className="definition-origin">
-        From Old English <i lang="ang">hwīlum</i> — later used for “formerly” or “once”.
-      </p>
+      {!compact && (
+        <p className="definition-origin">
+          From Old English <i lang="ang">hwīlum</i> — later used for “formerly” or “once”.
+        </p>
+      )}
     </section>
   );
 }

@@ -191,3 +191,164 @@ Whilom holds a strong regional baseline, not complete historical knowledge. The
 product does not claim every historical place, complete opening information,
 complete event history, complete temporal coverage or national coverage — and
 the copy is written to keep it that way.
+
+---
+
+# WHERE — WHEN — WHO
+
+Whilom's discovery model is three questions and a filter:
+
+| | Question | Control |
+| --- | --- | --- |
+| **WHERE** | Where are you looking? | Map viewport, search, coverage layer |
+| **WHEN** | When are you interested in? | Century ruler, epoch bands, four time modes |
+| **WHO** | Who do you want to follow? | Unified search, person map mode, related graph |
+| *WHAT* | What kind of thing? | Legend categories and discovery modes |
+
+## The map is the homepage
+
+The map takes the first viewport. The identity — name, tagline, definition — is
+a masthead beside it rather than a page above it. `/` and `/explore` are the
+same component in two modes; two map implementations would have drifted apart
+within a fortnight.
+
+### The default view is the United Kingdom
+
+Not Yorkshire, even though Yorkshire is what is currently activated. Opening on
+the one region that holds data would quietly redefine the product as a Yorkshire
+app.
+
+What keeps that honest is `coverage_regions` and `coverage_for_viewport`, which
+returns the **fraction** of a viewport inside activated coverage rather than a
+boolean — a view straddling the boundary is exactly where yes/no misleads.
+
+| Viewport | Behaviour |
+| --- | --- |
+| Inside activated coverage | Normal discovery, no coverage message |
+| Straddling the boundary | Results shown, plus "part of this view is outside Whilom's detailed coverage" |
+| Outside coverage | No results, plus "Whilom has not activated detailed coverage here yet — this area has plenty of history, we just have not mapped it" |
+
+An empty map means Whilom has not got there. It never means the place has no
+history, and the copy is written so it cannot be read that way.
+
+## The century ruler
+
+### The axis is deliberately not linear
+
+Real time is unusable as a straight line here. The Palaeolithic is 890,000 years
+and the First World War is four; on a true scale everything since the Romans
+occupies a hairline nobody can click.
+
+So each period gets screen width in proportion to how much it is likely to be
+*used*. Everything since the Norman conquest is about 4% of real time and gets
+over a quarter of the ruler. A ruler that is technically to scale but impossible
+to operate is literal, not honest.
+
+Century ticks are drawn where they fit and thinned where they do not — every
+century in the last two millennia, then millennia, then hundred-thousand-year
+steps in deep prehistory. Labels are thinned separately from ticks, because a
+tick can be narrower than its own label.
+
+### BCE and CE
+
+The public never sees a negative year or a year zero. `800 BC`, `AD 43`, `1837`.
+Internally years stay signed integers on the historical convention, and
+`fractionToYear` can never return 0 — asserted across a thousand positions on
+the axis rather than spot-checked.
+
+### Four modes, and the fill means something
+
+| Mode | Returns | Fill |
+| --- | --- | --- |
+| All time | Everything, dated or not | none |
+| At this time | Records spanning the selected year | narrow band at the handle |
+| Up to this time | Records that had begun by then | left edge → handle |
+| From this time | Records still standing after then | handle → right edge |
+
+The between-two-years filter survives in advanced filters; the modes did not
+replace it.
+
+**A record with no dates matches none of the three restrictive modes.** An
+undated thing must not acquire relevance to a year somebody happened to pick.
+It reappears under All time, where it belongs.
+
+### Epoch bands
+
+Twenty-one clickable bands across the ruler, alternately tinted so neighbours
+separate without needing twenty-one distinct colours. Clicking selects the
+period by stable id — `?period=victorian`, never a display string. Counts come
+from `period_counts_for_viewport`, one grouped query for all twenty-one epochs,
+because twenty-one round trips to label a timeline would cost more than
+everything else the map does.
+
+A count means *records Whilom currently associates with this period in this
+view*. It does not mean *places that existed then*, and with dated coverage
+around 1% of the corpus the difference is enormous.
+
+## The key
+
+Ten display groups derived from the canonical taxonomy by
+`map_display_category`. Canonical typing is never coarsened to suit a map key —
+the grouping is presentation only, and `structure`/`unknown` map to `other`
+rather than being forced into something more interesting.
+
+Every entry carries **colour, symbol and text**. Roughly one man in twelve has
+some colour-vision deficiency, and a map whose meaning is carried by hue alone
+is one they cannot read. Legend entries double as filters, but the same choices
+exist as ordinary controls in the filter panel: a legend is a poor place to hide
+the only way to do something.
+
+Clusters report a category only when the cell genuinely holds one category. A
+mixed cluster naming its most common member would imply the rest match it.
+
+## People
+
+### Search
+
+One box, `search_discovery`, returning places and people tagged by kind and
+capped per kind. Grouping happens after the fact, in the results — a person
+should not have to know which tab Whilom files them under before they can be
+found. Every query hits Whilom's own indexed data; no third-party lookup fires
+on a keystroke.
+
+### Identity, not names
+
+Slugs carry the canonical identifier (`jane-smith-q1234`), so two people sharing
+a name stay two people. Result rows show life dates and titles, which is what
+actually disambiguates them.
+
+### Dates
+
+`person_life_dates` renders `1564–1616`, `b. 1564`, `d. 1616` or nothing at all.
+Unknown stays unknown. Precision and the source's own raw value are preserved on
+the record, so a year shown as `1827` can still be traced to a full date.
+
+### Following someone
+
+Selecting a person switches the map to `person_places`, which reads both edge
+directions and reports the predicate **as stated** — "designed", "owned" —
+rather than flattening everything to "associated with".
+
+Places outside activated coverage are shown and labelled, not hidden. A real
+canonical relationship is worth showing even where detailed discovery has not
+reached; hiding it would be a different kind of dishonesty from overstating
+coverage.
+
+`related_people` offers only real graph paths: an explicit person-to-person edge,
+or a shared published place, kept apart because "his wife" and "also worked on
+this building" are not the same claim. There is no similarity scoring — a
+relationship Whilom cannot point at is not one it should assert.
+
+### Where the people came from
+
+A bounded enrichment through the already-approved Wikidata source: people
+already attached to a place Whilom had published, capped, with structured claims
+only and no article prose. Nobody was imported for being famous, which is why
+the cast is country-house architects rather than monarchs.
+
+## What this still is not
+
+Whilom holds a strong regional baseline, not complete historical knowledge.
+There is no arbitrary postcode geocoder, no visitor-attraction inference, no
+national coverage, and no first-party routing. The product says so rather than
+implying otherwise.

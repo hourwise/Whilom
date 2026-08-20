@@ -1,0 +1,199 @@
+{
+  "matrixVersion": 1,
+  "staticEvidenceOnly": true,
+  "capabilities": [
+    {
+      "capability": "PostGIS extension",
+      "exists": true,
+      "indexed": null,
+      "tested": "STATIC_MIGRATION",
+      "requiresBackendValidation": true,
+      "notPresent": false,
+      "evidence": "0001_extensions.sql"
+    },
+    {
+      "capability": "places.location geography(Point,4326)",
+      "exists": true,
+      "indexed": true,
+      "tested": "STATIC_PGTAP_PLAN",
+      "requiresBackendValidation": true,
+      "notPresent": false,
+      "evidence": "0004_places.sql; places_location_gix"
+    },
+    {
+      "capability": "route geometry spatial lookup",
+      "exists": true,
+      "indexed": true,
+      "tested": "STATIC_PGTAP_PLAN",
+      "requiresBackendValidation": true,
+      "notPresent": false,
+      "evidence": "0010_routes.sql; route_geometry_gix"
+    },
+    {
+      "capability": "coverage-region spatial lookup",
+      "exists": true,
+      "indexed": true,
+      "tested": "STATIC_PGTAP_PLAN",
+      "requiresBackendValidation": true,
+      "notPresent": false,
+      "evidence": "0031_discovery_categories_coverage.sql; coverage_regions_area_gix"
+    },
+    {
+      "capability": "exact ST_DWithin place search",
+      "exists": true,
+      "indexed": true,
+      "tested": "STATIC_SQL_AND_TEST_PLAN",
+      "requiresBackendValidation": true,
+      "notPresent": false,
+      "evidence": "search_places; map_places; map_clusters"
+    },
+    {
+      "capability": "viewport/bounding-box lookup",
+      "exists": true,
+      "indexed": true,
+      "tested": "STATIC_SQL_AND_TEST_PLAN",
+      "requiresBackendValidation": true,
+      "notPresent": false,
+      "evidence": "search_places; map_places; coverage_for_viewport"
+    },
+    {
+      "capability": "map clusters",
+      "exists": true,
+      "indexed": true,
+      "tested": "STATIC_PGTAP_PLAN",
+      "requiresBackendValidation": true,
+      "notPresent": false,
+      "evidence": "map_clusters; map_clusters.test.sql"
+    },
+    {
+      "capability": "map places",
+      "exists": true,
+      "indexed": true,
+      "tested": "STATIC_PGTAP_PLAN",
+      "requiresBackendValidation": true,
+      "notPresent": false,
+      "evidence": "map_places; map_contract.test.sql"
+    },
+    {
+      "capability": "category filter",
+      "exists": true,
+      "indexed": true,
+      "tested": "STATIC_SQL_AND_TEST_PLAN",
+      "requiresBackendValidation": true,
+      "notPresent": false,
+      "evidence": "0031/0035 discovery migrations"
+    },
+    {
+      "capability": "period/time filter",
+      "exists": true,
+      "indexed": true,
+      "tested": "STATIC_PGTAP_PLAN",
+      "requiresBackendValidation": true,
+      "notPresent": false,
+      "evidence": "0033/0036/0039; coverage_and_time.test.sql"
+    },
+    {
+      "capability": "place full-text search",
+      "exists": true,
+      "indexed": true,
+      "tested": "STATIC_PGTAP_PLAN",
+      "requiresBackendValidation": true,
+      "notPresent": false,
+      "evidence": "places_search_gin; search_places.test.sql"
+    },
+    {
+      "capability": "global external identifier index",
+      "exists": true,
+      "indexed": true,
+      "tested": "STATIC_SCHEMA",
+      "requiresBackendValidation": true,
+      "notPresent": false,
+      "evidence": "source_records unique(source_id, external_id, entity_type, entity_id)"
+    },
+    {
+      "capability": "global designation-reference index",
+      "exists": true,
+      "indexed": false,
+      "tested": "STATIC_SCHEMA",
+      "requiresBackendValidation": true,
+      "notPresent": false,
+      "evidence": "place_designations.reference exists but has no dedicated index"
+    },
+    {
+      "capability": "compact production matcher candidate index",
+      "exists": false,
+      "indexed": false,
+      "tested": false,
+      "requiresBackendValidation": true,
+      "notPresent": true,
+      "evidence": "BACKEND_SCHEMA_GAP; defer to Batch 21B"
+    },
+    {
+      "capability": "public discovery RLS/grants",
+      "exists": true,
+      "indexed": null,
+      "tested": "STATIC_POLICY_AUDIT",
+      "requiresBackendValidation": true,
+      "notPresent": false,
+      "evidence": "0021 grants; public-read policies; security-invoker discovery views/RPCs"
+    },
+    {
+      "capability": "protected contribution/admin RLS",
+      "exists": true,
+      "indexed": null,
+      "tested": "STATIC_POLICY_AUDIT",
+      "requiresBackendValidation": true,
+      "notPresent": false,
+      "evidence": "0008/0014/0015/0025/0027 policies and editor functions"
+    },
+    {
+      "capability": "generated Supabase database types",
+      "exists": true,
+      "indexed": null,
+      "tested": "DIRECT_TYPESCRIPT",
+      "requiresBackendValidation": true,
+      "notPresent": false,
+      "evidence": "packages/database/src/generated/database.types.ts; root db:types"
+    }
+  ],
+  "rlsAudit": {
+    "publicDiscovery": [
+      "places",
+      "place_designations",
+      "place_access",
+      "place_facilities",
+      "place_accessibility",
+      "people",
+      "routes",
+      "route_stops",
+      "route_geometry",
+      "sources",
+      "source_records",
+      "historical_periods",
+      "temporal_associations",
+      "coverage_regions"
+    ],
+    "protectedContributionAndAdmin": [
+      "reviews",
+      "comments",
+      "tips",
+      "contributions",
+      "corrections",
+      "reports",
+      "moderation_items",
+      "moderation_actions",
+      "import_candidates",
+      "import_conflicts",
+      "import_media_candidates",
+      "temporal_conflict_reviews"
+    ],
+    "liveChecksRequired": [
+      "anonymous discovery reads",
+      "authenticated editor writes",
+      "review queue invisibility to anon",
+      "security-invoker view behavior",
+      "RPC execute grants",
+      "Data API exposure of intended public tables"
+    ]
+  }
+}

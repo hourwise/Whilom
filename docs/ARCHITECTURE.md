@@ -170,3 +170,31 @@ Directions leave Whilom entirely: coordinates are handed to an external
 provider. Discovery and navigation are separate concerns.
 
 See [DISCOVERY.md](DISCOVERY.md).
+
+---
+
+## The discovery model
+
+```
+                    WHERE                WHEN                 WHO
+                 map viewport        century ruler       unified search
+                 + coverage          + epoch bands       + person graph
+                      |                    |                   |
+                      +--------------------+-------------------+
+                                           |
+                        map_places / map_clusters  (bounded, invoker)
+                                           |
+                          published canonical places only
+```
+
+`/` and `/explore` are one component. The homepage runs it immersive, giving the
+map the viewport; `/explore` opens the same thing with panels expanded. The
+place page remains where depth lives — the map is discovery, and a preview shows
+only what the marker payload already carries.
+
+Coverage is a first-class concept rather than a caption: the map's scope is the
+United Kingdom while the activated data is one region, and `coverage_regions`
+exists so the difference is stated by the system rather than remembered by
+whoever writes the copy.
+
+See [DISCOVERY.md](DISCOVERY.md).

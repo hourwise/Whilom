@@ -264,3 +264,34 @@ was asked for.
 
 Held by 48 assertions across `map_contract`, `map_clusters` and
 `temporal_discovery`.
+
+---
+
+## Discovery, coverage and people (0031–0034)
+
+`map_display_category(place_type)` collapses the canonical taxonomy into ten
+presentation groups. Never stored on a place: typing is not coarsened for a key.
+
+`coverage_regions` records where detailed coverage has been activated, and
+`coverage_for_viewport` returns the fraction of a viewport inside it. A fraction
+rather than a boolean, because a view straddling the boundary is where yes/no
+misleads. Absence of data outside these areas means "not yet activated", never
+"no history here".
+
+`period_counts_for_viewport` answers all twenty-one epochs in one grouped query.
+
+`search_discovery` returns places and people from one call, tagged by kind.
+`person_places`, `place_people` and `related_people` walk the published graph in
+both directions; all are SECURITY INVOKER and read only approved rows.
+`format_historical_year` and `person_life_dates` keep negative years and year
+zero out of public output.
+
+`place_matches_time` adds the at/until/from modes alongside period and range
+filtering. A temporal claim with no years satisfies no restrictive mode.
+
+0034 corrects the Iron Age boundary from 43 BC to AD 42. The intent recorded in
+0029 was "ends at the Roman invasion", which is AD 43; the sign was wrong, and
+the effect was that every year from 42 BC to AD 42 belonged to no period at all.
+The migration also asserts the registry contains no gaps, since the same
+off-by-a-sign is easy to reintroduce and invisible until a filter silently
+returns nothing.

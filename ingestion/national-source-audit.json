@@ -1,0 +1,137 @@
+{
+  "generatedAt": "2026-08-19T09:17:30.472Z",
+  "service": "https://services-eu1.arcgis.com/ZOdPfBS3aqqDYPUQ/ArcGIS/rest/services/National_Heritage_List_for_England_NHLE_v02_VIEW/FeatureServer",
+  "licence": "OGL-UK-3.0",
+  "attribution": "Contains Historic England information © Historic England. Contains Ordnance Survey data © Crown copyright and database right.",
+  "layers": [
+    "Listed Building points",
+    "Scheduled Monuments",
+    "Parks and Gardens",
+    "Battlefields",
+    "Protected Wreck Sites",
+    "World Heritage Sites"
+  ],
+  "counts": {
+    "perLayer": {
+      "Listed Building points": 379685,
+      "Scheduled Monuments": 20001,
+      "Parks and Gardens": 1721,
+      "Battlefields": 47,
+      "Protected Wreck Sites": 57,
+      "World Heritage Sites": 28
+    },
+    "total": 401539
+  },
+  "identifier": {
+    "field": "ListEntry",
+    "statisticCount": 379685,
+    "min": 1021466,
+    "max": 1497496,
+    "duplicateSemantics": "points are 1:1 by ListEntry; polygon and WHS layers repeat a ListEntry per geometry part (core + buffer), which the matcher deduplicates"
+  },
+  "geometry": {
+    "dominantLayer": "Listed Building points",
+    "nullGeometry": 0,
+    "note": "every dominant-layer record carries a coordinate"
+  },
+  "distribution": {
+    "unit": "OS 100km grid square",
+    "dominantLayer": "Listed Building points",
+    "occupiedCells": 27,
+    "dominantTotal": 379685,
+    "topCells": [
+      {
+        "cell": "TQ",
+        "count": 48864,
+        "share": 12.87
+      },
+      {
+        "cell": "TL",
+        "count": 34613,
+        "share": 9.12
+      },
+      {
+        "cell": "SP",
+        "count": 34592,
+        "share": 9.11
+      },
+      {
+        "cell": "ST",
+        "count": 34144,
+        "share": 8.99
+      },
+      {
+        "cell": "SU",
+        "count": 33408,
+        "share": 8.8
+      },
+      {
+        "cell": "SK",
+        "count": 21867,
+        "share": 5.76
+      },
+      {
+        "cell": "SO",
+        "count": 21838,
+        "share": 5.75
+      },
+      {
+        "cell": "SE",
+        "count": 21512,
+        "share": 5.67
+      },
+      {
+        "cell": "SJ",
+        "count": 17475,
+        "share": 4.6
+      },
+      {
+        "cell": "SX",
+        "count": 16243,
+        "share": 4.28
+      },
+      {
+        "cell": "SD",
+        "count": 12863,
+        "share": 3.39
+      },
+      {
+        "cell": "TM",
+        "count": 12142,
+        "share": 3.2
+      },
+      {
+        "cell": "NZ",
+        "count": 10648,
+        "share": 2.8
+      },
+      {
+        "cell": "TF",
+        "count": 8717,
+        "share": 2.3
+      },
+      {
+        "cell": "SS",
+        "count": 7432,
+        "share": 1.96
+      }
+    ],
+    "densestCellShare": 12.87
+  },
+  "currentCorpus": {
+    "regionalEnvelope": {
+      "xmin": 400000,
+      "ymin": 420000,
+      "xmax": 545000,
+      "ymax": 510000
+    },
+    "regionalListedBuildingPoints": 21039,
+    "approximateIngested": 23315,
+    "shareOfNational": 5.54
+  },
+  "expansion": {
+    "nationalTotal": 401539,
+    "candidateNewRecords": 378224,
+    "multiplier": 17.2
+  }
+}

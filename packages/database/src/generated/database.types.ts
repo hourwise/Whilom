@@ -313,6 +313,36 @@ export type Database = {
           },
         ]
       }
+      coverage_regions: {
+        Row: {
+          activated_at: string | null
+          area: unknown
+          created_at: string
+          dataset_version: string | null
+          display_name: string
+          id: string
+          note: string | null
+        }
+        Insert: {
+          activated_at?: string | null
+          area: unknown
+          created_at?: string
+          dataset_version?: string | null
+          display_name: string
+          id: string
+          note?: string | null
+        }
+        Update: {
+          activated_at?: string | null
+          area?: unknown
+          created_at?: string
+          dataset_version?: string | null
+          display_name?: string
+          id?: string
+          note?: string | null
+        }
+        Relationships: []
+      }
       entity_relationships: {
         Row: {
           confidence: number | null
@@ -2353,51 +2383,75 @@ export type Database = {
       temporal_associations: {
         Row: {
           association_type: Database["public"]["Enums"]["temporal_association_type"]
+          century_qualifier: string | null
           confidence: number | null
           created_at: string
           derivation: string | null
+          display_label: string | null
           end_year: number | null
           entity_id: string
           entity_type: Database["public"]["Enums"]["entity_type"]
           id: string
+          normaliser_version: string | null
           original_text: string | null
           period_id: string | null
           precision: Database["public"]["Enums"]["temporal_precision"]
+          raw_precision: string | null
+          raw_value: string | null
+          source_field: string | null
           source_id: string | null
+          source_property: string | null
+          source_rank: string | null
           source_record_id: string | null
           start_year: number | null
           status: Database["public"]["Enums"]["moderation_state"]
         }
         Insert: {
           association_type: Database["public"]["Enums"]["temporal_association_type"]
+          century_qualifier?: string | null
           confidence?: number | null
           created_at?: string
           derivation?: string | null
+          display_label?: string | null
           end_year?: number | null
           entity_id: string
           entity_type?: Database["public"]["Enums"]["entity_type"]
           id?: string
+          normaliser_version?: string | null
           original_text?: string | null
           period_id?: string | null
           precision?: Database["public"]["Enums"]["temporal_precision"]
+          raw_precision?: string | null
+          raw_value?: string | null
+          source_field?: string | null
           source_id?: string | null
+          source_property?: string | null
+          source_rank?: string | null
           source_record_id?: string | null
           start_year?: number | null
           status?: Database["public"]["Enums"]["moderation_state"]
         }
         Update: {
           association_type?: Database["public"]["Enums"]["temporal_association_type"]
+          century_qualifier?: string | null
           confidence?: number | null
           created_at?: string
           derivation?: string | null
+          display_label?: string | null
           end_year?: number | null
           entity_id?: string
           entity_type?: Database["public"]["Enums"]["entity_type"]
           id?: string
+          normaliser_version?: string | null
           original_text?: string | null
           period_id?: string | null
           precision?: Database["public"]["Enums"]["temporal_precision"]
+          raw_precision?: string | null
+          raw_value?: string | null
+          source_field?: string | null
           source_id?: string | null
+          source_property?: string | null
+          source_rank?: string | null
           source_record_id?: string | null
           start_year?: number | null
           status?: Database["public"]["Enums"]["moderation_state"]
@@ -2422,6 +2476,165 @@ export type Database = {
             columns: ["source_record_id"]
             isOneToOne: false
             referencedRelation: "source_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      temporal_conflict_entities: {
+        Row: {
+          category: Database["public"]["Enums"]["temporal_conflict_category"]
+          claim_ids: string[]
+          claim_set_digest: string
+          detected_at: string
+          id: string
+          max_disagreement_years: number
+          pair_count: number
+          place_id: string
+          refreshed_at: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["temporal_conflict_category"]
+          claim_ids: string[]
+          claim_set_digest: string
+          detected_at?: string
+          id?: string
+          max_disagreement_years: number
+          pair_count: number
+          place_id: string
+          refreshed_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["temporal_conflict_category"]
+          claim_ids?: string[]
+          claim_set_digest?: string
+          detected_at?: string
+          id?: string
+          max_disagreement_years?: number
+          pair_count?: number
+          place_id?: string
+          refreshed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "temporal_conflict_entities_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: true
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temporal_conflict_entities_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: true
+            referencedRelation: "places_geo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      temporal_conflict_reviews: {
+        Row: {
+          claim_set_digest: string
+          id: string
+          place_id: string
+          preferred_claim_id: string | null
+          rationale: string | null
+          review_state: Database["public"]["Enums"]["temporal_conflict_review_state"]
+          reviewed_at: string
+          reviewed_by: string | null
+        }
+        Insert: {
+          claim_set_digest: string
+          id?: string
+          place_id: string
+          preferred_claim_id?: string | null
+          rationale?: string | null
+          review_state: Database["public"]["Enums"]["temporal_conflict_review_state"]
+          reviewed_at?: string
+          reviewed_by?: string | null
+        }
+        Update: {
+          claim_set_digest?: string
+          id?: string
+          place_id?: string
+          preferred_claim_id?: string | null
+          rationale?: string | null
+          review_state?: Database["public"]["Enums"]["temporal_conflict_review_state"]
+          reviewed_at?: string
+          reviewed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "temporal_conflict_reviews_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temporal_conflict_reviews_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "places_geo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temporal_conflict_reviews_preferred_claim_id_fkey"
+            columns: ["preferred_claim_id"]
+            isOneToOne: false
+            referencedRelation: "temporal_associations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      temporal_quarantine: {
+        Row: {
+          created_at: string
+          entity_id: string | null
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          id: string
+          normaliser_version: string | null
+          note: string | null
+          raw_precision: string | null
+          raw_value: string
+          reason: string
+          source_field: string | null
+          source_id: string | null
+          source_record_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: Database["public"]["Enums"]["entity_type"]
+          id?: string
+          normaliser_version?: string | null
+          note?: string | null
+          raw_precision?: string | null
+          raw_value: string
+          reason: string
+          source_field?: string | null
+          source_id?: string | null
+          source_record_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: Database["public"]["Enums"]["entity_type"]
+          id?: string
+          normaliser_version?: string | null
+          note?: string | null
+          raw_precision?: string | null
+          raw_value?: string
+          reason?: string
+          source_field?: string | null
+          source_id?: string | null
+          source_record_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "temporal_quarantine_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
             referencedColumns: ["id"]
           },
         ]
@@ -3050,6 +3263,19 @@ export type Database = {
         Args: { p_collection_id: string }
         Returns: boolean
       }
+      coverage_for_viewport: {
+        Args: {
+          bbox_ne_lat: number
+          bbox_ne_lng: number
+          bbox_sw_lat: number
+          bbox_sw_lng: number
+        }
+        Returns: {
+          covered_fraction: number
+          region_ids: string[]
+          region_names: string[]
+        }[]
+      }
       current_app_role: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
@@ -3061,6 +3287,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      format_historical_year: { Args: { p_year: number }; Returns: string }
       image_is_visible: { Args: { p_image_id: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_editor: { Args: never; Returns: boolean }
@@ -3071,18 +3298,24 @@ export type Database = {
           bbox_ne_lng: number
           bbox_sw_lat: number
           bbox_sw_lng: number
+          categories?: string[]
           cell_degrees?: number
           designations?: string[]
           from_year?: number
           max_cells?: number
           period_id?: string
+          person_id?: string
           place_types?: string[]
           q?: string
           require_image?: boolean
+          selected_year?: number
+          time_mode?: string
           to_year?: number
         }
         Returns: {
+          category_count: number
           cell_key: string
+          dominant_category: string
           lat: number
           lng: number
           place_count: number
@@ -3096,16 +3329,21 @@ export type Database = {
           bbox_ne_lng: number
           bbox_sw_lat: number
           bbox_sw_lng: number
+          categories?: string[]
           designations?: string[]
           from_year?: number
           max_rows?: number
           period_id?: string
+          person_id?: string
           place_types?: string[]
           q?: string
           require_image?: boolean
+          selected_year?: number
+          time_mode?: string
           to_year?: number
         }
         Returns: {
+          display_category: string
           id: string
           lat: number
           lng: number
@@ -3120,10 +3358,99 @@ export type Database = {
         }[]
       }
       map_thumbnail_for: { Args: { p_place_id: string }; Returns: string }
+      period_counts_for_viewport: {
+        Args: {
+          bbox_ne_lat: number
+          bbox_ne_lng: number
+          bbox_sw_lat: number
+          bbox_sw_lng: number
+          place_types?: string[]
+          q?: string
+        }
+        Returns: {
+          display_name: string
+          display_order: number
+          period_id: string
+          place_count: number
+        }[]
+      }
+      person_by_slug: {
+        Args: { p_slug: string }
+        Returns: {
+          context: string
+          detail: string
+          display_name: string
+          id: string
+          kind: string
+          slug: string
+        }[]
+      }
+      person_life_dates: {
+        Args: { p_birth: number; p_death: number }
+        Returns: string
+      }
+      person_places: {
+        Args: { max_rows?: number; p_person_id: string }
+        Returns: {
+          display_category: string
+          in_coverage: boolean
+          lat: number
+          lng: number
+          name: string
+          place_id: string
+          place_type: string
+          predicate: string
+          relationship_note: string
+          slug: string
+        }[]
+      }
+      place_display_category: {
+        Args: { p_place_type: Database["public"]["Enums"]["place_type"] }
+        Returns: Database["public"]["Enums"]["map_display_category"]
+      }
       place_is_public: { Args: { p_place_id: string }; Returns: boolean }
       place_matches_period: {
         Args: { p_period_id: string; p_place_id: string }
         Returns: boolean
+      }
+      place_matches_time: {
+        Args: {
+          p_from_year?: number
+          p_mode: string
+          p_period_id?: string
+          p_place_id: string
+          p_to_year?: number
+          p_year: number
+        }
+        Returns: boolean
+      }
+      place_people: {
+        Args: { max_rows?: number; p_place_id: string }
+        Returns: {
+          life_dates: string
+          name: string
+          person_id: string
+          predicate: string
+          relationship_note: string
+          slug: string
+        }[]
+      }
+      place_temporal_claims: {
+        Args: { max_rows?: number; p_place_id: string }
+        Returns: {
+          association_type: string
+          claim_precision: string
+          derivation: string
+          end_year: number
+          label: string
+          period_id: string
+          period_name: string
+          precision_class: string
+          raw_value: string
+          source_field: string
+          source_name: string
+          start_year: number
+        }[]
       }
       preview_import_candidate: {
         Args: { p_candidate_id: string }
@@ -3136,6 +3463,19 @@ export type Database = {
       publish_media_candidate: {
         Args: { p_candidate_id: string; p_note?: string }
         Returns: string
+      }
+      refresh_temporal_conflicts: { Args: never; Returns: number }
+      related_people: {
+        Args: { max_rows?: number; p_person_id: string }
+        Returns: {
+          life_dates: string
+          name: string
+          person_id: string
+          relation_detail: string
+          relation_kind: string
+          shared_places: number
+          slug: string
+        }[]
       }
       resolve_import_conflict: {
         Args: {
@@ -3167,6 +3507,20 @@ export type Database = {
         Returns: undefined
       }
       route_is_public: { Args: { p_route_id: string }; Returns: boolean }
+      search_discovery: {
+        Args: { max_rows?: number; q: string }
+        Returns: {
+          context: string
+          detail: string
+          display_name: string
+          id: string
+          kind: string
+          lat: number
+          lng: number
+          rank: number
+          slug: string
+        }[]
+      }
       search_places: {
         Args: {
           bbox_ne_lat?: number
@@ -3200,6 +3554,138 @@ export type Database = {
         }[]
       }
       slugify_unique: { Args: { p_name: string }; Returns: string }
+      temporal_category_for_relation: {
+        Args: { relation: string }
+        Returns: Database["public"]["Enums"]["temporal_conflict_category"]
+      }
+      temporal_claim_label: {
+        Args: {
+          p_display_label: string
+          p_end_year: number
+          p_period_id: string
+          p_precision: Database["public"]["Enums"]["temporal_precision"]
+          p_start_year: number
+        }
+        Returns: string
+      }
+      temporal_claim_relation: {
+        Args: {
+          a_association: Database["public"]["Enums"]["temporal_association_type"]
+          a_end: number
+          a_precision: Database["public"]["Enums"]["temporal_precision"]
+          a_start: number
+          b_association: Database["public"]["Enums"]["temporal_association_type"]
+          b_end: number
+          b_precision: Database["public"]["Enums"]["temporal_precision"]
+          b_start: number
+        }
+        Returns: string
+      }
+      temporal_conflict_claim_digest: {
+        Args: { p_place_id: string }
+        Returns: string
+      }
+      temporal_conflict_pairs: {
+        Args: never
+        Returns: {
+          a_id: string
+          b_id: string
+          category: Database["public"]["Enums"]["temporal_conflict_category"]
+          disagreement_years: number
+          place_id: string
+          relation: string
+        }[]
+      }
+      temporal_conflict_status: {
+        Args: { max_rows?: number }
+        Returns: {
+          category: Database["public"]["Enums"]["temporal_conflict_category"]
+          current_digest: string
+          is_stale: boolean
+          max_disagreement_years: number
+          pair_count: number
+          place_id: string
+          place_name: string
+          place_slug: string
+          preferred_claim_id: string
+          rationale: string
+          review_state: Database["public"]["Enums"]["temporal_conflict_review_state"]
+          reviewed_at: string
+          reviewed_digest: string
+        }[]
+      }
+      temporal_conflicts: {
+        Args: { max_rows?: number }
+        Returns: {
+          a_association: string
+          a_label: string
+          a_property: string
+          a_source: string
+          b_association: string
+          b_label: string
+          b_property: string
+          b_source: string
+          place_id: string
+          place_name: string
+          place_slug: string
+          relation: string
+        }[]
+      }
+      temporal_coverage: {
+        Args: never
+        Returns: {
+          any_coverage: number
+          any_rate: number
+          bounded_only: number
+          period_only: number
+          published_places: number
+          strong: number
+          strong_rate: number
+          unknown: number
+        }[]
+      }
+      temporal_coverage_breakdown: {
+        Args: never
+        Returns: {
+          bucket: string
+          claims: number
+          dimension: string
+          places: number
+          precision_class: string
+        }[]
+      }
+      temporal_precision_class: {
+        Args: { p: Database["public"]["Enums"]["temporal_precision"] }
+        Returns: string
+      }
+      temporal_quarantine_ranking: {
+        Args: { max_rows?: number }
+        Returns: {
+          example_source_record: string
+          occurrences: number
+          raw_value: string
+          reason: string
+        }[]
+      }
+      temporal_relation_summary: {
+        Args: never
+        Returns: {
+          pairs: number
+          places: number
+          relation: string
+        }[]
+      }
+      temporal_same_description: {
+        Args: {
+          a_property: string
+          a_record: string
+          a_source_id: string
+          b_property: string
+          b_record: string
+          b_source_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       access_cost: "free" | "paid" | "donation" | "exterior_only"
@@ -3301,6 +3787,17 @@ export type Database = {
         | "manual"
         | "approximate"
         | "unknown"
+      map_display_category:
+        | "building"
+        | "religious"
+        | "fortification"
+        | "monument"
+        | "ruin"
+        | "archaeology"
+        | "industrial"
+        | "military"
+        | "landscape"
+        | "other"
       media_association_outcome:
         | "media_match_confident"
         | "media_match_review"
@@ -3414,6 +3911,19 @@ export type Database = {
         | "event"
         | "lost"
         | "associated"
+      temporal_conflict_category:
+        | "direct_date_disagreement"
+        | "century_disagreement"
+        | "period_disagreement"
+        | "disjoint_range"
+        | "overlapping_range"
+      temporal_conflict_review_state:
+        | "unreviewed"
+        | "reviewed_unresolved"
+        | "multi_phase_confirmed"
+        | "preferred_interpretation_recorded"
+        | "source_error_confirmed"
+        | "no_longer_conflicting"
       temporal_precision:
         | "exact_year"
         | "circa"
@@ -3672,6 +4182,18 @@ export const Constants = {
         "approximate",
         "unknown",
       ],
+      map_display_category: [
+        "building",
+        "religious",
+        "fortification",
+        "monument",
+        "ruin",
+        "archaeology",
+        "industrial",
+        "military",
+        "landscape",
+        "other",
+      ],
       media_association_outcome: [
         "media_match_confident",
         "media_match_review",
@@ -3795,6 +4317,21 @@ export const Constants = {
         "event",
         "lost",
         "associated",
+      ],
+      temporal_conflict_category: [
+        "direct_date_disagreement",
+        "century_disagreement",
+        "period_disagreement",
+        "disjoint_range",
+        "overlapping_range",
+      ],
+      temporal_conflict_review_state: [
+        "unreviewed",
+        "reviewed_unresolved",
+        "multi_phase_confirmed",
+        "preferred_interpretation_recorded",
+        "source_error_confirmed",
+        "no_longer_conflicting",
       ],
       temporal_precision: [
         "exact_year",

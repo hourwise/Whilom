@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { matchCandidate } from '../matching/matcher';
-import { isGenericName, nameSimilarity } from '../matching/name';
+import {
+  allNamePairsDistinct,
+  allPreparedNamePairsDistinct,
+  bestNameSimilarityBreakdown,
+  bestPreparedNameSimilarityBreakdown,
+  isGenericName,
+  nameSimilarity,
+  prepareNames,
+} from '../matching/name';
 import { MatchOutcome } from '../pipeline/candidate';
 import { THRESHOLDS } from '../matching/matcher';
 import type { CanonicalPlaceRef, PlaceCandidate } from '../pipeline/candidate';
@@ -12,7 +20,9 @@ import type { PlaceType } from '@whilom/domain';
  * values from `sources/historic-england/fixtures/yorkshire-poc.json`.
  */
 
-function candidate(over: Partial<PlaceCandidate> & { name: string; location: { lng: number; lat: number } }): PlaceCandidate {
+function candidate(
+  over: Partial<PlaceCandidate> & { name: string; location: { lng: number; lat: number } },
+): PlaceCandidate {
   return {
     provenance: {
       sourceId: 'historic-england-nhle',
@@ -34,7 +44,13 @@ function candidate(over: Partial<PlaceCandidate> & { name: string; location: { l
   };
 }
 
-function existing(over: Partial<CanonicalPlaceRef> & { id: string; name: string; location: { lng: number; lat: number } }): CanonicalPlaceRef {
+function existing(
+  over: Partial<CanonicalPlaceRef> & {
+    id: string;
+    name: string;
+    location: { lng: number; lat: number };
+  },
+): CanonicalPlaceRef {
   return {
     altNames: [],
     placeType: 'castle' as PlaceType,
@@ -56,7 +72,45 @@ describe('name handling', () => {
   it('sees through a scheduling description to the site name', () => {
     const scheduled =
       'Fountains Cistercian Abbey; monastic precinct, mill, water management works, agricultural and industrial features and 18th century gardens';
-    expect(nameSimilarity(scheduled, 'Fountains Abbey, With Ancillary Buildings')).toBeGreaterThan(0.6);
+    expect(nameSimilarity(scheduled, 'Fountains Abbey, With Ancillary Buildings')).toBeGreaterThan(
+      0.6,
+    );
+  });
+
+  it('keeps prepared canonical name work equivalent to the raw path', () => {
+    const cases = [
+      {
+        candidate: ['Middleham Castle'],
+        existing: ['Middleham Castle'],
+      },
+      {
+        candidate: ['CHURCH OF ST MARY'],
+        existing: ['Village Cross'],
+      },
+      {
+        candidate: [
+          'Fountains Cistercian Abbey; monastic precinct, mill, water management works',
+          'Fountains Abbey',
+        ],
+        existing: ['Fountains Abbey, With Ancillary Buildings'],
+      },
+      {
+        candidate: ['Old Hall (formerly manor house)'],
+        existing: ['Old Hall'],
+      },
+    ];
+
+    for (const entry of cases) {
+      expect(
+        allPreparedNamePairsDistinct(prepareNames(entry.candidate), prepareNames(entry.existing)),
+      ).toEqual(allNamePairsDistinct(entry.candidate, entry.existing));
+      expect(
+        bestPreparedNameSimilarityBreakdown(
+          prepareNames(entry.candidate),
+          prepareNames(entry.existing),
+        ),
+      ).toEqual(bestNameSimilarityBreakdown(entry.candidate, entry.existing));
+    }
   });
 });
 

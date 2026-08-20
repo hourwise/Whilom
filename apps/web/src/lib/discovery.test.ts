@@ -14,7 +14,9 @@ import {
   formatYear,
   paramsFromState,
   periodById,
+  personPlacesAsMapPlaces,
   stateFromParams,
+  viewportForPlaces,
 } from './discovery';
 
 describe('the period vocabulary', () => {
@@ -39,16 +41,34 @@ describe('the period vocabulary', () => {
   });
 
   it('stays in step with the database registry', () => {
-    // Drift here would mean the scrubber offers boundaries the map does not use.
-    const sql = readFileSync(
-      fileURLToPath(new URL('../../../../supabase/migrations/0029_temporal_discovery.sql', import.meta.url)),
-      'utf8',
+    // Drift here would mean the ruler offers boundaries the map does not use.
+    // Both migrations are read: 0029 inserts the registry and 0034 corrects the
+    // Iron Age boundary. Reading only the insert would compare against a value
+    // the database no longer holds — which is exactly how that bug survived a
+    // parity test that looked green.
+    const files = ['0029_temporal_discovery.sql', '0034_iron_age_boundary.sql'].map((f) =>
+      readFileSync(
+        fileURLToPath(new URL(`../../../../supabase/migrations/${f}`, import.meta.url)),
+        'utf8',
+      ),
     );
+    const registry = new Map<string, { start: number; end: number }>();
+    for (const sql of files) {
+      for (const m of sql.matchAll(/\('([a-z0-9_]+)',\s*'[^']*',\s*(-?\d+),\s*(-?\d+)/g)) {
+        registry.set(m[1]!, { start: Number(m[2]), end: Number(m[3]) });
+      }
+      for (const m of sql.matchAll(
+        /update public\.historical_periods\s+set\s+end_year\s*=\s*(-?\d+)[\s\S]*?where id = '([a-z0-9_]+)'/g,
+      )) {
+        const existing = registry.get(m[2]!);
+        if (existing) registry.set(m[2]!, { start: existing.start, end: Number(m[1]) });
+      }
+    }
     for (const period of PERIODS) {
-      const row = new RegExp(`\\('${period.id}',\\s*'[^']*',\\s*(-?\\d+),\\s*(-?\\d+)`).exec(sql);
-      expect(row, `period ${period.id} is missing from the migration`).not.toBeNull();
-      expect(Number(row![1]), `${period.id} start`).toBe(period.startYear);
-      expect(Number(row![2]), `${period.id} end`).toBe(period.endYear);
+      const row = registry.get(period.id);
+      expect(row, `period ${period.id} is missing from the migrations`).toBeDefined();
+      expect(row!.start, `${period.id} start`).toBe(period.startYear);
+      expect(row!.end, `${period.id} end`).toBe(period.endYear);
     }
   });
 });
@@ -70,7 +90,9 @@ describe('showing years to people', () => {
 
   it('spans a period across the BCE/CE boundary without a year zero', () => {
     const ironAge = periodById('iron_age')!;
-    expect(formatPeriodSpan(ironAge)).toBe('800 BC – 43 BC');
+    // The Iron Age ends the year before the Roman invasion of AD 43, so its
+    // span genuinely crosses the boundary — and does so without a year zero.
+    expect(formatPeriodSpan(ironAge)).toBe('800 BC – AD 42');
     const roman = periodById('roman')!;
     expect(formatPeriodSpan(roman)).toBe('AD 43 – AD 409');
   });
@@ -183,5 +205,65 @@ describe('empty results are explained honestly', () => {
   it('says where Whilom actually has coverage when nothing else is filtered', () => {
     const message = emptyStateMessage(DEFAULT_STATE);
     expect(message.detail).toMatch(/Yorkshire/);
+  });
+});
+
+describe('framing a person', () => {
+  const at = (lng: number, lat: number) => ({ lng, lat });
+
+  it('has nothing to frame when a person has no published places', () => {
+    expect(viewportForPlaces([])).toBeNull();
+  });
+
+  it('centres on the places it was given', () => {
+    const view = viewportForPlaces([at(-1.6, 53.9), at(-1.4, 54.1)]);
+    expect(view?.lng).toBeCloseTo(-1.5, 6);
+    expect(view?.lat).toBeCloseTo(54.0, 6);
+  });
+
+  it('zooms in close on a single building rather than leaving it in an empty map', () => {
+    const view = viewportForPlaces([at(-1.08, 53.96)]);
+    expect(view?.zoom).toBeGreaterThan(12);
+  });
+
+  it('pulls back for a life spread across a county', () => {
+    const wide = viewportForPlaces([at(-2.4, 53.4), at(-0.4, 54.6)]);
+    const narrow = viewportForPlaces([at(-1.09, 53.95), at(-1.07, 53.97)]);
+    expect(wide!.zoom).toBeLessThan(narrow!.zoom);
+  });
+
+  it('never zooms past the whole-country view or past a single street', () => {
+    const view = viewportForPlaces([at(-8, 50), at(2, 60)]);
+    expect(view!.zoom).toBeGreaterThanOrEqual(5);
+    expect(view!.zoom).toBeLessThanOrEqual(15);
+  });
+});
+
+describe("a person's places as markers", () => {
+  const row = {
+    place_id: 'p1',
+    slug: 'st-marys',
+    name: "St Mary's",
+    place_type: 'church',
+    display_category: 'religious',
+    lng: -1.08,
+    lat: 53.96,
+    predicate: 'built_by',
+    relationship_note: null,
+    in_coverage: true,
+  };
+
+  it('carries the identity and category the map needs to draw them', () => {
+    const place = personPlacesAsMapPlaces([row])[0]!;
+    expect(place.id).toBe('p1');
+    expect(place.slug).toBe('st-marys');
+    expect(place.display_category).toBe('religious');
+  });
+
+  it('leaves what the person projection does not carry as null rather than inventing it', () => {
+    const place = personPlacesAsMapPlaces([row])[0]!;
+    expect(place.thumbnail_url).toBeNull();
+    expect(place.period_summary).toBeNull();
+    expect(place.primary_designation).toBeNull();
   });
 });

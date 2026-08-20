@@ -8,7 +8,15 @@ import type {
 import { MatchOutcome } from '../pipeline/candidate';
 import { distanceMeters } from '../transforms/osgb';
 import { typesAreCompatible } from '../transforms/place-type';
-import { allNamePairsDistinct, bestNameSimilarityBreakdown, isGenericName } from './name';
+import {
+  allPreparedNamePairsDistinct,
+  bestPreparedNameSimilarityBreakdown,
+  isPreparedNameGeneric,
+  prepareNames,
+  type PreparedNames,
+} from './name';
+import { sameRegisterDifferentEntries } from './source-relation';
+import type { MatchProfile } from '../scale/metrics';
 
 /**
  * Conservative matcher v1 (spec §36).
@@ -79,6 +87,7 @@ export interface MatchStats {
    * refuses to match at this distance.
    */
   beyondMaxDistance: number;
+  profile?: MatchProfile;
 }
 
 /**
@@ -105,19 +114,31 @@ function distanceSignal(meters: number, radius: number): MatchSignal {
       detail: `${Math.round(meters)}m, within the ${Math.round(radius)}m positional agreement radius`,
     };
   }
-  if (meters <= 250) return { name: 'distance', weight: 0.3, detail: `${Math.round(meters)}m apart` };
-  if (meters <= 1000) return { name: 'distance', weight: 0.1, detail: `${Math.round(meters)}m apart` };
+  if (meters <= 250)
+    return { name: 'distance', weight: 0.3, detail: `${Math.round(meters)}m apart` };
+  if (meters <= 1000)
+    return { name: 'distance', weight: 0.1, detail: `${Math.round(meters)}m apart` };
   return { name: 'distance', weight: -0.1, detail: `${Math.round(meters)}m apart` };
 }
 
 function nameSignal(similarity: number, generic: boolean): MatchSignal {
   if (similarity >= 0.92) {
     return generic
-      ? { name: 'name', weight: 0.1, detail: `names match (${similarity.toFixed(2)}) but the name is not distinctive` }
+      ? {
+          name: 'name',
+          weight: 0.1,
+          detail: `names match (${similarity.toFixed(2)}) but the name is not distinctive`,
+        }
       : { name: 'name', weight: 0.4, detail: `distinctive names match (${similarity.toFixed(2)})` };
   }
-  if (similarity >= 0.75) return { name: 'name', weight: 0.2, detail: `names similar (${similarity.toFixed(2)})` };
-  if (similarity >= 0.55) return { name: 'name', weight: 0.05, detail: `names loosely similar (${similarity.toFixed(2)})` };
+  if (similarity >= 0.75)
+    return { name: 'name', weight: 0.2, detail: `names similar (${similarity.toFixed(2)})` };
+  if (similarity >= 0.55)
+    return {
+      name: 'name',
+      weight: 0.05,
+      detail: `names loosely similar (${similarity.toFixed(2)})`,
+    };
   return { name: 'name', weight: -0.2, detail: `names differ (${similarity.toFixed(2)})` };
 }
 
@@ -205,6 +226,43 @@ interface ScoredMatch {
   areaVsStructure: boolean;
 }
 
+interface ScoreVeto {
+  kind?: 'register' | 'distance' | 'name';
+}
+
+const canonicalNameCache = new WeakMap<CanonicalPlaceRef, PreparedNames>();
+const canonicalNameLru = new Map<CanonicalPlaceRef, PreparedNames>();
+const MAX_PREPARED_CANONICAL_NAMES = 8_192;
+
+function constructDecision(
+  profile: MatchProfile | undefined,
+  factory: () => MatchDecision,
+): MatchDecision {
+  const started = profile ? performance.now() : 0;
+  const decision = factory();
+  if (profile) profile.timingsMs.outcomeConstruction += performance.now() - started;
+  return decision;
+}
+
+function preparedNamesOfCanonical(existing: CanonicalPlaceRef): PreparedNames {
+  const cached = canonicalNameCache.get(existing);
+  if (cached) {
+    canonicalNameLru.delete(existing);
+    canonicalNameLru.set(existing, cached);
+    return cached;
+  }
+  const prepared = prepareNames([existing.name, ...existing.altNames]);
+  canonicalNameCache.set(existing, prepared);
+  canonicalNameLru.set(existing, prepared);
+  while (canonicalNameLru.size > MAX_PREPARED_CANONICAL_NAMES) {
+    const oldest = canonicalNameLru.keys().next().value as CanonicalPlaceRef | undefined;
+    if (!oldest) break;
+    canonicalNameLru.delete(oldest);
+    canonicalNameCache.delete(oldest);
+  }
+  return prepared;
+}
+
 /**
  * Whether one source's own register already says these are two different
  * things.
@@ -251,21 +309,21 @@ function areaAgainstStructure(ours: readonly string[], theirs: readonly string[]
   return ourArea !== theirArea;
 }
 
-function sameRegisterDifferentEntries(
+function scoreAgainst(
   candidate: PlaceCandidate,
   existing: CanonicalPlaceRef,
-): boolean {
-  const theirs = existing.sourceIdentity;
-  if (!theirs) return false;
-  if (theirs.sourceId !== candidate.provenance.sourceId) return false;
-  if (theirs.sourceRecordId === candidate.provenance.sourceRecordId) return false;
-
-  const ours = candidate.designations.map((d) => d.designation).sort();
-  if (ours.length === 0 || theirs.designations.length === 0) return false;
-  return ours.some((designation) => theirs.designations.includes(designation));
-}
-
-function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): ScoredMatch | null {
+  precomputedMeters?: number,
+  profile?: MatchProfile,
+  candidateNames: PreparedNames = prepareNames([candidate.name, ...candidate.altNames]),
+  existingNames: PreparedNames = preparedNamesOfCanonical(existing),
+  veto?: ScoreVeto,
+): ScoredMatch | null {
+  const timed = Boolean(
+    profile &&
+    profile.timingSampleEvery > 0 &&
+    profile.counts.comparisons % profile.timingSampleEvery === 0,
+  );
+  if (timed && profile) profile.timedComparisons += 1;
   // Hard register veto. Two entries in one source's register, under the same
   // designation, are two different protected things by that source's own
   // account. This is stronger evidence than any similarity signal, and it is
@@ -273,16 +331,26 @@ function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): S
   // curtilage structures after their parent building and puts them metres away,
   // so name and distance are at their most persuasive exactly where the records
   // are most certainly distinct.
-  if (sameRegisterDifferentEntries(candidate, existing)) return null;
+  const registerStarted = timed ? performance.now() : 0;
+  const registerVeto = sameRegisterDifferentEntries(candidate, existing);
+  if (timed && profile) profile.timingsMs.registerVeto += performance.now() - registerStarted;
+  if (registerVeto) {
+    if (veto) veto.kind = 'register';
+    return null;
+  }
+  if (profile) profile.counts.survivingRegister += 1;
 
-  const meters = distanceMeters(candidate.location, existing.location);
+  const distanceStarted = timed ? performance.now() : 0;
+  const meters = precomputedMeters ?? distanceMeters(candidate.location, existing.location);
+  if (timed && profile) profile.timingsMs.distance += performance.now() - distanceStarted;
   // Hard geographic veto. Two heritage sites 5km apart are not the same site,
   // however alike their names — this is what stops the two "Middleham Castle"
   // records, 48km apart, from ever being considered a match.
-  if (meters > THRESHOLDS.maxPlausibleDistanceMeters) return null;
-
-  const candidateNames = [candidate.name, ...candidate.altNames];
-  const existingNames = [existing.name, ...existing.altNames];
+  if (meters > THRESHOLDS.maxPlausibleDistanceMeters) {
+    if (veto) veto.kind = 'distance';
+    return null;
+  }
+  if (profile) profile.counts.survivingDistance += 1;
 
   // Hard nominal veto, on the same footing as the geographic one. The statutory
   // list separately designates thousands of curtilage structures and names each
@@ -290,12 +358,21 @@ function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): S
   // at their strongest exactly where the two records are most certainly
   // different things. When the names themselves say so, no score can override
   // it. See `namesDenoteDistinctThings`.
-  const distinct = allNamePairsDistinct(candidateNames, existingNames);
-  if (distinct.distinct) return null;
+  if (profile) profile.counts.reachingNameComparison += 1;
+  const distinctStarted = timed ? performance.now() : 0;
+  const distinct = allPreparedNamePairsDistinct(candidateNames, existingNames);
+  if (timed && profile) profile.timingsMs.nameDistinctness += performance.now() - distinctStarted;
+  if (distinct.distinct) {
+    if (veto) veto.kind = 'name';
+    return null;
+  }
 
-  const nameMatch = bestNameSimilarityBreakdown(candidateNames, existingNames);
+  const similarityStarted = timed ? performance.now() : 0;
+  const nameMatch = bestPreparedNameSimilarityBreakdown(candidateNames, existingNames);
+  if (timed && profile) profile.timingsMs.nameSimilarity += performance.now() - similarityStarted;
   const nameScore = nameMatch.score;
-  const generic = isGenericName(candidate.name) && isGenericName(existing.name);
+  const generic =
+    isPreparedNameGeneric(candidateNames[0]!) && isPreparedNameGeneric(existingNames[0]!);
 
   const radius = agreementRadius(candidate.locationAccuracyMeters, existing.locationAccuracyMeters);
   const signals: MatchSignal[] = [distanceSignal(meters, radius), nameSignal(nameScore, generic)];
@@ -308,15 +385,29 @@ function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): S
   // even carried. "Marrick Priory Farmhouse", typed `monument` at confidence
   // 0.2 because nothing in its name could be recognised, was contributing
   // positive evidence towards merging with an actual priory.
+  if (profile) profile.counts.reachingFullScoring += 1;
+  const scoringStarted = timed ? performance.now() : 0;
   const candidateTyped = candidate.placeTypeConfidence >= 0.7;
   const existingTyped = (existing.placeTypeConfidence ?? 0) >= 0.7;
   const compatible = typesAreCompatible(candidate.placeType, existing.placeType);
   if (candidateTyped && existingTyped && compatible) {
-    signals.push({ name: 'type', weight: 0.1, detail: `types compatible (${candidate.placeType}/${existing.placeType})` });
+    signals.push({
+      name: 'type',
+      weight: 0.1,
+      detail: `types compatible (${candidate.placeType}/${existing.placeType})`,
+    });
   } else if (candidateTyped && !compatible) {
-    signals.push({ name: 'type', weight: -0.35, detail: `types incompatible (${candidate.placeType}/${existing.placeType})` });
+    signals.push({
+      name: 'type',
+      weight: -0.35,
+      detail: `types incompatible (${candidate.placeType}/${existing.placeType})`,
+    });
   } else if (!candidateTyped) {
-    signals.push({ name: 'type', weight: 0, detail: 'candidate type not confidently known; ignored' });
+    signals.push({
+      name: 'type',
+      weight: 0,
+      detail: 'candidate type not confidently known; ignored',
+    });
   } else {
     signals.push({
       name: 'type',
@@ -326,7 +417,9 @@ function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): S
   }
 
   if (candidate.postcode && existing.postcode) {
-    const same = candidate.postcode.replace(/\s+/g, '').toUpperCase() === existing.postcode.replace(/\s+/g, '').toUpperCase();
+    const same =
+      candidate.postcode.replace(/\s+/g, '').toUpperCase() ===
+      existing.postcode.replace(/\s+/g, '').toUpperCase();
     signals.push(
       same
         ? { name: 'postcode', weight: 0.2, detail: 'postcodes match' }
@@ -334,15 +427,23 @@ function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): S
     );
   }
 
-  if (candidate.town && existing.town && candidate.town.toLowerCase() === existing.town.toLowerCase()) {
+  if (
+    candidate.town &&
+    existing.town &&
+    candidate.town.toLowerCase() === existing.town.toLowerCase()
+  ) {
     signals.push({ name: 'town', weight: 0.05, detail: `same town (${existing.town})` });
   }
 
+  const conflicts = collectConflicts(candidate, existing, meters);
+  if (timed && profile) {
+    profile.timingsMs.scoringAndConflicts += performance.now() - scoringStarted;
+  }
   return {
     existing,
     score: scoreOf(signals),
     signals,
-    conflicts: collectConflicts(candidate, existing, meters),
+    conflicts,
     meters,
     radius,
     nameScore,
@@ -365,7 +466,9 @@ export function matchCandidate(
   existingPlaces: readonly CanonicalPlaceRef[],
   stats?: MatchStats,
 ): MatchDecision {
+  const candidateNames = prepareNames([candidate.name, ...candidate.altNames]);
   // --- Deterministic identity ----------------------------------------------
+  const identifierStarted = performance.now();
   for (const existing of existingPlaces) {
     const shared = sharedExternalId(candidate, existing);
     if (shared && !sameRegisterDifferentEntries(candidate, existing)) {
@@ -373,72 +476,124 @@ export function matchCandidate(
       // an assertion made by a source, and sources do attach one QID to both a
       // hall and its stable block. If the names say these are different
       // things, that disagreement is for a human, not an automatic merge.
-      const namesDistinct = allNamePairsDistinct(
-        [candidate.name, ...candidate.altNames],
-        [existing.name, ...existing.altNames],
+      const namesDistinct = allPreparedNamePairsDistinct(
+        candidateNames,
+        preparedNamesOfCanonical(existing),
       );
       if (namesDistinct.distinct) {
-        return {
+        if (stats?.profile) {
+          stats.profile.timingsMs.identifierPhase += performance.now() - identifierStarted;
+          stats.profile.counts.reachingNameComparison += 1;
+        }
+        return constructDecision(stats?.profile, () => ({
           outcome: MatchOutcome.MatchReview,
           confidence: 0.5,
           matchedPlaceId: existing.id,
           signals: [
-            { name: 'external-id', weight: 1, detail: `shared ${shared.scheme} identifier ${shared.value}` },
-            { name: 'name', weight: -1, detail: namesDistinct.reason ?? 'names denote different things' },
+            {
+              name: 'external-id',
+              weight: 1,
+              detail: `shared ${shared.scheme} identifier ${shared.value}`,
+            },
+            {
+              name: 'name',
+              weight: -1,
+              detail: namesDistinct.reason ?? 'names denote different things',
+            },
           ],
           conflicts: [],
           rationale: `Shares a ${shared.scheme} identifier with "${existing.name}", but ${namesDistinct.reason ?? 'the names denote different things'}.`,
-        };
+        }));
       }
       const meters = distanceMeters(candidate.location, existing.location);
       const conflicts = collectConflicts(candidate, existing, meters);
       const signals: MatchSignal[] = [
-        { name: 'external-id', weight: 1, detail: `shared ${shared.scheme} identifier ${shared.value}` },
+        {
+          name: 'external-id',
+          weight: 1,
+          detail: `shared ${shared.scheme} identifier ${shared.value}`,
+        },
       ];
       // Even a shared identifier does not license a silent overwrite when the
       // records disagree about something material.
-      return conflicts.length > 0
-        ? {
-            outcome: MatchOutcome.ConflictReview,
-            confidence: 1,
-            matchedPlaceId: existing.id,
-            signals,
-            conflicts,
-            rationale: `Same ${shared.scheme} identifier as "${existing.name}", but the records disagree on ${conflicts.map((c) => c.field).join(', ')}.`,
-          }
-        : {
-            outcome: MatchOutcome.MatchConfident,
-            confidence: 1,
-            matchedPlaceId: existing.id,
-            signals,
-            conflicts: [],
-            rationale: `Same ${shared.scheme} identifier as "${existing.name}".`,
-          };
+      if (stats?.profile) {
+        stats.profile.timingsMs.identifierPhase += performance.now() - identifierStarted;
+        stats.profile.counts.reachingNameComparison += 1;
+      }
+      return constructDecision(stats?.profile, () =>
+        conflicts.length > 0
+          ? {
+              outcome: MatchOutcome.ConflictReview,
+              confidence: 1,
+              matchedPlaceId: existing.id,
+              signals,
+              conflicts,
+              rationale: `Same ${shared.scheme} identifier as "${existing.name}", but the records disagree on ${conflicts.map((c) => c.field).join(', ')}.`,
+            }
+          : {
+              outcome: MatchOutcome.MatchConfident,
+              confidence: 1,
+              matchedPlaceId: existing.id,
+              signals,
+              conflicts: [],
+              rationale: `Same ${shared.scheme} identifier as "${existing.name}".`,
+            },
+      );
     }
   }
+  if (stats?.profile)
+    stats.profile.timingsMs.identifierPhase += performance.now() - identifierStarted;
 
   // --- Scored comparison ----------------------------------------------------
-  const scored = existingPlaces
-    .map((existing) => {
-      const match = scoreAgainst(candidate, existing);
-      if (stats) {
-        stats.comparisons += 1;
-        const meters = distanceMeters(candidate.location, existing.location);
-        if (meters > THRESHOLDS.maxPlausibleDistanceMeters) stats.beyondMaxDistance += 1;
-        if (match === null) {
-          if (sameRegisterDifferentEntries(candidate, existing)) stats.vetoedByRegister += 1;
-          else if (meters > THRESHOLDS.maxPlausibleDistanceMeters) stats.vetoedByDistance += 1;
-          else stats.vetoedByName += 1;
-        }
+  const allocationStarted = performance.now();
+  const scoredOrNull = existingPlaces.map((existing) => {
+    // The benchmark observer asks for distance-veto counters as well as the
+    // decision. Compute this deterministic value once for the hot path; the
+    // previous implementation recomputed it inside scoreAgainst and then
+    // immediately recomputed it for instrumentation. Outcomes and signals
+    // are unchanged.
+    const meters = stats ? distanceMeters(candidate.location, existing.location) : undefined;
+    if (stats?.profile) stats.profile.counts.comparisons += 1;
+    const veto: ScoreVeto = {};
+    const match = scoreAgainst(
+      candidate,
+      existing,
+      meters,
+      stats?.profile,
+      candidateNames,
+      preparedNamesOfCanonical(existing),
+      veto,
+    );
+    if (stats) {
+      stats.comparisons += 1;
+      if (meters! > THRESHOLDS.maxPlausibleDistanceMeters) stats.beyondMaxDistance += 1;
+      if (match === null) {
+        if (veto.kind === 'register') stats.vetoedByRegister += 1;
+        else if (veto.kind === 'distance') stats.vetoedByDistance += 1;
+        else if (veto.kind === 'name') stats.vetoedByName += 1;
       }
-      return match;
-    })
-    .filter((m): m is ScoredMatch => m !== null)
-    .sort((a, b) => b.score - a.score);
-
+    }
+    return match;
+  });
+  if (stats?.profile) {
+    stats.profile.timingsMs.scoredResultAllocation += performance.now() - allocationStarted;
+  }
+  const filteringStarted = performance.now();
+  const scored = scoredOrNull.filter((m): m is ScoredMatch => m !== null);
+  if (stats?.profile) {
+    stats.profile.timingsMs.filtering += performance.now() - filteringStarted;
+    stats.profile.counts.scoredCandidates += scored.length;
+    if (scored.length === 0) stats.profile.counts.zeroViable += 1;
+    else if (scored.length === 1) stats.profile.counts.oneViable += 1;
+    else stats.profile.counts.twoOrMoreViable += 1;
+  }
+  const sortingStarted = performance.now();
+  scored.sort((a, b) => b.score - a.score);
   const best = scored[0];
+  const runnerUp = scored[1];
+  if (stats?.profile) stats.profile.timingsMs.sortingOrTopTwo += performance.now() - sortingStarted;
   if (!best || best.score < THRESHOLDS.reviewScore) {
-    return {
+    return constructDecision(stats?.profile, () => ({
       outcome: MatchOutcome.NewCanonical,
       confidence: best ? best.score : 0,
       signals: best?.signals ?? [],
@@ -446,24 +601,23 @@ export function matchCandidate(
       rationale: best
         ? `Closest existing place "${best.existing.name}" scored ${best.score.toFixed(2)}, below the ${THRESHOLDS.reviewScore} review threshold.`
         : 'No existing place within range.',
-    };
+    }));
   }
 
   // A second candidate scoring nearly as well means we cannot say *which* place
   // this is, even if we are sure it is one of them. That is a review, never a
   // merge — this is the "multiple structures within one estate" case.
-  const runnerUp = scored[1];
   const ambiguous = runnerUp !== undefined && best.score - runnerUp.score < 0.1;
 
   if (best.conflicts.length > 0) {
-    return {
+    return constructDecision(stats?.profile, () => ({
       outcome: MatchOutcome.ConflictReview,
       confidence: best.score,
       matchedPlaceId: best.existing.id,
       signals: best.signals,
       conflicts: best.conflicts,
       rationale: `Probably "${best.existing.name}" (${best.score.toFixed(2)}), but the sources disagree on ${best.conflicts.map((c) => c.field).join(', ')}.`,
-    };
+    }));
   }
 
   // Containment is not identity — the project's oldest matching principle,
@@ -494,14 +648,14 @@ export function matchCandidate(
     best.meters <= best.radius;
 
   if (confidentGatesPass) {
-    return {
+    return constructDecision(stats?.profile, () => ({
       outcome: MatchOutcome.MatchConfident,
       confidence: best.score,
       matchedPlaceId: best.existing.id,
       signals: best.signals,
       conflicts: [],
       rationale: `Distinctive name and position agree with "${best.existing.name}" (${best.score.toFixed(2)}).`,
-    };
+    }));
   }
 
   const why: string[] = [];
@@ -515,16 +669,19 @@ export function matchCandidate(
   if (ambiguous && runnerUp) why.push(`"${runnerUp.existing.name}" scores almost as well`);
   if (best.nameScore < THRESHOLDS.confidentNameSimilarity) why.push('names are not close enough');
   if (best.meters > best.radius) {
-    why.push(`${Math.round(best.meters)}m apart, outside the ${Math.round(best.radius)}m agreement radius`);
+    why.push(
+      `${Math.round(best.meters)}m apart, outside the ${Math.round(best.radius)}m agreement radius`,
+    );
   }
-  if (best.score < THRESHOLDS.confidentScore) why.push(`score ${best.score.toFixed(2)} below ${THRESHOLDS.confidentScore}`);
+  if (best.score < THRESHOLDS.confidentScore)
+    why.push(`score ${best.score.toFixed(2)} below ${THRESHOLDS.confidentScore}`);
 
-  return {
+  return constructDecision(stats?.profile, () => ({
     outcome: MatchOutcome.MatchReview,
     confidence: best.score,
     matchedPlaceId: best.existing.id,
     signals: best.signals,
     conflicts: [],
     rationale: `Possibly "${best.existing.name}", needs review: ${why.join('; ')}.`,
-  };
+  }));
 }

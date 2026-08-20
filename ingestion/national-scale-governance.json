@@ -1,0 +1,104 @@
+{
+  "contractId": "whilom-national-scale-v1",
+  "contractVersion": 1,
+  "lanes": {
+    "historicalPrefixRegression": {
+      "role": "HISTORICAL",
+      "compositionDrift": [
+        {
+          "from": 25000,
+          "to": 50000,
+          "classification": "COMPARABLE_WORKLOAD",
+          "maxDesignationDriftPercentagePoints": 0.034,
+          "maxGeographyDriftPercentagePoints": 0.040000000000000036,
+          "designationViolations": [],
+          "geographyViolations": [],
+          "normalizedGrowth": 0.45454545454545453,
+          "pass": true
+        },
+        {
+          "from": 50000,
+          "to": 100000,
+          "classification": "WORKLOAD_PHASE_CHANGE",
+          "maxDesignationDriftPercentagePoints": 5.4069999999999965,
+          "maxGeographyDriftPercentagePoints": 0.04999999999999982,
+          "designationViolations": [
+            "listed_building",
+            "registered_park_garden",
+            "scheduled_monument"
+          ],
+          "geographyViolations": [],
+          "normalizedGrowth": 2.466666666666667,
+          "pass": false
+        },
+        {
+          "from": 100000,
+          "to": 199980,
+          "classification": "COMPARABLE_WORKLOAD",
+          "maxDesignationDriftPercentagePoints": 0.006000000000000227,
+          "maxGeographyDriftPercentagePoints": 0.006,
+          "designationViolations": [],
+          "geographyViolations": [],
+          "normalizedGrowth": 0.8244067650008244,
+          "pass": true
+        }
+      ],
+      "historicalPrefixStatus": "WORKLOAD_PHASE_CHANGE_AT_50K_TO_100K",
+      "maximumProvenSafeScale": "PROVEN_SAFE_TO_50K",
+      "nationalExpansionClassification": "REMEDIATION_INSUFFICIENT"
+    },
+    "compositionControlledScale": {
+      "role": "CONTROLLED",
+      "sampleDigests": {
+        "25000": "7bef48b0753acbcd41bccba9b54ae28e3d4248b3ad11a1b8869a154a45a593b8",
+        "50000": "a850f335d94230baa7b55d6301452e133c18a75c78bd92fce605a8367ffc2759",
+        "100000": "73cbe02f6f60afc8ee54a38acae394fda09c488fcb21838c7bc724af3c9df95a",
+        "199980": "631100d50055eedeecae8c6bd8f40b894f067bde2c80f683902324ff6608e28c"
+      },
+      "compositionDrift": [
+        {
+          "from": 25000,
+          "to": 50000,
+          "classification": "COMPARABLE_WORKLOAD",
+          "maxDesignationDriftPercentagePoints": 0.012000000000000455,
+          "maxGeographyDriftPercentagePoints": 0.0040000000000000036,
+          "designationViolations": [],
+          "geographyViolations": [],
+          "normalizedGrowth": 0.8692307692307693,
+          "pass": true
+        },
+        {
+          "from": 50000,
+          "to": 100000,
+          "classification": "COMPARABLE_WORKLOAD",
+          "maxDesignationDriftPercentagePoints": 0.01200000000000001,
+          "maxGeographyDriftPercentagePoints": 0.0030000000000001137,
+          "designationViolations": [],
+          "geographyViolations": [],
+          "normalizedGrowth": 0.9867256637168141,
+          "pass": true
+        },
+        {
+          "from": 100000,
+          "to": 199980,
+          "classification": "COMPARABLE_WORKLOAD",
+          "maxDesignationDriftPercentagePoints": 0.006999999999999673,
+          "maxGeographyDriftPercentagePoints": 0.0017999999999998018,
+          "designationViolations": [],
+          "geographyViolations": [],
+          "normalizedGrowth": 0.6480468674670158,
+          "pass": true
+        }
+      ],
+      "controlledEquivalentWorkScale": "PASS_TO_200K",
+      "controlledWorkloadComparability": "PASS"
+    }
+  },
+  "overallEvidence": {
+    "architectureScaleEvidence": "EQUIVALENT_WORK_PROVEN_TO_200K",
+    "fullNational401kScale": "NOT_PROVEN",
+    "databaseScale": "NOT_RUN",
+    "nationalPublication": "NOT_AUTHORIZED",
+    "perRecordGrowthVsSizeMax": 1
+  }
+}

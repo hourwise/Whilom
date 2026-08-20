@@ -5,7 +5,9 @@ import { applyEnrichment } from '../enrichment/wikidata';
 import { matchCandidate } from '../matching/matcher';
 import type { MatchStats } from '../matching/matcher';
 import { CandidateIndex, CandidateMode } from '../matching/candidates';
+import type { CandidateStore } from '../matching/candidates';
 import type { CandidateGenerationStats } from '../matching/candidates';
+import type { CandidateGenerationDelta } from '../matching/candidates';
 import {
   SameSourceOverlap,
   classifySameSourceOverlap,
@@ -18,12 +20,7 @@ import type { NormaliseResult } from '../transforms/normalise-nhle';
 import { distanceMeters } from '../transforms/osgb';
 import { isFallbackClassification } from '../transforms/place-type';
 import { buildCandidateFacts } from './facts';
-import type {
-  CanonicalPlaceRef,
-  MatchDecision,
-  PlaceCandidate,
-  RejectedRecord,
-} from './candidate';
+import type { CanonicalPlaceRef, MatchDecision, PlaceCandidate, RejectedRecord } from './candidate';
 import { MatchOutcome } from './candidate';
 
 /**
@@ -69,7 +66,17 @@ export interface RunObserver {
   /** Accumulates candidate-generation work across the whole run. */
   candidateStats?: CandidateGenerationStats;
   /** Called once per record that reached the matcher. */
-  onRecord?(timings: { normaliseMs: number; validateMs: number; matchMs: number }): void;
+  onRecord?(timings: {
+    normaliseMs: number;
+    validateMs: number;
+    matchMs: number;
+    candidate: PlaceCandidate;
+    shortlist: readonly CanonicalPlaceRef[];
+    shortlistSize: number;
+    candidateGeneration?: CandidateGenerationDelta;
+  }): void;
+  /** Called once for every matcher decision, including streamed runs. */
+  onDecision?(decided: DecidedCandidate): void;
 }
 
 export interface RunOptions {
@@ -89,6 +96,12 @@ export interface RunOptions {
    * exhaustive exists so bounded can be proved equivalent to it.
    */
   candidateMode?: CandidateMode;
+  /** A disk-backed store can keep payload memory bounded for national streams. */
+  candidateStore?: CandidateStore;
+  /** Clear a bounded store after this many source rows. */
+  chunkSize?: number;
+  /** Do not retain every decision in the report when a caller has a decision tap. */
+  retainDecided?: boolean;
 }
 
 export interface DecidedCandidate {
@@ -206,7 +219,7 @@ export function candidateAsCanonical(candidate: PlaceCandidate, id: string): Can
 
 export async function runIngestion(options: RunOptions): Promise<RunReport> {
   const { importRunId, sources, enrichmentSource, maxRecords, observer } = options;
-  const candidateMode = options.candidateMode ?? CandidateMode.Bounded;
+  const candidateMode = options.candidateMode ?? CandidateMode.RegisterPruned;
   const startedAt = new Date();
 
   const report: RunReport = {
@@ -237,159 +250,244 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
   // Places the matcher compares against: what is already canonical, plus what
   // this run has decided to create. Without the second half, two source rows
   // describing one abbey would both be filed as new.
-  const existing = new CandidateIndex(candidateMode);
-  for (const place of options.existingPlaces ?? []) existing.add(place);
+  const existing: CandidateStore = options.candidateStore ?? new CandidateIndex(candidateMode);
+  for (const place of options.existingPlaces ?? []) await existing.add(place);
   const preexistingIds = new Set((options.existingPlaces ?? []).map((p) => p.id));
-  // The candidate behind each record created in this run, so a later source
-  // describing the same place can be compared field by field against it.
-  const candidateById = new Map<string, PlaceCandidate>();
   let createdInRun = 0;
+  const chunkSize = options.chunkSize ?? Number.POSITIVE_INFINITY;
+  await existing.beginChunk?.();
 
   for (const source of sources) {
-   for await (const raw of source.adapter.fetch()) {
-    if (maxRecords !== undefined && report.sourceRows >= maxRecords) break;
-    report.sourceRows += 1;
-
-    // --- NORMALISE ----------------------------------------------------------
-    const normaliseStart = performance.now();
-    const normalised = source.normalise(raw, importRunId);
-    const normaliseMs = performance.now() - normaliseStart;
-    if (!normalised.ok) {
-      report.rejected += 1;
-      report.rejections.push(normalised.rejected);
-      report.outcomes[MatchOutcome.RejectInvalid] += 1;
-      continue;
-    }
-
-    // --- VALIDATE -----------------------------------------------------------
-    const validateStart = performance.now();
-    const parsed = placeCandidateSchema.safeParse(normalised.candidate);
-    const validateMs = performance.now() - validateStart;
-    if (!parsed.success) {
-      report.rejected += 1;
-      report.rejections.push({
-        provenance: normalised.candidate.provenance,
-        name: normalised.candidate.name,
-        reasons: parsed.error.issues.map((i) => `${i.path.join('.') || 'record'}: ${i.message}`),
-      });
-      report.outcomes[MatchOutcome.RejectInvalid] += 1;
-      continue;
-    }
-
-    report.valid += 1;
-    // Derive the publishable facts once, centrally, so the publish engine
-    // never has to know which source a candidate came from.
-    let candidate: PlaceCandidate = {
-      ...normalised.candidate,
-      facts: buildCandidateFacts(normalised.candidate),
-    };
-    if (isFallbackClassification(candidate.placeTypeRule)) report.genericallyTyped += 1;
-
-    // --- IDENTIFIER RESOLUTION (see note above) -----------------------------
-    if (enrichmentSource) {
-      const enrichment = await enrichmentSource.enrich(candidate);
-      if (enrichment) {
-        report.enriched += 1;
-        candidate = applyEnrichment(
-          candidate,
-          enrichment,
-          ENRICHMENT_COORDINATE_TOLERANCE_METERS,
-          distanceMeters,
-        );
+    for await (const raw of source.adapter.fetch()) {
+      if (maxRecords !== undefined && report.sourceRows >= maxRecords) break;
+      report.sourceRows += 1;
+      if (report.sourceRows > 1 && (report.sourceRows - 1) % chunkSize === 0) {
+        await existing.beginChunk?.();
+        // CI scale jobs may opt into --expose-gc. When available, collecting at
+        // the explicit chunk boundary makes the working-set measurement about
+        // retained payloads rather than garbage awaiting the next V8 cycle.
+        globalThis.gc?.();
       }
-    }
 
-    // --- MATCH / DEDUPE -----------------------------------------------------
-    // --- CANDIDATE GENERATION ----------------------------------------------
-    // Which records the matcher is asked about. Not which records match.
-    const shortlist = existing.candidatesFor(candidate, observer?.candidateStats);
+      // --- NORMALISE ----------------------------------------------------------
+      const normaliseStart = performance.now();
+      const normalised = source.normalise(raw, importRunId);
+      const normaliseMs = performance.now() - normaliseStart;
+      if (!normalised.ok) {
+        report.rejected += 1;
+        report.rejections.push(normalised.rejected);
+        report.outcomes[MatchOutcome.RejectInvalid] += 1;
+        continue;
+      }
 
-    const matchStart = performance.now();
-    const decision = matchCandidate(candidate, shortlist, observer?.matchStats);
-    const matchMs = performance.now() - matchStart;
-    observer?.onRecord?.({ normaliseMs, validateMs, matchMs });
-    const withinRun =
-      decision.matchedPlaceId !== undefined && !preexistingIds.has(decision.matchedPlaceId);
+      // --- VALIDATE -----------------------------------------------------------
+      const validateStart = performance.now();
+      const parsed = placeCandidateSchema.safeParse(normalised.candidate);
+      const validateMs = performance.now() - validateStart;
+      if (!parsed.success) {
+        report.rejected += 1;
+        report.rejections.push({
+          provenance: normalised.candidate.provenance,
+          name: normalised.candidate.name,
+          reasons: parsed.error.issues.map((i) => `${i.path.join('.') || 'record'}: ${i.message}`),
+        });
+        report.outcomes[MatchOutcome.RejectInvalid] += 1;
+        continue;
+      }
 
-    report.outcomes[decision.outcome] += 1;
-    report.conflicts += decision.conflicts.length;
-    if (
-      withinRun &&
-      (decision.outcome === MatchOutcome.MatchConfident ||
-        decision.outcome === MatchOutcome.MatchReview ||
-        decision.outcome === MatchOutcome.ConflictReview)
-    ) {
-      report.duplicatesWithinRun += 1;
-    }
+      report.valid += 1;
+      // Derive the publishable facts once, centrally, so the publish engine
+      // never has to know which source a candidate came from.
+      let candidate: PlaceCandidate = {
+        ...normalised.candidate,
+        facts: buildCandidateFacts(normalised.candidate),
+      };
+      if (isFallbackClassification(candidate.placeTypeRule)) report.genericallyTyped += 1;
 
-    // Only a new canonical record joins the comparison set. A record awaiting
-    // review must not become something later records can match against —
-    // that would let one uncertain decision propagate through the whole run.
-    if (decision.outcome === MatchOutcome.NewCanonical) {
-      createdInRun += 1;
-      const id = `run:${importRunId}:${createdInRun}`;
-      existing.add(candidateAsCanonical(candidate, id));
-      candidateById.set(id, candidate);
-      report.comparisons[ComparisonOutcome.NoMatch] += 1;
-    }
+      // --- IDENTIFIER RESOLUTION (see note above) -----------------------------
+      if (enrichmentSource) {
+        const enrichment = await enrichmentSource.enrich(candidate);
+        if (enrichment) {
+          report.enriched += 1;
+          candidate = applyEnrichment(
+            candidate,
+            enrichment,
+            ENRICHMENT_COORDINATE_TOLERANCE_METERS,
+            distanceMeters,
+          );
+        }
+      }
 
-    // --- CROSS-SOURCE COMPARISON -------------------------------------------
-    // Only meaningful once we believe two records describe one place. Identity
-    // and agreement are separate questions: deciding they are the same site
-    // says nothing about whether the sources agree about it.
-    //
-    // And it is only meaningful when there really are two sources. Running the
-    // comparator over two records from the SAME source asks a question that
-    // cannot be answered — Historic England does not disagree with itself, it
-    // holds several designations over overlapping ground, so a listed building
-    // and the scheduled monument around it differ in type and position by
-    // design. The 1,000-record scale tier surfaced this: every one of its 142
-    // "cross-source conflicts" was NHLE compared against NHLE, inflating the
-    // conflict rate to 23.9% and, worse, would have told a reviewer that two
-    // sources disagreed when only one source was ever involved.
-    let comparison: SourceComparison | undefined;
-    if (decision.matchedPlaceId) {
-      const counterpart = candidateById.get(decision.matchedPlaceId);
-      if (counterpart) {
-        if (shouldCompareAcrossSources(counterpart, candidate)) {
-          comparison = compareSources(counterpart, candidate);
-          report.comparisons[comparison.outcome] += 1;
-          report.conflicts += comparison.conflicts.length;
+      // --- MATCH / DEDUPE -----------------------------------------------------
+      // --- CANDIDATE GENERATION ----------------------------------------------
+      // Which records the matcher is asked about. Not which records match.
+      const candidateStatsBefore = observer?.candidateStats
+        ? {
+            candidatePairs: observer.candidateStats.candidatePairs,
+            cellSupersetCandidates: observer.candidateStats.cellSupersetCandidates,
+            rejectedByExactRadius: observer.candidateStats.rejectedByExactRadius,
+            exactSpatialCandidates: observer.candidateStats.exactSpatialCandidates,
+            identifierCandidates: observer.candidateStats.identifierCandidates,
+            identifierOnlyCandidates: observer.candidateStats.identifierOnlyCandidates,
+            identifierRescuedBeyondRadius: observer.candidateStats.identifierRescuedBeyondRadius,
+            finalCandidatePairs: observer.candidateStats.finalCandidatePairs,
+            registerVetoCandidates: observer.candidateStats.registerVetoCandidates,
+            sameSourceSameRecordCandidates: observer.candidateStats.sameSourceSameRecordCandidates,
+            sameSourceDifferentDesignationCandidates:
+              observer.candidateStats.sameSourceDifferentDesignationCandidates,
+            crossSourceCandidates: observer.candidateStats.crossSourceCandidates,
+            missingSourceIdentityCandidates:
+              observer.candidateStats.missingSourceIdentityCandidates,
+            survivingRegisterCandidates: observer.candidateStats.survivingRegisterCandidates,
+          }
+        : undefined;
+      const shortlist = await existing.candidatesFor(candidate, observer?.candidateStats);
+      const candidateGeneration =
+        observer?.candidateStats && candidateStatsBefore
+          ? {
+              candidatePairs:
+                observer.candidateStats.candidatePairs - candidateStatsBefore.candidatePairs,
+              cellSupersetCandidates:
+                observer.candidateStats.cellSupersetCandidates -
+                candidateStatsBefore.cellSupersetCandidates,
+              rejectedByExactRadius:
+                observer.candidateStats.rejectedByExactRadius -
+                candidateStatsBefore.rejectedByExactRadius,
+              exactSpatialCandidates:
+                observer.candidateStats.exactSpatialCandidates -
+                candidateStatsBefore.exactSpatialCandidates,
+              identifierCandidates:
+                observer.candidateStats.identifierCandidates -
+                candidateStatsBefore.identifierCandidates,
+              identifierOnlyCandidates:
+                observer.candidateStats.identifierOnlyCandidates -
+                candidateStatsBefore.identifierOnlyCandidates,
+              identifierRescuedBeyondRadius:
+                observer.candidateStats.identifierRescuedBeyondRadius -
+                candidateStatsBefore.identifierRescuedBeyondRadius,
+              finalCandidatePairs:
+                observer.candidateStats.finalCandidatePairs -
+                candidateStatsBefore.finalCandidatePairs,
+              registerVetoCandidates:
+                observer.candidateStats.registerVetoCandidates -
+                candidateStatsBefore.registerVetoCandidates,
+              sameSourceSameRecordCandidates:
+                observer.candidateStats.sameSourceSameRecordCandidates -
+                candidateStatsBefore.sameSourceSameRecordCandidates,
+              sameSourceDifferentDesignationCandidates:
+                observer.candidateStats.sameSourceDifferentDesignationCandidates -
+                candidateStatsBefore.sameSourceDifferentDesignationCandidates,
+              crossSourceCandidates:
+                observer.candidateStats.crossSourceCandidates -
+                candidateStatsBefore.crossSourceCandidates,
+              missingSourceIdentityCandidates:
+                observer.candidateStats.missingSourceIdentityCandidates -
+                candidateStatsBefore.missingSourceIdentityCandidates,
+              survivingRegisterCandidates:
+                observer.candidateStats.survivingRegisterCandidates -
+                candidateStatsBefore.survivingRegisterCandidates,
+            }
+          : undefined;
+
+      const matchStart = performance.now();
+      const decision = matchCandidate(candidate, shortlist, observer?.matchStats);
+      const matchMs = performance.now() - matchStart;
+      observer?.onRecord?.({
+        normaliseMs,
+        validateMs,
+        matchMs,
+        candidate,
+        shortlist,
+        shortlistSize: shortlist.length,
+        candidateGeneration,
+      });
+      const withinRun =
+        decision.matchedPlaceId !== undefined && !preexistingIds.has(decision.matchedPlaceId);
+
+      report.outcomes[decision.outcome] += 1;
+      report.conflicts += decision.conflicts.length;
+      if (
+        withinRun &&
+        (decision.outcome === MatchOutcome.MatchConfident ||
+          decision.outcome === MatchOutcome.MatchReview ||
+          decision.outcome === MatchOutcome.ConflictReview)
+      ) {
+        report.duplicatesWithinRun += 1;
+      }
+
+      // Only a new canonical record joins the comparison set. A record awaiting
+      // review must not become something later records can match against —
+      // that would let one uncertain decision propagate through the whole run.
+      if (decision.outcome === MatchOutcome.NewCanonical) {
+        createdInRun += 1;
+        const id = `run:${importRunId}:${createdInRun}`;
+        await existing.add(candidateAsCanonical(candidate, id), candidate);
+        report.comparisons[ComparisonOutcome.NoMatch] += 1;
+      }
+
+      // --- CROSS-SOURCE COMPARISON -------------------------------------------
+      // Only meaningful once we believe two records describe one place. Identity
+      // and agreement are separate questions: deciding they are the same site
+      // says nothing about whether the sources agree about it.
+      //
+      // And it is only meaningful when there really are two sources. Running the
+      // comparator over two records from the SAME source asks a question that
+      // cannot be answered — Historic England does not disagree with itself, it
+      // holds several designations over overlapping ground, so a listed building
+      // and the scheduled monument around it differ in type and position by
+      // design. The 1,000-record scale tier surfaced this: every one of its 142
+      // "cross-source conflicts" was NHLE compared against NHLE, inflating the
+      // conflict rate to 23.9% and, worse, would have told a reviewer that two
+      // sources disagreed when only one source was ever involved.
+      let comparison: SourceComparison | undefined;
+      const matchedIdentity = decision.matchedPlaceId
+        ? await existing.getSourceIdentity?.(decision.matchedPlaceId)
+        : undefined;
+      if (decision.matchedPlaceId && matchedIdentity) {
+        if (shouldCompareAcrossSources(matchedIdentity, candidate)) {
+          const counterpart = await existing.getCandidate?.(decision.matchedPlaceId);
+          if (counterpart) {
+            comparison = compareSources(counterpart, candidate);
+            report.comparisons[comparison.outcome] += 1;
+            report.conflicts += comparison.conflicts.length;
+          }
         } else {
-          // Same source: recorded as an overlap, never as a disagreement.
+          // Same source: recorded as an overlap, never as a disagreement. The
+          // compact source identity avoids reloading a full national payload.
           report.withinSourceMatches += 1;
-          const overlap = classifySameSourceOverlap(counterpart, candidate);
+          const overlap = classifySameSourceOverlap(matchedIdentity, {
+            provenance: {
+              sourceId: candidate.provenance.sourceId,
+              sourceRecordId: candidate.provenance.sourceRecordId,
+            },
+            designations: candidate.designations,
+          });
           report.sameSourceOverlaps[overlap] += 1;
         }
       }
-    }
-    // A review outcome is ambiguity about IDENTITY, and it belongs in the
-    // comparison histogram only when two sources were actually involved.
-    // Counting it for a same-source pair was the last residue of the Batch 6
-    // defect: a single-source run still reported cross-source comparison
-    // outcomes, for pairs where no comparison was ever performed.
-    if (decision.outcome === MatchOutcome.MatchReview && !comparison) {
-      const counterpart = decision.matchedPlaceId
-        ? candidateById.get(decision.matchedPlaceId)
-        : undefined;
-      if (counterpart && shouldCompareAcrossSources(counterpart, candidate)) {
-        report.comparisons[ComparisonOutcome.Ambiguous] += 1;
+      // A review outcome is ambiguity about IDENTITY, and it belongs in the
+      // comparison histogram only when two sources were actually involved.
+      // Counting it for a same-source pair was the last residue of the Batch 6
+      // defect: a single-source run still reported cross-source comparison
+      // outcomes, for pairs where no comparison was ever performed.
+      if (decision.outcome === MatchOutcome.MatchReview && !comparison) {
+        if (matchedIdentity && shouldCompareAcrossSources(matchedIdentity, candidate)) {
+          report.comparisons[ComparisonOutcome.Ambiguous] += 1;
+        }
       }
-    }
 
-    const matchedCandidate = decision.matchedPlaceId
-      ? candidateById.get(decision.matchedPlaceId)
-      : undefined;
-    report.decided.push({
-      candidate,
-      decision,
-      withinRun,
-      ...(matchedCandidate
-        ? { matchedSourceRecordId: matchedCandidate.provenance.sourceRecordId }
-        : {}),
-      ...(comparison ? { comparison } : {}),
-    });
-   }
+      const decided: DecidedCandidate = {
+        candidate,
+        decision,
+        withinRun,
+        ...(matchedIdentity
+          ? { matchedSourceRecordId: matchedIdentity.provenance.sourceRecordId }
+          : {}),
+        ...(comparison ? { comparison } : {}),
+      };
+      if (options.retainDecided !== false) report.decided.push(decided);
+      observer?.onDecision?.(decided);
+    }
   }
 
   const finishedAt = new Date();
