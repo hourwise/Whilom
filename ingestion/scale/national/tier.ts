@@ -32,6 +32,8 @@ export interface Layer {
 export interface Cache {
   _source: Record<string, unknown>;
   layers: Layer[];
+  /** Optional persisted order used to preserve the established 100k prefix. */
+  order?: { layerIndex: number; featureIndex: number }[];
 }
 
 export interface NationalTierFixture {
@@ -54,6 +56,15 @@ function cellKey(attributes: Record<string, unknown>): string {
  * feature) pairs so a tier prefix can be split back into layers.
  */
 export function interleavedOrder(cache: Cache): { layerIndex: number; feature: Feature }[] {
+  if (cache.order) {
+    return cache.order.map(({ layerIndex, featureIndex }) => {
+      const layer = cache.layers[layerIndex];
+      const feature = layer?.features[featureIndex];
+      if (!layer || !feature) throw new Error('national cache order points to a missing feature');
+      return { layerIndex, feature };
+    });
+  }
+
   // Group every record by cell, preserving the ListEntry-ascending order the
   // capture fetched them in.
   const byCell = new Map<string, { layerIndex: number; feature: Feature }[]>();

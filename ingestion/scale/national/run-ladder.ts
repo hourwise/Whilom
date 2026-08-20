@@ -73,6 +73,19 @@ export interface StageResult {
     chunks: number;
     spillBytes: number;
     maxCachedPayloadRecords: number;
+    payloadLookups: number;
+    pageHits: number;
+    pageMisses: number;
+    physicalReadCalls: number;
+    bytesReadFromSpill: number;
+    payloadBytesRequested: number;
+    missPayloadBytesRequested: number;
+    recordsDecoded: number;
+    cacheHitRatio: number;
+    readAmplification: number;
+    physicalReadsPerPayloadLookup: number;
+    pageCacheRecords: number;
+    maxPageCachePages: number;
   };
   classification: StageClassification;
   reason: string;
@@ -161,21 +174,31 @@ function conflictCount(metrics: TierMetrics): number {
   return metrics.matching.outcomes[MatchOutcome.ConflictReview] ?? 0;
 }
 
-export async function runNationalLadder(largest?: number): Promise<{
+export async function runNationalLadder(
+  largest?: number,
+  only?: number,
+): Promise<{
   sampleSize: number;
   checkpoints: number[];
   stages: StageResult[];
   maxProvenScale: string;
 }> {
   const available = nationalSampleSize();
-  const requested: number[] = [...NATIONAL_CHECKPOINTS].filter(
-    (c) => c <= available && (largest === undefined || c <= largest),
-  );
+  const requested: number[] =
+    only !== undefined
+      ? [only]
+      : [...NATIONAL_CHECKPOINTS].filter(
+          (c) => c <= available && (largest === undefined || c <= largest),
+        );
   // The stratified sample lands a hair under 100k (largest-remainder rounding on
   // per-layer sub-quotas), so the 100k checkpoint is exercised at the full
   // sample size rather than dropped. Reported as the ~100k stage it is.
   const topRequested = requested[requested.length - 1] ?? 0;
-  if (available > topRequested && (largest === undefined || available <= largest)) {
+  if (
+    only === undefined &&
+    available > topRequested &&
+    (largest === undefined || available <= largest)
+  ) {
     requested.push(available);
   }
 
@@ -262,7 +285,9 @@ const invokedDirectly = process.argv[1] && resolve(process.argv[1]).endsWith('ru
 if (invokedDirectly) {
   const largestArg = process.argv.indexOf('--largest');
   const largest = largestArg >= 0 ? Number(process.argv[largestArg + 1]) : undefined;
-  runNationalLadder(largest)
+  const onlyArg = process.argv.indexOf('--only');
+  const only = onlyArg >= 0 ? Number(process.argv[onlyArg + 1]) : undefined;
+  runNationalLadder(largest, only)
     .then((result) => {
       writeFileSync(
         resolve(process.cwd(), 'national-ladder.json'),

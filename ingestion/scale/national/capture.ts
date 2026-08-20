@@ -36,10 +36,15 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { INGESTED_LAYERS, NHLE_SERVICE } from './audit';
+import type { Cache as TierCache } from './tier';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const NATIONAL_CACHE_DIR = resolve(HERE, '../../.national-cache');
 export const NATIONAL_CACHE_FILE = resolve(NATIONAL_CACHE_DIR, 'nhle-national-cache.json');
+export const LEGACY_NATIONAL_CACHE_FILE = resolve(
+  NATIONAL_CACHE_DIR,
+  'nhle-national-cache-legacy-100k.json',
+);
 export const NATIONAL_MANIFEST_FILE = resolve(HERE, 'manifest.json');
 
 /** National checkpoints. Capture may supply fewer; the ladder reports NOT_RUN. */
@@ -69,6 +74,55 @@ export interface NationalManifest {
 
 interface Feature {
   attributes: Record<string, unknown>;
+}
+
+function stableFeatureKey(layerId: number, feature: Feature): string {
+  const attributes = feature.attributes;
+  const value = attributes['ListEntry'] ?? attributes['NHLE_ID'] ?? attributes['RecordID'];
+  return `${layerId}|${String(value)}`;
+}
+
+function cacheOrder(cache: TierCache): { layerIndex: number; feature: Feature }[] {
+  if (cache.order) {
+    return cache.order.map(({ layerIndex, featureIndex }) => {
+      const feature = cache.layers[layerIndex]?.features[featureIndex];
+      if (!feature) throw new Error('national cache order points to a missing feature');
+      return { layerIndex, feature };
+    });
+  }
+  const byCell = new Map<string, { layerIndex: number; feature: Feature }[]>();
+  cache.layers.forEach((layer, layerIndex) => {
+    for (const feature of layer.features) {
+      const e = Number(feature.attributes['Easting']);
+      const n = Number(feature.attributes['Northing']);
+      const key =
+        Number.isFinite(e) && Number.isFinite(n)
+          ? `${Math.floor(e / CELL_M)},${Math.floor(n / CELL_M)}`
+          : 'none';
+      const bucket = byCell.get(key) ?? [];
+      bucket.push({ layerIndex, feature });
+      byCell.set(key, bucket);
+    }
+  });
+  const cells = [...byCell.entries()].sort(
+    (a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]),
+  );
+  const cursors = new Map(cells.map(([key]) => [key, 0]));
+  const order: { layerIndex: number; feature: Feature }[] = [];
+  let remaining = cells.reduce((sum, [, list]) => sum + list.length, 0);
+  while (remaining > 0) {
+    for (const [key, list] of cells) {
+      const at = cursors.get(key) ?? 0;
+      if (at >= list.length) continue;
+      const take = Math.max(1, Math.round(list.length / 100));
+      for (let i = 0; i < take && at + i < list.length; i += 1) {
+        order.push(list[at + i]!);
+        remaining -= 1;
+      }
+      cursors.set(key, at + take);
+    }
+  }
+  return order;
 }
 
 async function arcgis(layer: number, params: Record<string, string>): Promise<any> {
@@ -155,7 +209,21 @@ function osGridSquare(col: number, row: number): string {
   return String.fromCharCode(a + l1) + String.fromCharCode(a + l2);
 }
 
-export async function captureNational(): Promise<NationalManifest> {
+export async function captureNational(
+  options: {
+    sampleSize?: number;
+    outputFile?: string;
+    outputManifestFile?: string;
+    previousCacheFile?: string;
+  } = {},
+): Promise<NationalManifest> {
+  const sampleSize = options.sampleSize ?? NATIONAL_SAMPLE_SIZE;
+  const outputFile = options.outputFile ?? NATIONAL_CACHE_FILE;
+  const outputManifestFile = options.outputManifestFile ?? NATIONAL_MANIFEST_FILE;
+  const previousCacheFile = options.previousCacheFile ?? outputFile;
+  const previousCache = existsSync(previousCacheFile)
+    ? (JSON.parse(readFileSync(previousCacheFile, 'utf8')) as TierCache)
+    : undefined;
   // 1. Measure each occupied cell across all ingested layers. Per-layer counts
   //    are kept so phase 3 does not re-query them.
   const occupied: {
@@ -180,14 +248,14 @@ export async function captureNational(): Promise<NationalManifest> {
   //    sum to exactly the sample size rather than drifting by rounding.
   const raw = occupied.map((c) => ({
     ...c,
-    exact: (NATIONAL_SAMPLE_SIZE * c.nationalCount) / nationalTotal,
+    exact: (sampleSize * c.nationalCount) / nationalTotal,
   }));
   const quotas = raw.map((c) => ({ ...c, quota: Math.floor(c.exact) }));
   let assigned = quotas.reduce((sum, c) => sum + c.quota, 0);
   quotas
     .map((c, i) => ({ i, frac: c.exact - Math.floor(c.exact) }))
     .sort((a, b) => b.frac - a.frac)
-    .slice(0, NATIONAL_SAMPLE_SIZE - assigned)
+    .slice(0, sampleSize - assigned)
     .forEach(({ i }) => {
       const q = quotas[i];
       if (q) q.quota += 1;
@@ -223,7 +291,7 @@ export async function captureNational(): Promise<NationalManifest> {
   }
   const total = layers.reduce((sum, l) => sum + l.features.length, 0);
 
-  const cache = {
+  const cache: TierCache = {
     _source: {
       dataset: 'National Heritage List for England (NHLE)',
       publisher: 'Historic England',
@@ -237,10 +305,54 @@ export async function captureNational(): Promise<NationalManifest> {
     },
     layers: layers.filter((l) => l.features.length > 0),
   };
+
+  // Preserve the already approved ~100k ordering when the requested sample is
+  // extended. The old API response is retained by prefix in each cell/layer;
+  // the persisted reference order makes that guarantee independent of how
+  // the larger sample's per-cell quotas change.
+  if (previousCache) {
+    const currentByKey = new Map<string, { layerIndex: number; featureIndex: number }[]>();
+    cache.layers.forEach((layer, layerIndex) => {
+      layer.features.forEach((feature, featureIndex) => {
+        const key = stableFeatureKey(layer.layerId, feature);
+        const bucket = currentByKey.get(key) ?? [];
+        bucket.push({ layerIndex, featureIndex });
+        currentByKey.set(key, bucket);
+      });
+    });
+    const order: { layerIndex: number; featureIndex: number }[] = [];
+    const seen = new Set<string>();
+    const takeCurrent = (key: string): { layerIndex: number; featureIndex: number } | undefined => {
+      const bucket = currentByKey.get(key);
+      const current = bucket?.find((item) => !seen.has(`${item.layerIndex}:${item.featureIndex}`));
+      return current;
+    };
+    for (const item of cacheOrder(previousCache)) {
+      const oldLayer = previousCache.layers[item.layerIndex];
+      if (!oldLayer) continue;
+      const key = stableFeatureKey(oldLayer.layerId, item.feature);
+      const current = takeCurrent(key);
+      if (current && !seen.has(`${current.layerIndex}:${current.featureIndex}`)) {
+        order.push(current);
+        seen.add(`${current.layerIndex}:${current.featureIndex}`);
+      }
+    }
+    for (const item of cacheOrder(cache)) {
+      const layer = cache.layers[item.layerIndex];
+      if (!layer) continue;
+      const key = stableFeatureKey(layer.layerId, item.feature);
+      const current = takeCurrent(key);
+      if (current && !seen.has(`${current.layerIndex}:${current.featureIndex}`)) {
+        order.push(current);
+        seen.add(`${current.layerIndex}:${current.featureIndex}`);
+      }
+    }
+    cache.order = order;
+  }
   mkdirSync(NATIONAL_CACHE_DIR, { recursive: true });
-  writeFileSync(NATIONAL_CACHE_FILE, JSON.stringify(cache));
-  const bytes = readFileSync(NATIONAL_CACHE_FILE).length;
-  const sha256 = createHash('sha256').update(readFileSync(NATIONAL_CACHE_FILE)).digest('hex');
+  writeFileSync(outputFile, JSON.stringify(cache));
+  const bytes = readFileSync(outputFile).length;
+  const sha256 = createHash('sha256').update(readFileSync(outputFile)).digest('hex');
 
   const manifest: NationalManifest = {
     dataset: 'National Heritage List for England (NHLE)',
@@ -251,7 +363,7 @@ export async function captureNational(): Promise<NationalManifest> {
       'geographically stratified national sample; per-cell quota proportional to national share; ListEntry-ascending within a cell',
     sampleSize: total,
     checkpoints: [...NATIONAL_CHECKPOINTS],
-    retrievedAt: cache._source.retrievedAt,
+    retrievedAt: String(cache._source['retrievedAt'] ?? new Date().toISOString()),
     cells: quotas.map((c) => ({
       cell: c.cell,
       col: c.col,
@@ -262,7 +374,7 @@ export async function captureNational(): Promise<NationalManifest> {
     composition: { total, perLayer },
     cache: { file: 'nhle-national-cache.json', sha256, bytes },
   };
-  writeFileSync(NATIONAL_MANIFEST_FILE, JSON.stringify(manifest, null, 2) + '\n');
+  writeFileSync(outputManifestFile, JSON.stringify(manifest, null, 2) + '\n');
   return manifest;
 }
 

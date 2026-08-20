@@ -105,19 +105,31 @@ function distanceSignal(meters: number, radius: number): MatchSignal {
       detail: `${Math.round(meters)}m, within the ${Math.round(radius)}m positional agreement radius`,
     };
   }
-  if (meters <= 250) return { name: 'distance', weight: 0.3, detail: `${Math.round(meters)}m apart` };
-  if (meters <= 1000) return { name: 'distance', weight: 0.1, detail: `${Math.round(meters)}m apart` };
+  if (meters <= 250)
+    return { name: 'distance', weight: 0.3, detail: `${Math.round(meters)}m apart` };
+  if (meters <= 1000)
+    return { name: 'distance', weight: 0.1, detail: `${Math.round(meters)}m apart` };
   return { name: 'distance', weight: -0.1, detail: `${Math.round(meters)}m apart` };
 }
 
 function nameSignal(similarity: number, generic: boolean): MatchSignal {
   if (similarity >= 0.92) {
     return generic
-      ? { name: 'name', weight: 0.1, detail: `names match (${similarity.toFixed(2)}) but the name is not distinctive` }
+      ? {
+          name: 'name',
+          weight: 0.1,
+          detail: `names match (${similarity.toFixed(2)}) but the name is not distinctive`,
+        }
       : { name: 'name', weight: 0.4, detail: `distinctive names match (${similarity.toFixed(2)})` };
   }
-  if (similarity >= 0.75) return { name: 'name', weight: 0.2, detail: `names similar (${similarity.toFixed(2)})` };
-  if (similarity >= 0.55) return { name: 'name', weight: 0.05, detail: `names loosely similar (${similarity.toFixed(2)})` };
+  if (similarity >= 0.75)
+    return { name: 'name', weight: 0.2, detail: `names similar (${similarity.toFixed(2)})` };
+  if (similarity >= 0.55)
+    return {
+      name: 'name',
+      weight: 0.05,
+      detail: `names loosely similar (${similarity.toFixed(2)})`,
+    };
   return { name: 'name', weight: -0.2, detail: `names differ (${similarity.toFixed(2)})` };
 }
 
@@ -265,7 +277,11 @@ function sameRegisterDifferentEntries(
   return ours.some((designation) => theirs.designations.includes(designation));
 }
 
-function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): ScoredMatch | null {
+function scoreAgainst(
+  candidate: PlaceCandidate,
+  existing: CanonicalPlaceRef,
+  precomputedMeters?: number,
+): ScoredMatch | null {
   // Hard register veto. Two entries in one source's register, under the same
   // designation, are two different protected things by that source's own
   // account. This is stronger evidence than any similarity signal, and it is
@@ -275,7 +291,7 @@ function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): S
   // are most certainly distinct.
   if (sameRegisterDifferentEntries(candidate, existing)) return null;
 
-  const meters = distanceMeters(candidate.location, existing.location);
+  const meters = precomputedMeters ?? distanceMeters(candidate.location, existing.location);
   // Hard geographic veto. Two heritage sites 5km apart are not the same site,
   // however alike their names — this is what stops the two "Middleham Castle"
   // records, 48km apart, from ever being considered a match.
@@ -312,11 +328,23 @@ function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): S
   const existingTyped = (existing.placeTypeConfidence ?? 0) >= 0.7;
   const compatible = typesAreCompatible(candidate.placeType, existing.placeType);
   if (candidateTyped && existingTyped && compatible) {
-    signals.push({ name: 'type', weight: 0.1, detail: `types compatible (${candidate.placeType}/${existing.placeType})` });
+    signals.push({
+      name: 'type',
+      weight: 0.1,
+      detail: `types compatible (${candidate.placeType}/${existing.placeType})`,
+    });
   } else if (candidateTyped && !compatible) {
-    signals.push({ name: 'type', weight: -0.35, detail: `types incompatible (${candidate.placeType}/${existing.placeType})` });
+    signals.push({
+      name: 'type',
+      weight: -0.35,
+      detail: `types incompatible (${candidate.placeType}/${existing.placeType})`,
+    });
   } else if (!candidateTyped) {
-    signals.push({ name: 'type', weight: 0, detail: 'candidate type not confidently known; ignored' });
+    signals.push({
+      name: 'type',
+      weight: 0,
+      detail: 'candidate type not confidently known; ignored',
+    });
   } else {
     signals.push({
       name: 'type',
@@ -326,7 +354,9 @@ function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): S
   }
 
   if (candidate.postcode && existing.postcode) {
-    const same = candidate.postcode.replace(/\s+/g, '').toUpperCase() === existing.postcode.replace(/\s+/g, '').toUpperCase();
+    const same =
+      candidate.postcode.replace(/\s+/g, '').toUpperCase() ===
+      existing.postcode.replace(/\s+/g, '').toUpperCase();
     signals.push(
       same
         ? { name: 'postcode', weight: 0.2, detail: 'postcodes match' }
@@ -334,7 +364,11 @@ function scoreAgainst(candidate: PlaceCandidate, existing: CanonicalPlaceRef): S
     );
   }
 
-  if (candidate.town && existing.town && candidate.town.toLowerCase() === existing.town.toLowerCase()) {
+  if (
+    candidate.town &&
+    existing.town &&
+    candidate.town.toLowerCase() === existing.town.toLowerCase()
+  ) {
     signals.push({ name: 'town', weight: 0.05, detail: `same town (${existing.town})` });
   }
 
@@ -383,8 +417,16 @@ export function matchCandidate(
           confidence: 0.5,
           matchedPlaceId: existing.id,
           signals: [
-            { name: 'external-id', weight: 1, detail: `shared ${shared.scheme} identifier ${shared.value}` },
-            { name: 'name', weight: -1, detail: namesDistinct.reason ?? 'names denote different things' },
+            {
+              name: 'external-id',
+              weight: 1,
+              detail: `shared ${shared.scheme} identifier ${shared.value}`,
+            },
+            {
+              name: 'name',
+              weight: -1,
+              detail: namesDistinct.reason ?? 'names denote different things',
+            },
           ],
           conflicts: [],
           rationale: `Shares a ${shared.scheme} identifier with "${existing.name}", but ${namesDistinct.reason ?? 'the names denote different things'}.`,
@@ -393,7 +435,11 @@ export function matchCandidate(
       const meters = distanceMeters(candidate.location, existing.location);
       const conflicts = collectConflicts(candidate, existing, meters);
       const signals: MatchSignal[] = [
-        { name: 'external-id', weight: 1, detail: `shared ${shared.scheme} identifier ${shared.value}` },
+        {
+          name: 'external-id',
+          weight: 1,
+          detail: `shared ${shared.scheme} identifier ${shared.value}`,
+        },
       ];
       // Even a shared identifier does not license a silent overwrite when the
       // records disagree about something material.
@@ -420,14 +466,19 @@ export function matchCandidate(
   // --- Scored comparison ----------------------------------------------------
   const scored = existingPlaces
     .map((existing) => {
-      const match = scoreAgainst(candidate, existing);
+      // The benchmark observer asks for distance-veto counters as well as the
+      // decision. Compute this deterministic value once for the hot path; the
+      // previous implementation recomputed it inside scoreAgainst and then
+      // immediately recomputed it for instrumentation. Outcomes and signals
+      // are unchanged.
+      const meters = stats ? distanceMeters(candidate.location, existing.location) : undefined;
+      const match = scoreAgainst(candidate, existing, meters);
       if (stats) {
         stats.comparisons += 1;
-        const meters = distanceMeters(candidate.location, existing.location);
-        if (meters > THRESHOLDS.maxPlausibleDistanceMeters) stats.beyondMaxDistance += 1;
+        if (meters! > THRESHOLDS.maxPlausibleDistanceMeters) stats.beyondMaxDistance += 1;
         if (match === null) {
           if (sameRegisterDifferentEntries(candidate, existing)) stats.vetoedByRegister += 1;
-          else if (meters > THRESHOLDS.maxPlausibleDistanceMeters) stats.vetoedByDistance += 1;
+          else if (meters! > THRESHOLDS.maxPlausibleDistanceMeters) stats.vetoedByDistance += 1;
           else stats.vetoedByName += 1;
         }
       }
@@ -515,9 +566,12 @@ export function matchCandidate(
   if (ambiguous && runnerUp) why.push(`"${runnerUp.existing.name}" scores almost as well`);
   if (best.nameScore < THRESHOLDS.confidentNameSimilarity) why.push('names are not close enough');
   if (best.meters > best.radius) {
-    why.push(`${Math.round(best.meters)}m apart, outside the ${Math.round(best.radius)}m agreement radius`);
+    why.push(
+      `${Math.round(best.meters)}m apart, outside the ${Math.round(best.radius)}m agreement radius`,
+    );
   }
-  if (best.score < THRESHOLDS.confidentScore) why.push(`score ${best.score.toFixed(2)} below ${THRESHOLDS.confidentScore}`);
+  if (best.score < THRESHOLDS.confidentScore)
+    why.push(`score ${best.score.toFixed(2)} below ${THRESHOLDS.confidentScore}`);
 
   return {
     outcome: MatchOutcome.MatchReview,

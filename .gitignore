@@ -42,6 +42,7 @@ Thumbs.db
 ingestion/.scale-cache/
 ingestion/.national-cache/
 ingestion/.national-chunk-cache/
+/.national-chunk-cache/
 # National ladder run output (machine-specific timings; regenerate with national:ladder)
 ingestion/national-ladder.json
 scale-results-*.json

@@ -93,6 +93,19 @@ export interface WorkingSetStats {
   chunks: number;
   spillBytes: number;
   maxCachedPayloadRecords: number;
+  payloadLookups: number;
+  pageHits: number;
+  pageMisses: number;
+  physicalReadCalls: number;
+  bytesReadFromSpill: number;
+  payloadBytesRequested: number;
+  missPayloadBytesRequested: number;
+  recordsDecoded: number;
+  cacheHitRatio: number;
+  readAmplification: number;
+  physicalReadsPerPayloadLookup: number;
+  pageCacheRecords: number;
+  maxPageCachePages: number;
 }
 
 /** What candidate generation cost, and what it saved. */
