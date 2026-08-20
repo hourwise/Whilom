@@ -11,6 +11,15 @@ name: National scale pilot
 # Everything is local to the runner. No hosted Supabase, no secrets, no touch of
 # the canonical corpus — the national sample lives only in the runner's cache.
 on:
+  # Ordinary PRs validate the cheap, committed governance evidence only.
+  # The pilot below remains manual/scheduled because it runs national ingest.
+  pull_request:
+    paths:
+      - 'ingestion/scale/national/**'
+      - 'ingestion/*national*.json'
+      - 'ingestion/package.json'
+      - 'docs/SCALE.md'
+      - '.github/workflows/national-scale.yml'
   workflow_dispatch:
     inputs:
       largest:
@@ -27,7 +36,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  contract:
+    if: github.event_name == 'pull_request'
+    name: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Validate scale contract and committed evidence
+        working-directory: ingestion
+        run: |
+          pnpm exec vitest run tests/benchmark-contract.test.ts tests/composition-drift.test.ts tests/governance-report.test.ts
+          pnpm exec tsx scale/national/governance-report.ts --check
+
   pilot:
+    if: github.event_name != 'pull_request'
     name: pilot
     runs-on: ubuntu-latest
     timeout-minutes: 60

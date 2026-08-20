@@ -44,7 +44,8 @@ function readStages(): Stage[] {
 
 function growth(later: Stage, earlier: Stage): number {
   return (
-    (later.ingestion.matcherMsPerRecord / earlier.ingestion.matcherMsPerRecord) /
+    later.ingestion.matcherMsPerRecord /
+    earlier.ingestion.matcherMsPerRecord /
     (later.stage / earlier.stage)
   );
 }
@@ -54,7 +55,7 @@ function transition(later: Stage, earlier: Stage): { normalizedGrowth: number; p
   return { normalizedGrowth, pass: normalizedGrowth <= GATE };
 }
 
-function classify(stages: readonly Stage[], transitions: readonly { pass: boolean }[]): string {
+function classify(transitions: readonly { pass: boolean }[]): string {
   if (transitions.every((item) => item.pass)) return 'PASS_TO_200K';
   if (transitions[0]?.pass && transitions[1]?.pass) return 'PASS_TO_100K';
   if (transitions[0]?.pass) return 'PASS_TO_50K';
@@ -62,10 +63,14 @@ function classify(stages: readonly Stage[], transitions: readonly { pass: boolea
 }
 
 function comparable(stages: readonly Stage[]): 'PASS' | 'PARTIAL' | 'FAIL' {
-  const full = stages[stages.length - 1]!.sample as { designationPercentages?: Record<string, number> };
+  const full = stages[stages.length - 1]!.sample as {
+    designationPercentages?: Record<string, number>;
+  };
   const target = full.designationPercentages ?? {};
   const deviations = stages.flatMap((stage) => {
-    const percentages = (stage.sample as { designationPercentages?: Record<string, number> }).designationPercentages ?? {};
+    const percentages =
+      (stage.sample as { designationPercentages?: Record<string, number> })
+        .designationPercentages ?? {};
     return Object.entries(target).map(([key, value]) => Math.abs((percentages[key] ?? 0) - value));
   });
   const maxDeviation = Math.max(...deviations, 0);
@@ -83,7 +88,7 @@ function main(): void {
     gate: { perRecordGrowthVsSizeMax: GATE },
     stages,
     normalizedGrowth: transitions,
-    equivalentWorkScale: classify(stages, transitions),
+    equivalentWorkScale: classify(transitions),
     controlledWorkloadComparability: comparable(stages),
     officialScaleClassification: {
       maximumProvenSafeScale: 'PROVEN_SAFE_TO_50K',
