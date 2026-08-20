@@ -324,3 +324,113 @@ the growth gate. It should also run the already-defined ephemeral PostGIS
 query lane in CI/Docker and record the same representative national viewport,
 search, category, period, and count metrics before any owner-authorized
 publication decision.
+
+## Batch 16 — working-set threshold diagnosis and matcher hot-path remediation
+
+Batch 16 is stacked directly on Batch 15 at `51c09ee2bc8975d3efe7529ac0e28dc6a01ec911`. The national capture and its established ordering were unchanged. The extended ladder prefix was used for the fixed ~100k experiment; the legacy 99,990-record prefix remains separately identified by SHA-256 `8097257c5ad063e1003327d5effeedfdeddd5ddcf23b563242a97e7909838b26`.
+
+### Starting state and hypothesis
+
+**MEASURED:** Batch 15 passed 25k and 50k, failed the 50k → ~100k normalized growth gate at `2.63`, and measured 65,536 canonical payload records as the default bounded working set. The Batch 16 hypothesis was that crossing that limit caused a page-cache/residency cliff.
+
+**MEASURED:** Five fresh Node processes ran the identical `buildNationalTier(100000)` prefix with identical page size, matcher, explicit GC, sampled hot-path timing, and cache limits. The matrix was diagnostic only; no production default was selected from it.
+
+| Canonical cache limit | rec/s | match ms/record | comparisons/record | µs/comparison | page misses / reloads |    bytes read | records decoded | heap / RSS MB (sampled peak heap) |
+| --------------------: | ----: | --------------: | -----------------: | ------------: | --------------------: | ------------: | --------------: | --------------------------------: |
+|                32,768 | 908.6 |           0.522 |              204.6 |         2.551 |       10,958 / 10,958 | 1,045,252,272 |       2,281,830 |                   382 / 819 (560) |
+|                50,000 | 940.1 |           0.542 |              204.6 |         2.649 |         5,688 / 5,688 |   534,032,235 |       1,166,527 |                   261 / 833 (553) |
+|                65,536 | 969.2 |           0.539 |              204.6 |         2.634 |         3,242 / 3,242 |   289,208,479 |         632,150 |                   549 / 862 (666) |
+|                96,000 | 992.3 |           0.541 |              204.6 |         2.644 |         1,093 / 1,093 |    69,102,082 |         151,124 |                   573 / 800 (592) |
+|               131,072 | 992.2 |           0.541 |              204.6 |         2.644 |             439 / 439 |       228,295 |             500 |                   586 / 809 (644) |
+
+**WORKING_SET_THRESHOLD_CLASSIFICATION = WORKING_SET_THRESHOLD_PARTIAL**
+
+**INFERRED:** The working-set limit is a material contributor to candidate page resolution: page reloads fell 25× and payload-resolution time fell from about 19.96 s at 32,768 to 5.20 s at 131,072. It does not explain a matcher-only discontinuity: shortlist percentiles and comparisons/record were identical at every limit, and matcher-only time stayed within `0.522–0.542 ms/record`. The 65,536 crossing is therefore a real I/O/residency transition, but not the cause of the whole 50k → 100k growth failure.
+
+**NOT MATERIAL:** Raising the cache without limit was not selected. The 131,072 run retained 99,621 decoded canonical payloads and did not materially reduce matcher-only time. Batch 15's bounded page design remains in place.
+
+### Matcher work attribution
+
+The 65,536 fixed-100k run compared 20,454,728 candidates. Timing was sampled once per 100 comparisons for deep per-comparison components; record-level components were timed directly. The table is intentionally **inclusive and non-additive**: scored-result allocation contains the scoring work, and the component timers are not a wall-clock partition.
+
+| Component | Measured time / estimate | Share of 53.871 s matcher time | Evidence |
+| --- | ---: | ---: |
+| shortlist generation, including page access | 16.922 s | 31.4% of matcher-adjacent work | **MEASURED**, candidate-generation timer |
+| payload/page resolution within that path | 9.213 s | 17.1% | **MEASURED**, page-store timer |
+| shared identifier phase | 5.302 s | 9.8% | **MEASURED**, record-level timer |
+| same-register veto | ~8.902 s sampled estimate | 16.5% | **MEASURED**, 1% comparison timing; 1,223,460 comparisons survived it |
+| distance calculation | ~0.367 s sampled estimate | 0.7% | **MEASURED**, 416,083 comparisons survived distance |
+| distinct-name veto | ~1.045 s sampled estimate | 1.9% | **MEASURED**, 416,110 comparisons reached name comparison |
+| name similarity | ~6.224 s sampled estimate | 11.5% | **MEASURED**, 415,548 comparisons reached full scoring |
+| type/postcode/town scoring and conflicts | ~1.282 s sampled estimate | 2.4% | **MEASURED** |
+| scored-result allocation/map | 45.860 s inclusive | 85.1% | **MEASURED**, includes nested score work |
+| filtering | 0.109 s | 0.2% | **MEASURED** |
+| sorting / best-candidate selection | 0.092 s | 0.2% | **MEASURED**, full sort retained |
+| outcome construction | 0.102 s | 0.2% | **MEASURED** |
+
+The shortlist distribution was stable across the cache matrix: p50 `136`, p90 `394`, p95 `544`, p99 `1,651`, maximum `2,944`; 342 rows had no candidate, 326 had one, and 99,288 had two or more. This identifies both shortlist density and matcher CPU as contributors, with page residency affecting the surrounding candidate-resolution path.
+
+**MEASURED geography comparison:** using deterministic latitude/longitude envelopes for the named OS-cell regimes, TQ/London had 7,246 rows, `702.47` mean shortlist, and `1.4831 ms/record`; ST/Bristol-Bath had 4,608 rows, `278.69` and `0.6525 ms/record`; the sparser outside-dense-envelopes group had 28,425 rows, `157.87` and `0.4855 ms/record`. This is a density effect, not a cache-limit effect.
+
+### Remediation
+
+**MEASURED:** immutable canonical name preparation was a material repeated cost. Before preparation, the 65,536 run recorded sampled name-distinctness and name-similarity times of approximately `55.4 ms` and `139.3 ms`; after preparation they were `10.5 ms` and `62.2 ms` over the same sampled workload. The exact normalization, tokenisation, containment, generic-name rules, distinct-name rules, and similarity algorithm are unchanged.
+
+**IMPLEMENTED:**
+
+- canonical names are prepared once per canonical object and retained in a bounded 8,192-entry LRU derived representation;
+- candidate names are prepared once per source row;
+- the derived cache uses weak canonical keys plus explicit LRU eviction, so it cannot retain the national payload indefinitely;
+- the matcher now carries an internal register/distance/name veto reason to the existing benchmark counters instead of recomputing the same-register veto after `scoreAgainst` already performed it;
+- optional matcher profiling records lightweight counters on normal runs and sampled deep timings only in the diagnostic harness.
+
+**NOT MATERIAL:** Full sorting was measured before changing it. The full sort timer was about `97 ms` before the experiment and `92 ms` after the name-preparation run; no top-two replacement was retained. Stable insertion-order sorting therefore remains the semantic reference.
+
+**NOT IMPLEMENTED:** The global exact-identifier index remains global and unchanged. No exact identifier was made geographically local, and no combined-pass shortcut was introduced: the existing store already supplies identifier candidates, while the matcher’s visible two-pass contract protects exact-ID precedence and distant matches. Same-register safeguards and name-disagreement review remain unchanged.
+
+### Equivalence evidence
+
+**MEASURED:** The focused matcher suite passed 21/21 tests. The machine-checked exhaustive-versus-bounded 5,000-record equivalence run produced identical digest `b91e746c25ba2545...`, zero decision differences, identical outcome summary (`NEW_CANONICAL 4,971`, `MATCH_REVIEW 18`, `MATCH_CONFIDENT 4`, `CONFLICT_REVIEW 4`), and 97.45% candidate pruning. The exact decision digest is written by `scale-equivalence-5000.json`; only its prefix is shown here for readability.
+
+**INFERRED:** Because the derived representation is only a memoized form of the existing name functions and the veto reason only replaces a duplicate counter check, matching semantics are unchanged. The focused tests and exhaustive oracle provide the machine gate; national outcomes remained stable at 100k (`99,956 valid`, `44 rejected`, `37 conflicts`) and 199,980 (`199,914 valid`, `66 rejected`, `134 conflicts`).
+
+### Final fresh-process national ladder
+
+Each stage below was run in its own Node process with `--expose-gc`; 199,980 is the complete available ~200k capture. The `classification` column is the authoritative adjacent-stage result, not the isolated `--only` process's local result.
+
+| Stage | Records |   rec/s | match ms/record | comparisons/record | µs/comparison | shortlist p50/p95/p99/max | heap / RSS MB (peak heap) | physical reads |    bytes read |   decoded | integrity       | classification                                        |
+| ----: | ------: | ------: | --------------: | -----------------: | ------------: | ------------------------- | ------------------------: | -------------: | ------------: | --------: | --------------- | ----------------------------------------------------- |
+|   25k |  25,000 | 1,944.3 |           0.170 |              113.1 |         1.503 | 75 / 339 / 515 / 913      |           181 / 486 (572) |            161 |        88,987 |       196 | 25,000/25,000   | PASS                                                  |
+|   50k |  50,000 | 1,733.3 |           0.225 |              133.7 |         1.684 | 100 / 375 / 553 / 935     |           197 / 451 (575) |            253 |       132,702 |       291 | 50,000/50,000   | PASS                                                  |
+| ~100k | 100,000 | 1,036.2 |           0.506 |              204.6 |         2.473 | 136 / 544 / 1,651 / 2,944 |           445 / 838 (624) |          3,242 |   289,208,479 |   632,150 | 100,000/100,000 | FAIL_PERFORMANCE adjacent gate                        |
+| ~200k | 199,980 |   578.4 |           0.971 |              358.5 |         2.708 | 231 / 873 / 3,934 / 6,090 |     1,097 / 1,320 (1,097) |         29,195 | 3,073,918,335 | 6,710,017 | 199,980/199,980 | PASS adjacent-only; NOT PROVEN past failed transition |
+
+The unchanged normalized-growth calculations are:
+
+```text
+(0.225 / 0.170) / (50000 / 25000) = 0.662  PASS
+(0.506 / 0.225) / (100000 / 50000) = 1.124  FAIL (> 1.0)
+(0.971 / 0.506) / (199980 / 100000) = 0.960  PASS adjacent-only
+```
+
+The low absolute times and the passing 100k/200k isolated gates do not erase the failed 50k → 100k transition.
+
+**MAXIMUM_PROVEN_SAFE_SCALE = PROVEN_SAFE_TO_50K**
+
+**NATIONAL_EXPANSION_CLASSIFICATION = REMEDIATION_INSUFFICIENT**
+
+**EPHEMERAL_DATABASE_LANE = DEFERRED** — the repository's existing local Supabase/pgTAP lane still requires Docker, which is unavailable in this environment. No hosted database, production credential, or hosted Supabase write was used.
+
+**NATIONAL_PUBLICATION_PERFORMED = NO**
+
+### Known limitations and Batch 17 recommendation
+
+**NOT RUN:** full ~401,539-record capture; hosted publication; Historic England descriptions; production deployment; hosted Supabase writes.
+
+**MEASURED validation note:** direct ingestion and web TypeScript checks passed; ingestion, web, and package-scoped Vitest suites passed. The repository workflow validator's first invocation could not resolve its existing undeclared `js-yaml` runtime dependency, so the same validator logic was rerun against the already-installed package path and all four workflows parsed successfully. The pnpm 11 wrapper's known missing `@types/node` workspace link recurred; `pnpm-lock.yaml` was restored and direct compiler checks were used.
+
+**NOT PROVEN:** continuous safe scale past 50k. The 200k result is useful diagnostic evidence only because the 100k transition failed the unchanged growth gate.
+
+**INFERRED:** The strongest remaining measured bottleneck is dense-region shortlist/matcher work after page resolution: TQ/London's shortlist is 4.45× the sparse-group mean and the 50k → 100k normalized matcher growth remains above 1.0 despite name preparation and duplicate-veto removal.
+
+Batch 17 should run one narrowly scoped density-aware matcher remediation experiment: reduce repeated candidate comparisons inside dense geographic cells while proving exact insertion-order, global-identifier, veto, conflict, and decision-digest equivalence. It should not increase the cache without a bounded-memory model, weaken the growth gate, or authorize national publication.
