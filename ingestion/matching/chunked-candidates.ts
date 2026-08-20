@@ -100,6 +100,7 @@ export interface ChunkedWorkingSetStats {
   physicalReadsPerPayloadLookup: number;
   pageCacheRecords: number;
   maxPageCachePages: number;
+  payloadResolutionMs: number;
 }
 
 function latCell(lat: number): number {
@@ -165,6 +166,7 @@ export class ChunkedCandidateIndex {
   private peakCachedPayloadRecords = 0;
   private chunks = 0;
   private spillBytes = 0;
+  private payloadResolutionMs = 0;
 
   constructor(
     directory: string,
@@ -355,6 +357,7 @@ export class ChunkedCandidateIndex {
       stats.fromSpatial += spatial;
       stats.fromIdentifierOnly += identifierOnly;
       stats.cellsInspected += cells;
+      stats.shortlistSizes.push(ordered.length);
       stats.generationMs += performance.now() - started;
     }
     return ordered;
@@ -404,6 +407,7 @@ export class ChunkedCandidateIndex {
         this.payloadLookups > 0 ? this.physicalReadCalls / this.payloadLookups : 0,
       pageCacheRecords: cachedPayloadRecords,
       maxPageCachePages: this.maxPageCachePages,
+      payloadResolutionMs: this.payloadResolutionMs,
     };
   }
 
@@ -418,6 +422,7 @@ export class ChunkedCandidateIndex {
   }
 
   private load(sequence: number): CachedPayload {
+    const started = performance.now();
     this.payloadLookups += 1;
     const pointer = this.pointers[sequence];
     if (!pointer) throw new Error(`missing locality candidate pointer ${sequence}`);
@@ -429,7 +434,10 @@ export class ChunkedCandidateIndex {
       this.cacheHits += 1;
       this.pageHits += 1;
       const cached = cachedPage.records.get(pointer.pageRow);
-      if (cached) return cached;
+      if (cached) {
+        this.payloadResolutionMs += performance.now() - started;
+        return cached;
+      }
       throw new Error(`missing row ${pointer.pageRow} in cached page ${pointer.pageKey}`);
     }
 
@@ -457,10 +465,12 @@ export class ChunkedCandidateIndex {
     this.evictPagesIfNeeded();
     const loaded = page.records.get(pointer.pageRow);
     if (!loaded) throw new Error(`missing row ${pointer.pageRow} in page ${pointer.pageKey}`);
+    this.payloadResolutionMs += performance.now() - started;
     return loaded;
   }
 
   private loadCandidate(sequence: number): PlaceCandidate | undefined {
+    const started = performance.now();
     this.payloadLookups += 1;
     const pointer = this.pointers[sequence];
     if (!pointer) throw new Error(`missing locality candidate pointer ${sequence}`);
@@ -471,7 +481,9 @@ export class ChunkedCandidateIndex {
       cachedPage.used = ++this.cacheClock;
       this.cacheHits += 1;
       this.pageHits += 1;
-      return cachedPage.records.get(pointer.pageRow);
+      const cached = cachedPage.records.get(pointer.pageRow);
+      this.payloadResolutionMs += performance.now() - started;
+      return cached;
     }
 
     this.cacheMisses += 1;
@@ -494,7 +506,9 @@ export class ChunkedCandidateIndex {
     const page: LoadedCandidatePage = { records, used: ++this.cacheClock };
     this.candidatePageCache.set(pointer.pageKey, page);
     this.evictCandidatePagesIfNeeded();
-    return page.records.get(pointer.pageRow);
+    const loaded = page.records.get(pointer.pageRow);
+    this.payloadResolutionMs += performance.now() - started;
+    return loaded;
   }
 
   private evictPagesIfNeeded(): void {

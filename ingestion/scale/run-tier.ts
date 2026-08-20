@@ -29,8 +29,14 @@ import type { CandidateGenerationStats } from '../matching/candidates';
 import { GATES, mayProceed } from './gates';
 import type { GateResult } from './gates';
 import { TIER_SIZES, buildTierFixture, isTierSize } from './tier';
-import { evenSample, round, timingStats } from './metrics';
-import type { QualitySample, ReviewPressure, TierMetrics, WorkingSetStats } from './metrics';
+import { evenSample, percentile, round, timingStats } from './metrics';
+import type {
+  MatchProfile,
+  QualitySample,
+  ReviewPressure,
+  TierMetrics,
+  WorkingSetStats,
+} from './metrics';
 
 const SAMPLE_SIZE = 20;
 
@@ -254,12 +260,62 @@ export interface TierExecution {
   decisionAggregates: DecisionAggregates;
   retainedDecided: boolean;
   workingSet?: WorkingSetStats;
+  profile?: MatchProfile;
+  geography: Record<string, { records: number; matchMs: number; shortlist: number }>;
+  peakHeapUsedMb: number;
 }
 
 export interface TierExecutionOptions {
   candidateStore?: CandidateStore;
   retainDecided?: boolean;
   chunkSize?: number;
+  /** Enable detailed matcher timing; omitted for ordinary scale runs. */
+  profile?: boolean;
+  profileSampleEvery?: number;
+}
+
+function emptyMatchProfile(enabled: boolean, timingSampleEvery: number): MatchProfile {
+  return {
+    enabled,
+    timingSampleEvery,
+    timedComparisons: 0,
+    timingsMs: {
+      identifierPhase: 0,
+      registerVeto: 0,
+      distance: 0,
+      nameDistinctness: 0,
+      nameSimilarity: 0,
+      scoringAndConflicts: 0,
+      scoredResultAllocation: 0,
+      filtering: 0,
+      sortingOrTopTwo: 0,
+      outcomeConstruction: 0,
+    },
+    counts: {
+      comparisons: 0,
+      survivingRegister: 0,
+      survivingDistance: 0,
+      reachingNameComparison: 0,
+      reachingFullScoring: 0,
+      scoredCandidates: 0,
+      zeroViable: 0,
+      oneViable: 0,
+      twoOrMoreViable: 0,
+    },
+  };
+}
+
+function geographyBucket(lat: number, lng: number): string {
+  if (lat >= 51.25 && lat <= 51.75 && lng >= -0.6 && lng <= 0.8) return 'TQ/London-envelope';
+  if (lat >= 51.1 && lat <= 51.7 && lng >= -3.0 && lng <= -2.0) return 'ST/Bristol-Bath-envelope';
+  if (lat < 51 || lng < -3.0 || lng > 0.8) return 'sparser-outside-dense-envelopes';
+  return 'other';
+}
+
+function maxOrZero(values: readonly number[]): number {
+  let max = 0;
+  for (const value of values) max = Math.max(max, value);
+  return max;
 }
 
 /**
@@ -284,12 +340,15 @@ export async function executeTier(
     vetoedByName: 0,
     vetoedByRegister: 0,
     beyondMaxDistance: 0,
+    profile: options.profile ? emptyMatchProfile(true, options.profileSampleEvery ?? 0) : undefined,
   };
   const candidateStats = emptyCandidateStats();
   const normaliseSamples: number[] = [];
   const validateSamples: number[] = [];
   const matchSamples: number[] = [];
   const decisionAggregates = emptyDecisionAggregates();
+  const geography: Record<string, { records: number; matchMs: number; shortlist: number }> = {};
+  let peakHeapUsedBytes = process.memoryUsage().heapUsed;
 
   const report = await runIngestion({
     importRunId: `scale-${tier}`,
@@ -306,10 +365,19 @@ export async function executeTier(
     observer: {
       matchStats,
       candidateStats,
-      onRecord: ({ normaliseMs, validateMs, matchMs }) => {
+      onRecord: ({ normaliseMs, validateMs, matchMs, candidate, shortlistSize }) => {
         normaliseSamples.push(normaliseMs);
         validateSamples.push(validateMs);
         matchSamples.push(matchMs);
+        const bucket = geographyBucket(candidate.location.lat, candidate.location.lng);
+        const current = geography[bucket] ?? { records: 0, matchMs: 0, shortlist: 0 };
+        current.records += 1;
+        current.matchMs += matchMs;
+        current.shortlist += shortlistSize;
+        geography[bucket] = current;
+        if (matchSamples.length % 4_096 === 0) {
+          peakHeapUsedBytes = Math.max(peakHeapUsedBytes, process.memoryUsage().heapUsed);
+        }
       },
       onDecision: (decided) => observeDecision(decisionAggregates, decided),
     },
@@ -319,6 +387,7 @@ export async function executeTier(
   });
 
   const finishedAt = new Date();
+  peakHeapUsedBytes = Math.max(peakHeapUsedBytes, process.memoryUsage().heapUsed);
   const workingSet = options.candidateStore?.workingSetStats?.() as WorkingSetStats | undefined;
   await options.candidateStore?.close?.();
   return {
@@ -336,6 +405,9 @@ export async function executeTier(
     decisionAggregates,
     retainedDecided: options.retainDecided !== false,
     workingSet,
+    profile: matchStats.profile,
+    geography,
+    peakHeapUsedMb: Math.round(peakHeapUsedBytes / 1_048_576),
   };
 }
 
@@ -406,6 +478,7 @@ export function buildTierMetrics(execution: TierExecution, tier: number): TierMe
       ci: process.env['CI'] === 'true',
     },
     composition: fixture.mix,
+    peakHeapUsedMb: execution.peakHeapUsedMb,
     ingestion: {
       sourceRows: report.sourceRows,
       valid,
@@ -442,10 +515,33 @@ export function buildTierMetrics(execution: TierExecution, tier: number): TierMe
         vetoedByName: matchStats.vetoedByName,
         vetoedByRegister: matchStats.vetoedByRegister,
         beyondMaxDistance: matchStats.beyondMaxDistance,
+        shortlist: {
+          p50: percentile(
+            [...candidateStats.shortlistSizes].sort((a, b) => a - b),
+            50,
+          ),
+          p90: percentile(
+            [...candidateStats.shortlistSizes].sort((a, b) => a - b),
+            90,
+          ),
+          p95: percentile(
+            [...candidateStats.shortlistSizes].sort((a, b) => a - b),
+            95,
+          ),
+          p99: percentile(
+            [...candidateStats.shortlistSizes].sort((a, b) => a - b),
+            99,
+          ),
+          max: maxOrZero(candidateStats.shortlistSizes),
+          zero: candidateStats.shortlistSizes.filter((n) => n === 0).length,
+          one: candidateStats.shortlistSizes.filter((n) => n === 1).length,
+          twoOrMore: candidateStats.shortlistSizes.filter((n) => n >= 2).length,
+        },
       },
       conflictFields: [...conflictFields.entries()]
         .map(([field, count]) => ({ field, count }))
         .sort((a, b) => b.count - a.count),
+      ...(execution.profile ? { profile: execution.profile } : {}),
     },
     candidates: {
       mode: candidateMode,
@@ -464,6 +560,25 @@ export function buildTierMetrics(execution: TierExecution, tier: number): TierMe
       fromIdentifierOnly: candidateStats.fromIdentifierOnly,
       cellsInspected: candidateStats.cellsInspected,
       generationMs: round(candidateStats.generationMs),
+      shortlist: {
+        p50: percentile(
+          [...candidateStats.shortlistSizes].sort((a, b) => a - b),
+          50,
+        ),
+        p90: percentile(
+          [...candidateStats.shortlistSizes].sort((a, b) => a - b),
+          90,
+        ),
+        p95: percentile(
+          [...candidateStats.shortlistSizes].sort((a, b) => a - b),
+          95,
+        ),
+        p99: percentile(
+          [...candidateStats.shortlistSizes].sort((a, b) => a - b),
+          99,
+        ),
+        max: maxOrZero(candidateStats.shortlistSizes),
+      },
     },
 
     review,
@@ -494,6 +609,20 @@ export function buildTierMetrics(execution: TierExecution, tier: number): TierMe
       ),
     ],
     ...(execution.workingSet ? { workingSet: execution.workingSet } : {}),
+    ...(Object.keys(execution.geography).length > 0
+      ? {
+          geography: Object.fromEntries(
+            Object.entries(execution.geography).map(([key, value]) => [
+              key,
+              {
+                records: value.records,
+                meanMsPerRecord: round(value.matchMs / Math.max(1, value.records), 4),
+                meanShortlist: round(value.shortlist / Math.max(1, value.records), 2),
+              },
+            ]),
+          ),
+        }
+      : {}),
     gates: [],
     proceeded: false,
   };
