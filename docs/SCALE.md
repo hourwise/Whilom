@@ -159,3 +159,168 @@ Do not activate a national slice from this batch. Scaling capability is not publ
 ### Remaining bottleneck and Batch 15 recommendation
 
 The remaining bottleneck is the disk-backed candidate payload access pattern: the compact index bounds retained payload memory, but a 2,048-record cache causes repeated synchronous reads as the national density rises. Batch 15 should benchmark a locality-aware persisted index or controlled geographic batches with overlap, then repeat the machine-checked digest gate at 25k/50k/100k/200k before any publication decision. It should also add a safe ephemeral database lane if the existing CI mechanism can run without hosted infrastructure. No UI redesign, Historic England description retrieval, or remote deployment is part of that recommendation.
+
+## Batch 15 — national locality remediation and 200k proof
+
+Batch 15 is stacked directly on Batch 14. It does not change the matcher’s
+eligibility rules, the 5,000 m plausible radius, identifier semantics, source
+governance, or canonical publication data.
+
+### Status at a glance
+
+| Classification                    | Result                                                                                                                |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Maximum proven safe scale         | **`PROVEN_SAFE_TO_50K`**                                                                                              |
+| National expansion classification | **`REMEDIATION_INSUFFICIENT`**                                                                                        |
+| Ephemeral database lane           | **`DEFERRED`** — CI uses `supabase start`, but Docker is unavailable in this environment; no hosted database was used |
+| National publication performed    | **NO**                                                                                                                |
+
+The Batch 15 locality design removes the measured per-candidate random-read
+amplification, and the 200k capture and run completed with exact accounting.
+The existing growth gate still fails at the 50k → 100k transition. The low
+absolute ms/record values are not treated as a pass when that authoritative
+trend gate fails.
+
+### Part A — measured Batch 14 I/O failure
+
+The instrumented Batch 14 single-file spill store measured the following before
+the locality change:
+
+| Stage |                                                        Payload lookups | Cache hits | Cache misses / physical reads | Hit ratio |  Bytes read |
+| ----- | ---------------------------------------------------------------------: | ---------: | ----------------------------: | --------: | ----------: |
+| 25k   |                                                              2,825,937 |  2,719,756 |                       106,181 |    96.24% | 221,078,526 |
+| 50k   |                                                              6,681,208 |  6,390,553 |                       290,655 |    95.65% | 606,467,832 |
+| ~100k | approximately 2,687,858 cache misses were already recorded by Batch 14 |            |                               |           |             |
+
+This confirmed that the LRU was not a correctness mechanism: an eviction was
+safe, but every later miss synchronously reread one JSONL payload from the
+corpus-wide spill file. The dominant failure was read amplification and page
+locality, not candidate-count growth alone.
+
+### Part B — locality-aware design
+
+`ChunkedCandidateIndex` now writes two aligned append-only page streams per
+coarse 0.5° geographic working region:
+
+1. canonical pages contain only `CanonicalPlaceRef` payloads needed by spatial
+   candidate generation;
+2. deferred candidate pages contain the full `PlaceCandidate` payload and are
+   read only when cross-source comparison calls `getCandidate`.
+
+The fine 0.05° spatial grid and the existing radius-cell enumeration are
+unchanged. Candidate sequence numbers are collected from same, adjacent,
+vertical, horizontal, diagonal, boundary, and corner cells, then sorted by
+canonical insertion sequence before reaching the matcher. The identifier index
+remains global and independent of the geographic page, so a distant exact
+identifier match cannot be lost. Page caches remain bounded (65,536 canonical
+payload records, with a smaller deferred candidate-page cache); the cache is
+retained across 4,096-row chunks but evicts by LRU. Chunk boundaries therefore
+measure lifecycle without destroying locality.
+
+The matcher’s decisions remain unchanged. The only matcher-file change is an
+exact hot-path optimization: when instrumentation is enabled, the geodesic
+distance used for the decision is reused for the counters instead of being
+computed twice.
+
+### I/O evidence after remediation
+
+The final split-page implementation measured:
+
+| Stage | Payload lookups |  Page hits | Page misses / physical reads | Hit ratio |    Bytes read | Read amplification |
+| ----- | --------------: | ---------: | ---------------------------: | --------: | ------------: | -----------------: |
+| 25k   |       2,825,937 |  2,825,776 |                          161 |  99.9943% |        88,987 |              1.22× |
+| 50k   |       6,681,208 |  6,680,955 |                          253 |  99.9962% |       132,702 |              1.15× |
+| ~100k |      20,458,498 | 20,455,256 |                        3,242 |  99.9842% |   289,208,479 |            195.40× |
+| ~200k |      71,687,863 | 71,658,668 |                       29,195 |  99.9593% | 3,073,918,335 |            230.23× |
+
+The page hit ratio and physical-read count are the direct measured proof that
+the repeated one-record synchronous read pattern was removed. Byte
+amplification remains high at national density because a miss reads a whole
+bounded page while only one logical payload triggered that miss; this is why
+both hit ratio and bytes/read amplification are reported rather than hiding one
+behind the other.
+
+### Equivalence and boundary evidence
+
+The focused machine checks compare the in-memory `CandidateIndex` and the new
+page store over identical inputs and compare the resulting decision digest,
+outcome histogram, duplicate count, conflicts, matched source IDs, and stable
+insertion order. The existing Batch 14 streamed-store equivalence tests remain
+green. The new deterministic tests cover:
+
+- same, horizontal-adjacent, vertical-adjacent, diagonal, exact-boundary, and
+  corner cells;
+- records just inside and outside the matcher’s 5 km eligibility radius;
+- geographically distant exact identifiers and duplicate identifiers;
+- repeated near-identical names, same-source and cross-source governance,
+  conflict review, stable ordering, chunk transitions, page eviction, and
+  deterministic reruns;
+- persisted national-order references and preservation of the established
+  ~100k prefix.
+
+The pre-extension 99,990-record prefix was rebuilt separately and checked before
+the 200k extension. Its digest is recorded in
+`ingestion/scale/national/legacy-prefix-digest.json`:
+
+```text
+prefix records: 99990
+prefix SHA-256: 8097257c5ad063e1003327d5effeedfdeddd5ddcf23b563242a97e7909838b26
+first: layer 0 / ListEntry 1021941
+last:  layer 7 / ListEntry 1000726
+```
+
+The final 199,980-record cache has the same prefix digest and a complete
+persisted order. The capture is metadata-only from the approved Historic
+England NHLE source; descriptions were not retrieved and the generated cache
+is not committed.
+
+### Batch 15 fresh-process scale ladder
+
+The 25k, 50k, ~100k, and ~200k checkpoints were run in separate Node
+processes with explicit GC available. The ~200k stage is the complete available
+199,980-record capture. Integrity means every source row was either valid or
+rejected and therefore accounted for.
+
+| Stage | Records | Valid / rejected | Conflicts |   rec/s | match ms/record | comparisons/record | heap / RSS MB | page reads | Integrity                                 | Classification                                |
+| ----- | ------: | ---------------: | --------: | ------: | --------------: | -----------------: | ------------: | ---------: | ----------------------------------------- | --------------------------------------------- |
+| 25k   |  25,000 |      24,982 / 18 |         0 | 1,524.2 |           0.097 |              113.1 |     106 / 280 |        161 | PASS; 25,000/25,000 accounted             | **PASS**                                      |
+| 50k   |  50,000 |      49,976 / 24 |         0 | 1,434.6 |           0.129 |              133.7 |     113 / 304 |        253 | PASS; 50,000/50,000 accounted             | **PASS**                                      |
+| ~100k | 100,000 |      99,956 / 44 |        37 |   688.8 |           0.679 |              204.6 |     291 / 505 |      3,242 | PASS integrity; 100,000/100,000 accounted | **FAIL_PERFORMANCE**                          |
+| ~200k | 199,980 |     199,914 / 66 |       134 |   385.8 |           1.309 |              358.5 |     334 / 842 |     29,195 | PASS integrity; 199,980/199,980 accounted | **PASS adjacent-only; not proven nationally** |
+
+The authoritative 50k → 100k normalized growth is:
+
+```text
+(0.679 / 0.129) / (100000 / 50000) = 2.63
+```
+
+which exceeds the unchanged `perRecordGrowthVsSizeMax = 1.0` gate. The
+100k → ~200k adjacent ratio is below that ceiling, but it cannot erase the
+failed lower transition. Therefore the largest continuous proven safe stage is
+50k, not 100k or 200k.
+
+### Database lane and remaining limitations
+
+The repository’s existing CI lane was audited. It reuses Supabase CLI,
+PostgreSQL/PostGIS, pgTAP, `supabase/scale/plans.sql`, and
+`supabase/scale/benchmark.sql`, but it requires the local Supabase stack and
+Docker. Docker is not installed in this environment. No hosted Supabase
+credentials, production data, remote schema change, or paid infrastructure was
+used. The result is explicitly **`EPHEMERAL_DATABASE_LANE_DEFERRED`**; no
+national query-latency claim is made for `coverage_for_viewport`, map clusters,
+map places, search, category, period, or count queries.
+
+The full approximately 401,539-record national source was **NOT RUN**. No
+publication, canonical import, production coverage change, description
+retrieval, or hosted database write occurred.
+
+### Recommendation for Batch 16
+
+Keep the locality-page design as the candidate-access foundation, but do not
+authorize national publication. Batch 16 should isolate the remaining
+50k→100k matcher-work growth with a separate bounded matcher-work benchmark,
+then address that bottleneck without changing matching semantics or weakening
+the growth gate. It should also run the already-defined ephemeral PostGIS
+query lane in CI/Docker and record the same representative national viewport,
+search, category, period, and count metrics before any owner-authorized
+publication decision.
