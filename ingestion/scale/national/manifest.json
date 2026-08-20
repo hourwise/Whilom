@@ -4,218 +4,214 @@
   "licence": "OGL-UK-3.0",
   "service": "https://services-eu1.arcgis.com/ZOdPfBS3aqqDYPUQ/ArcGIS/rest/services/National_Heritage_List_for_England_NHLE_v02_VIEW/FeatureServer",
   "strategy": "geographically stratified national sample; per-cell quota proportional to national share; ListEntry-ascending within a cell",
-  "sampleSize": 99990,
-  "checkpoints": [
-    25000,
-    50000,
-    100000
-  ],
-  "retrievedAt": "2026-08-19T09:55:44.501Z",
+  "sampleSize": 199980,
+  "checkpoints": [25000, 50000, 100000, 200000],
+  "retrievedAt": "2026-08-19T23:13:18.076Z",
   "cells": [
     {
       "cell": "SV",
       "col": 0,
       "row": 0,
       "nationalCount": 375,
-      "quota": 93
+      "quota": 187
     },
     {
       "cell": "SW",
       "col": 1,
       "row": 0,
       "nationalCount": 7841,
-      "quota": 1952
+      "quota": 3905
     },
     {
       "cell": "SX",
       "col": 2,
       "row": 0,
       "nationalCount": 18343,
-      "quota": 4567
+      "quota": 9134
     },
     {
       "cell": "SS",
       "col": 2,
       "row": 1,
       "nationalCount": 7937,
-      "quota": 1976
+      "quota": 3952
     },
     {
       "cell": "NX",
       "col": 2,
       "row": 5,
       "nationalCount": 257,
-      "quota": 64
+      "quota": 128
     },
     {
       "cell": "SY",
       "col": 3,
       "row": 0,
       "nationalCount": 7215,
-      "quota": 1796
+      "quota": 3593
     },
     {
       "cell": "ST",
       "col": 3,
       "row": 1,
       "nationalCount": 35623,
-      "quota": 8870
+      "quota": 17739
     },
     {
       "cell": "SO",
       "col": 3,
       "row": 2,
       "nationalCount": 22772,
-      "quota": 5670
+      "quota": 11340
     },
     {
       "cell": "SJ",
       "col": 3,
       "row": 3,
       "nationalCount": 18185,
-      "quota": 4528
+      "quota": 9055
     },
     {
       "cell": "SD",
       "col": 3,
       "row": 4,
       "nationalCount": 13453,
-      "quota": 3350
+      "quota": 6699
     },
     {
       "cell": "NY",
       "col": 3,
       "row": 5,
       "nationalCount": 7981,
-      "quota": 1987
+      "quota": 3974
     },
     {
       "cell": "NT",
       "col": 3,
       "row": 6,
       "nationalCount": 1021,
-      "quota": 254
+      "quota": 508
     },
     {
       "cell": "SZ",
       "col": 4,
       "row": 0,
       "nationalCount": 4555,
-      "quota": 1134
+      "quota": 2268
     },
     {
       "cell": "SU",
       "col": 4,
       "row": 1,
       "nationalCount": 35834,
-      "quota": 8922
+      "quota": 17844
     },
     {
       "cell": "SP",
       "col": 4,
       "row": 2,
       "nationalCount": 35855,
-      "quota": 8927
+      "quota": 17854
     },
     {
       "cell": "SK",
       "col": 4,
       "row": 3,
       "nationalCount": 23216,
-      "quota": 5780
+      "quota": 11561
     },
     {
       "cell": "SE",
       "col": 4,
       "row": 4,
       "nationalCount": 23393,
-      "quota": 5824
+      "quota": 11649
     },
     {
       "cell": "NZ",
       "col": 4,
       "row": 5,
       "nationalCount": 11522,
-      "quota": 2869
+      "quota": 5737
     },
     {
       "cell": "NU",
       "col": 4,
       "row": 6,
       "nationalCount": 2022,
-      "quota": 504
+      "quota": 1007
     },
     {
       "cell": "TV",
       "col": 5,
       "row": 0,
       "nationalCount": 245,
-      "quota": 61
+      "quota": 122
     },
     {
       "cell": "TQ",
       "col": 5,
       "row": 1,
       "nationalCount": 50198,
-      "quota": 12498
+      "quota": 24997
     },
     {
       "cell": "TL",
       "col": 5,
       "row": 2,
       "nationalCount": 35776,
-      "quota": 8908
+      "quota": 17815
     },
     {
       "cell": "TF",
       "col": 5,
       "row": 3,
       "nationalCount": 9378,
-      "quota": 2335
+      "quota": 4670
     },
     {
       "cell": "TA",
       "col": 5,
       "row": 4,
       "nationalCount": 3473,
-      "quota": 865
+      "quota": 1729
     },
     {
       "cell": "TR",
       "col": 6,
       "row": 1,
       "nationalCount": 7596,
-      "quota": 1891
+      "quota": 3782
     },
     {
       "cell": "TM",
       "col": 6,
       "row": 2,
       "nationalCount": 12448,
-      "quota": 3099
+      "quota": 6199
     },
     {
       "cell": "TG",
       "col": 6,
       "row": 3,
       "nationalCount": 5124,
-      "quota": 1276
+      "quota": 2552
     }
   ],
   "composition": {
-    "total": 99990,
+    "total": 199980,
     "perLayer": {
-      "Listed Building points": 94535,
-      "Scheduled Monuments": 4994,
-      "Protected Wreck Sites": 11,
-      "Parks and Gardens": 435,
-      "Battlefields": 10,
-      "World Heritage Sites": 5
+      "Listed Building points": 189067,
+      "Scheduled Monuments": 9989,
+      "Protected Wreck Sites": 26,
+      "Parks and Gardens": 865,
+      "Battlefields": 21,
+      "World Heritage Sites": 12
     }
   },
   "cache": {
     "file": "nhle-national-cache.json",
-    "sha256": "9a0b3f6016622bd247b1309425c2d15c33671b79478e33ff7d9cd2cf5c51b3c6",
-    "bytes": 31242462
+    "sha256": "643c2a5a217a86f7e16f2dd59d41b2a3581db159190727e0f18451df31e53c0d",
+    "bytes": 70348106
   }
 }

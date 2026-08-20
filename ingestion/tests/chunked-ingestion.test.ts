@@ -99,6 +99,10 @@ describe('chunked candidate boundaries', () => {
     expect(found.map((item) => item.id)).toEqual(['first', 'second']);
     expect(stats.fromIdentifierOnly).toBe(1);
     expect(chunked.workingSetStats().peakCachedPayloadRecords).toBeLessThanOrEqual(1);
+    expect(chunked.workingSetStats().physicalReadCalls).toBeGreaterThan(0);
+    expect(chunked.workingSetStats().physicalReadCalls).toBeLessThanOrEqual(
+      chunked.workingSetStats().payloadLookups,
+    );
   });
 });
 

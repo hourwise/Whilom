@@ -85,6 +85,20 @@ describe('deterministic national sampling', () => {
     const sparse = syntheticCache({ '5,1': 10 });
     expect(interleavedOrder(sparse)).toHaveLength(10);
   });
+
+  it('honours an explicit persisted order for an extended sample prefix', () => {
+    const ordered: Cache = {
+      ...cache,
+      order: [
+        { layerIndex: 0, featureIndex: 7 },
+        { layerIndex: 0, featureIndex: 2 },
+      ],
+    };
+    expect(interleavedOrder(ordered).map((item) => item.feature.attributes['ListEntry'])).toEqual([
+      cache.layers[0]!.features[7]!.attributes['ListEntry'],
+      cache.layers[0]!.features[2]!.attributes['ListEntry'],
+    ]);
+  });
 });
 
 describe('national stage classification', () => {

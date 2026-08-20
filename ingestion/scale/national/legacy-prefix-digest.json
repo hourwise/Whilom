@@ -1,0 +1,8 @@
+{
+  "source": "Historic England NHLE national cache before Batch 15 extension",
+  "prefixRecords": 99990,
+  "cacheSha256": "32e5b00205c76888462587c6db2ef503de57fbf6fc93832e31bb697058b97163",
+  "prefixSha256": "8097257c5ad063e1003327d5effeedfdeddd5ddcf23b563242a97e7909838b26",
+  "first": { "layerId": 0, "listEntry": 1021941 },
+  "last": { "layerId": 7, "listEntry": 1000726 }
+}
