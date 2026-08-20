@@ -43,7 +43,11 @@ function candidate(
 }
 
 function existing(
-  over: Partial<CanonicalPlaceRef> & { id: string; name: string; location: { lng: number; lat: number } },
+  over: Partial<CanonicalPlaceRef> & {
+    id: string;
+    name: string;
+    location: { lng: number; lat: number };
+  },
 ): CanonicalPlaceRef {
   return {
     altNames: [],
@@ -77,9 +81,13 @@ describe('the candidate radius comes from the matcher', () => {
 describe('spatial bounding', () => {
   it('includes a record well inside the radius', () => {
     const index = new CandidateIndex(CandidateMode.Bounded);
-    index.add(existing({ id: 'near', name: 'Near Hall', location: { lng: -1.5, lat: northOf(54, 200) } }));
+    index.add(
+      existing({ id: 'near', name: 'Near Hall', location: { lng: -1.5, lat: northOf(54, 200) } }),
+    );
 
-    const found = index.candidatesFor(candidate({ name: 'Test', location: { lng: -1.5, lat: 54 } }));
+    const found = index.candidatesFor(
+      candidate({ name: 'Test', location: { lng: -1.5, lat: 54 } }),
+    );
     expect(found.map((f) => f.id)).toEqual(['near']);
   });
 
@@ -88,8 +96,47 @@ describe('spatial bounding', () => {
     const lat = northOf(54, THRESHOLDS.maxPlausibleDistanceMeters - 100);
     index.add(existing({ id: 'edge', name: 'Edge Hall', location: { lng: -1.5, lat } }));
 
-    const found = index.candidatesFor(candidate({ name: 'Test', location: { lng: -1.5, lat: 54 } }));
+    const found = index.candidatesFor(
+      candidate({ name: 'Test', location: { lng: -1.5, lat: 54 } }),
+    );
     expect(found.map((f) => f.id)).toEqual(['edge']);
+  });
+
+  it('keeps a 4,999.9m candidate in the exact-radius set', () => {
+    const index = new CandidateIndex(CandidateMode.Bounded);
+    const location = { lng: -1.5, lat: northOf(54, THRESHOLDS.maxPlausibleDistanceMeters - 0.1) };
+    index.add(existing({ id: 'inside-boundary', name: 'Boundary Hall', location }));
+
+    expect(distanceMeters({ lng: -1.5, lat: 54 }, location)).toBeLessThanOrEqual(
+      THRESHOLDS.maxPlausibleDistanceMeters,
+    );
+    expect(
+      index.candidatesFor(candidate({ name: 'Test', location: { lng: -1.5, lat: 54 } })),
+    ).toHaveLength(1);
+  });
+
+  it('uses the same distance implementation at the exact boundary', () => {
+    const index = new CandidateIndex(CandidateMode.Bounded);
+    const location = { lng: -1.5, lat: northOf(54, THRESHOLDS.maxPlausibleDistanceMeters) };
+    index.add(existing({ id: 'boundary', name: 'Boundary Hall', location }));
+    const subject = candidate({ name: 'Test', location: { lng: -1.5, lat: 54 } });
+    const distance = distanceMeters(subject.location, location);
+
+    expect(index.candidatesFor(subject).map((record) => record.id)).toEqual(
+      distance <= THRESHOLDS.maxPlausibleDistanceMeters ? ['boundary'] : [],
+    );
+  });
+
+  it('prunes an ordinary candidate just beyond 5km before hydration', () => {
+    const index = new CandidateIndex(CandidateMode.Bounded);
+    const location = { lng: -1.5, lat: northOf(54, THRESHOLDS.maxPlausibleDistanceMeters + 100) };
+    index.add(existing({ id: 'outside-boundary', name: 'Outside Hall', location }));
+    const subject = candidate({ name: 'Test', location: { lng: -1.5, lat: 54 } });
+    const stats = emptyCandidateStats();
+
+    expect(index.candidatesFor(subject, stats)).toHaveLength(0);
+    expect(stats.rejectedByExactRadius).toBe(1);
+    expect(stats.exactSpatialCandidates).toBe(0);
   });
 
   it('excludes a record the matcher would refuse on distance alone', () => {
@@ -103,10 +150,13 @@ describe('spatial bounding', () => {
 
     // And the matcher would have refused it anyway, which is what makes the
     // exclusion safe rather than merely convenient.
-    expect(distanceMeters(subject.location, far)).toBeGreaterThan(THRESHOLDS.maxPlausibleDistanceMeters);
-    expect(matchCandidate(subject, [existing({ id: 'far', name: 'Middleham Castle', location: far })]).outcome).toBe(
-      MatchOutcome.NewCanonical,
+    expect(distanceMeters(subject.location, far)).toBeGreaterThan(
+      THRESHOLDS.maxPlausibleDistanceMeters,
     );
+    expect(
+      matchCandidate(subject, [existing({ id: 'far', name: 'Middleham Castle', location: far })])
+        .outcome,
+    ).toBe(MatchOutcome.NewCanonical);
   });
 
   it('bounds the candidate set by locality, not by corpus size', () => {
@@ -122,7 +172,9 @@ describe('spatial bounding', () => {
         }),
       );
     }
-    const found = index.candidatesFor(candidate({ name: 'Test', location: { lng: -1.5, lat: northOf(53, 100_000) } }));
+    const found = index.candidatesFor(
+      candidate({ name: 'Test', location: { lng: -1.5, lat: northOf(53, 100_000) } }),
+    );
 
     expect(found.length).toBeGreaterThan(0);
     // 5km at 100m spacing is ~100 records; the grid block is a little generous.
@@ -174,6 +226,39 @@ describe('identifier candidates ignore locality', () => {
       designations: [{ designation: 'scheduled_monument', reference: '1234567' }],
     });
     expect(index.candidatesFor(subject).map((c) => c.id)).toEqual(['listed']);
+  });
+
+  it('preserves insertion order for multiple distant identifier candidates', () => {
+    const index = new CandidateIndex(CandidateMode.Bounded);
+    index.add(
+      existing({
+        id: 'distant-first',
+        name: 'First Abbey',
+        location: { lng: -3.5, lat: 51.5 },
+        externalIds: [{ scheme: 'wikidata', value: 'Q1' }],
+      }),
+    );
+    index.add(
+      existing({
+        id: 'distant-second',
+        name: 'Second Abbey',
+        location: { lng: -3.4, lat: 51.6 },
+        externalIds: [{ scheme: 'wikidata', value: 'Q2' }],
+      }),
+    );
+
+    const subject = candidate({
+      name: 'Shared Abbey',
+      location: { lng: -1.5, lat: 54 },
+      externalIds: [
+        { scheme: 'wikidata', value: 'Q1' },
+        { scheme: 'wikidata', value: 'Q2' },
+      ],
+    });
+    expect(index.candidatesFor(subject).map((record) => record.id)).toEqual([
+      'distant-first',
+      'distant-second',
+    ]);
   });
 
   it('does not surface a different identifier value', () => {
@@ -240,9 +325,13 @@ describe('candidate sets are well formed', () => {
     // two equally good records wins, so order is part of the contract.
     const index = new CandidateIndex(CandidateMode.Bounded);
     for (const id of ['a', 'b', 'c', 'd']) {
-      index.add(existing({ id, name: `Place ${id}`, location: { lng: -1.5, lat: northOf(54, 50) } }));
+      index.add(
+        existing({ id, name: `Place ${id}`, location: { lng: -1.5, lat: northOf(54, 50) } }),
+      );
     }
-    const found = index.candidatesFor(candidate({ name: 'Test', location: { lng: -1.5, lat: 54 } }));
+    const found = index.candidatesFor(
+      candidate({ name: 'Test', location: { lng: -1.5, lat: 54 } }),
+    );
     expect(found.map((f) => f.id)).toEqual(['a', 'b', 'c', 'd']);
   });
 
@@ -271,8 +360,12 @@ describe('candidate sets are well formed', () => {
 
   it('reports what it pruned', () => {
     const index = new CandidateIndex(CandidateMode.Bounded);
-    index.add(existing({ id: 'near', name: 'Near', location: { lng: -1.5, lat: northOf(54, 100) } }));
-    index.add(existing({ id: 'far', name: 'Far', location: { lng: -1.5, lat: northOf(54, 60_000) } }));
+    index.add(
+      existing({ id: 'near', name: 'Near', location: { lng: -1.5, lat: northOf(54, 100) } }),
+    );
+    index.add(
+      existing({ id: 'far', name: 'Far', location: { lng: -1.5, lat: northOf(54, 60_000) } }),
+    );
 
     const stats = emptyCandidateStats();
     index.candidatesFor(candidate({ name: 'Test', location: { lng: -1.5, lat: 54 } }), stats);
@@ -284,10 +377,16 @@ describe('candidate sets are well formed', () => {
 describe('exhaustive mode', () => {
   it('returns everything, so it can serve as the equivalence oracle', () => {
     const index = new CandidateIndex(CandidateMode.Exhaustive);
-    index.add(existing({ id: 'near', name: 'Near', location: { lng: -1.5, lat: northOf(54, 100) } }));
-    index.add(existing({ id: 'far', name: 'Far', location: { lng: -1.5, lat: northOf(54, 900_000) } }));
+    index.add(
+      existing({ id: 'near', name: 'Near', location: { lng: -1.5, lat: northOf(54, 100) } }),
+    );
+    index.add(
+      existing({ id: 'far', name: 'Far', location: { lng: -1.5, lat: northOf(54, 900_000) } }),
+    );
 
-    const found = index.candidatesFor(candidate({ name: 'Test', location: { lng: -1.5, lat: 54 } }));
+    const found = index.candidatesFor(
+      candidate({ name: 'Test', location: { lng: -1.5, lat: 54 } }),
+    );
     expect(found.map((f) => f.id)).toEqual(['near', 'far']);
   });
 });
@@ -300,7 +399,13 @@ describe('positional uncertainty cannot widen the scan', () => {
     // a locality bound decays back into a full scan.
     const index = new CandidateIndex(CandidateMode.Bounded);
     for (let i = 0; i < 400; i += 1) {
-      index.add(existing({ id: `p${i}`, name: `P${i}`, location: { lng: -1.5, lat: northOf(54, i * 100) } }));
+      index.add(
+        existing({
+          id: `p${i}`,
+          name: `P${i}`,
+          location: { lng: -1.5, lat: northOf(54, i * 100) },
+        }),
+      );
     }
 
     const precise = index.candidatesFor(

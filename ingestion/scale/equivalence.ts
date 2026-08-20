@@ -41,6 +41,14 @@ export interface EquivalenceResult {
     generationMs: number;
     wallClockMs: number;
   };
+  cellSuperset: {
+    digest: string;
+    summary: Record<string, number>;
+    candidatePairs: number;
+    matchMs: number;
+    generationMs: number;
+    wallClockMs: number;
+  };
   bounded: {
     digest: string;
     summary: Record<string, number>;
@@ -74,13 +82,18 @@ export async function checkEquivalence(tier: number): Promise<EquivalenceRun> {
   // Exhaustive first: it is the reference, and running it first means a crash
   // in the new code cannot be mistaken for the oracle being unavailable.
   const exhaustive = await executeTier(tier, CandidateMode.Exhaustive);
+  const cellSuperset = await executeTier(tier, CandidateMode.CellSuperset);
   const bounded = await executeTier(tier, CandidateMode.Bounded);
 
   const exhaustiveOracle = buildOracle(tier, CandidateMode.Exhaustive, exhaustive.report);
+  const cellSupersetOracle = buildOracle(tier, CandidateMode.CellSuperset, cellSuperset.report);
   const boundedOracle = buildOracle(tier, CandidateMode.Bounded, bounded.report);
-  const differences = compareOracles(exhaustiveOracle, boundedOracle);
+  const cellSupersetDifferences = compareOracles(exhaustiveOracle, cellSupersetOracle);
+  const boundedDifferences = compareOracles(exhaustiveOracle, boundedOracle);
+  const differences = [...cellSupersetDifferences, ...boundedDifferences];
 
   const exhaustiveMatchMs = exhaustive.matchSamples.reduce((a, b) => a + b, 0);
+  const cellSupersetMatchMs = cellSuperset.matchSamples.reduce((a, b) => a + b, 0);
   const boundedMatchMs = bounded.matchSamples.reduce((a, b) => a + b, 0);
   const boundedTotalMs = boundedMatchMs + bounded.candidateStats.generationMs;
 
@@ -100,6 +113,14 @@ export async function checkEquivalence(tier: number): Promise<EquivalenceRun> {
       matchMs: round(exhaustiveMatchMs),
       generationMs: round(exhaustive.candidateStats.generationMs),
       wallClockMs: exhaustive.wallClockMs,
+    },
+    cellSuperset: {
+      digest: cellSupersetOracle.digest,
+      summary: cellSupersetOracle.summary,
+      candidatePairs: cellSuperset.candidateStats.candidatePairs,
+      matchMs: round(cellSupersetMatchMs),
+      generationMs: round(cellSuperset.candidateStats.generationMs),
+      wallClockMs: cellSuperset.wallClockMs,
     },
     bounded: {
       digest: boundedOracle.digest,
@@ -132,7 +153,11 @@ export async function checkEquivalence(tier: number): Promise<EquivalenceRun> {
       // against the matcher time it saves.
       endToEnd: boundedTotalMs > 0 ? round(exhaustiveMatchMs / boundedTotalMs, 2) : 0,
     },
-    passed: differences.length === 0 && exhaustiveOracle.digest === boundedOracle.digest,
+    passed:
+      cellSupersetDifferences.length === 0 &&
+      boundedDifferences.length === 0 &&
+      exhaustiveOracle.digest === cellSupersetOracle.digest &&
+      exhaustiveOracle.digest === boundedOracle.digest,
   };
 
   return { result, exhaustiveOracle, boundedOracle };
@@ -172,6 +197,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
 
       console.log(`\n=== equivalence, tier ${tier} ===`);
       console.log(`exhaustive digest  ${result.exhaustive.digest.slice(0, 16)}`);
+      console.log(`cell-superset      ${result.cellSuperset.digest.slice(0, 16)}`);
       console.log(`bounded digest     ${result.bounded.digest.slice(0, 16)}`);
       console.log(`decision diffs     ${result.decisionDifferences}`);
       console.log(`summary            ${JSON.stringify(result.bounded.summary)}`);
