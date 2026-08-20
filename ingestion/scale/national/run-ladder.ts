@@ -27,6 +27,7 @@ import { CandidateMode } from '../../matching/candidates';
 import { ChunkedCandidateIndex } from '../../matching/chunked-candidates';
 import { MatchOutcome } from '../../pipeline/candidate';
 import { executeTier, buildTierMetrics } from '../run-tier';
+import { round } from '../metrics';
 import type { TierMetrics } from '../metrics';
 import { buildNationalTier, nationalSampleSize } from './tier';
 import { NATIONAL_CHECKPOINTS } from './capture';
@@ -49,6 +50,11 @@ export interface StageResult {
   recordsPerSecond: number;
   meanMsPerRecord: number;
   meanComparisonsPerRecord: number;
+  cellSupersetCandidatesPerRecord: number;
+  exactSpatialCandidatesPerRecord: number;
+  exactRadiusRejectedPerRecord: number;
+  identifierOnlyCandidatesPerRecord: number;
+  identifierRescuedBeyondRadius: number;
   /** Ratio of this stage's per-record match time to the smallest stage's. */
   matchTimeScaling: number | null;
   integrity: {
@@ -241,6 +247,23 @@ export async function runNationalLadder(
       recordsPerSecond: metrics.ingestion.recordsPerSecond,
       meanMsPerRecord,
       meanComparisonsPerRecord: metrics.matching.work.meanComparisonsPerRecord,
+      cellSupersetCandidatesPerRecord: round(
+        metrics.candidates.cellSupersetCandidates / Math.max(1, metrics.ingestion.valid),
+        1,
+      ),
+      exactSpatialCandidatesPerRecord: round(
+        metrics.candidates.exactSpatialCandidates / Math.max(1, metrics.ingestion.valid),
+        1,
+      ),
+      exactRadiusRejectedPerRecord: round(
+        metrics.candidates.rejectedByExactRadius / Math.max(1, metrics.ingestion.valid),
+        1,
+      ),
+      identifierOnlyCandidatesPerRecord: round(
+        metrics.candidates.identifierOnlyCandidates / Math.max(1, metrics.ingestion.valid),
+        2,
+      ),
+      identifierRescuedBeyondRadius: metrics.candidates.identifierRescuedBeyondRadius,
       matchTimeScaling: smallest > 0 ? Math.round((meanMsPerRecord / smallest) * 100) / 100 : null,
       integrity: {
         sourceRows: metrics.ingestion.sourceRows,

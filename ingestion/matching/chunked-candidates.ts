@@ -17,8 +17,9 @@
 import { closeSync, mkdirSync, openSync, readFileSync, writeSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { CanonicalPlaceRef, PlaceCandidate } from '../pipeline/candidate';
+import { distanceMeters } from '../transforms/osgb';
+import { CandidateMode, candidateRadiusMeters } from './candidates';
 import type { CandidateGenerationStats } from './candidates';
-import { candidateRadiusMeters } from './candidates';
 
 const METRES_PER_DEGREE_LATITUDE = 111_320;
 const CELL_DEGREES = 0.05;
@@ -35,6 +36,8 @@ interface CandidateSpillRow {
 
 interface Pointer {
   sequence: number;
+  lat: number;
+  lng: number;
   canonicalLength: number;
   candidateLength: number;
   cell: string;
@@ -171,6 +174,7 @@ export class ChunkedCandidateIndex {
   constructor(
     directory: string,
     private readonly maxCachedPayloadRecords = 65_536,
+    private readonly mode: CandidateMode = CandidateMode.Bounded,
   ) {
     this.pagesDirectory = resolve(directory, 'payload-pages');
     mkdirSync(this.pagesDirectory, { recursive: true });
@@ -270,6 +274,8 @@ export class ChunkedCandidateIndex {
 
     const pointer: Pointer = {
       sequence,
+      lat: record.location.lat,
+      lng: record.location.lng,
       canonicalLength: canonicalLine.length,
       candidateLength: candidateLine.length,
       cell,
@@ -321,7 +327,7 @@ export class ChunkedCandidateIndex {
     const lngSteps = Math.ceil(lngSpanDegrees / CELL_DEGREES);
     const centreLat = latCell(candidate.location.lat);
     const centreLng = lngCell(candidate.location.lng);
-    let spatial = 0;
+    let cellSupersetCandidates = 0;
     let cells = 0;
     for (let dLat = -latSteps; dLat <= latSteps; dLat += 1) {
       for (let dLng = -lngSteps; dLng <= lngSteps; dLng += 1) {
@@ -331,18 +337,45 @@ export class ChunkedCandidateIndex {
         for (const sequence of bucket) {
           if (!selected.has(sequence)) {
             selected.add(sequence);
-            spatial += 1;
+            cellSupersetCandidates += 1;
           }
         }
       }
     }
 
+    const exact = this.mode === CandidateMode.Bounded;
+    let rejectedByExactRadius = 0;
+    let spatial = 0;
+    if (exact) {
+      for (const sequence of selected) {
+        const pointer = this.pointers[sequence]!;
+        if (distanceMeters(candidate.location, { lat: pointer.lat, lng: pointer.lng }) <= radius) {
+          spatial += 1;
+        } else {
+          selected.delete(sequence);
+          rejectedByExactRadius += 1;
+        }
+      }
+    } else {
+      spatial = cellSupersetCandidates;
+    }
+
+    let identifierCandidates = 0;
     let identifierOnly = 0;
+    let identifierRescuedBeyondRadius = 0;
+    const identifierSeen = new Set<number>();
     for (const key of identifiersOfCandidate(candidate)) {
       for (const sequence of this.byIdentifier.get(key) ?? []) {
+        if (identifierSeen.has(sequence)) continue;
+        identifierSeen.add(sequence);
+        identifierCandidates += 1;
         if (!selected.has(sequence)) {
           selected.add(sequence);
           identifierOnly += 1;
+          const pointer = this.pointers[sequence]!;
+          if (distanceMeters(candidate.location, { lat: pointer.lat, lng: pointer.lng }) > radius) {
+            identifierRescuedBeyondRadius += 1;
+          }
         }
       }
     }
@@ -356,6 +389,13 @@ export class ChunkedCandidateIndex {
       stats.candidatePairs += ordered.length;
       stats.fromSpatial += spatial;
       stats.fromIdentifierOnly += identifierOnly;
+      stats.cellSupersetCandidates += cellSupersetCandidates;
+      stats.rejectedByExactRadius += rejectedByExactRadius;
+      stats.exactSpatialCandidates += spatial;
+      stats.identifierCandidates += identifierCandidates;
+      stats.identifierOnlyCandidates += identifierOnly;
+      stats.identifierRescuedBeyondRadius += identifierRescuedBeyondRadius;
+      stats.finalCandidatePairs += ordered.length;
       stats.cellsInspected += cells;
       stats.shortlistSizes.push(ordered.length);
       stats.generationMs += performance.now() - started;

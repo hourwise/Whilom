@@ -7,6 +7,7 @@ import type { MatchStats } from '../matching/matcher';
 import { CandidateIndex, CandidateMode } from '../matching/candidates';
 import type { CandidateStore } from '../matching/candidates';
 import type { CandidateGenerationStats } from '../matching/candidates';
+import type { CandidateGenerationDelta } from '../matching/candidates';
 import {
   SameSourceOverlap,
   classifySameSourceOverlap,
@@ -71,6 +72,7 @@ export interface RunObserver {
     matchMs: number;
     candidate: PlaceCandidate;
     shortlistSize: number;
+    candidateGeneration?: CandidateGenerationDelta;
   }): void;
   /** Called once for every matcher decision, including streamed runs. */
   onDecision?(decided: DecidedCandidate): void;
@@ -318,7 +320,47 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
       // --- MATCH / DEDUPE -----------------------------------------------------
       // --- CANDIDATE GENERATION ----------------------------------------------
       // Which records the matcher is asked about. Not which records match.
+      const candidateStatsBefore = observer?.candidateStats
+        ? {
+            candidatePairs: observer.candidateStats.candidatePairs,
+            cellSupersetCandidates: observer.candidateStats.cellSupersetCandidates,
+            rejectedByExactRadius: observer.candidateStats.rejectedByExactRadius,
+            exactSpatialCandidates: observer.candidateStats.exactSpatialCandidates,
+            identifierCandidates: observer.candidateStats.identifierCandidates,
+            identifierOnlyCandidates: observer.candidateStats.identifierOnlyCandidates,
+            identifierRescuedBeyondRadius: observer.candidateStats.identifierRescuedBeyondRadius,
+            finalCandidatePairs: observer.candidateStats.finalCandidatePairs,
+          }
+        : undefined;
       const shortlist = await existing.candidatesFor(candidate, observer?.candidateStats);
+      const candidateGeneration =
+        observer?.candidateStats && candidateStatsBefore
+          ? {
+              candidatePairs:
+                observer.candidateStats.candidatePairs - candidateStatsBefore.candidatePairs,
+              cellSupersetCandidates:
+                observer.candidateStats.cellSupersetCandidates -
+                candidateStatsBefore.cellSupersetCandidates,
+              rejectedByExactRadius:
+                observer.candidateStats.rejectedByExactRadius -
+                candidateStatsBefore.rejectedByExactRadius,
+              exactSpatialCandidates:
+                observer.candidateStats.exactSpatialCandidates -
+                candidateStatsBefore.exactSpatialCandidates,
+              identifierCandidates:
+                observer.candidateStats.identifierCandidates -
+                candidateStatsBefore.identifierCandidates,
+              identifierOnlyCandidates:
+                observer.candidateStats.identifierOnlyCandidates -
+                candidateStatsBefore.identifierOnlyCandidates,
+              identifierRescuedBeyondRadius:
+                observer.candidateStats.identifierRescuedBeyondRadius -
+                candidateStatsBefore.identifierRescuedBeyondRadius,
+              finalCandidatePairs:
+                observer.candidateStats.finalCandidatePairs -
+                candidateStatsBefore.finalCandidatePairs,
+            }
+          : undefined;
 
       const matchStart = performance.now();
       const decision = matchCandidate(candidate, shortlist, observer?.matchStats);
@@ -329,6 +371,7 @@ export async function runIngestion(options: RunOptions): Promise<RunReport> {
         matchMs,
         candidate,
         shortlistSize: shortlist.length,
+        candidateGeneration,
       });
       const withinRun =
         decision.matchedPlaceId !== undefined && !preexistingIds.has(decision.matchedPlaceId);

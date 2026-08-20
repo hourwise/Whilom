@@ -36,6 +36,7 @@ export interface MatchWorkStats extends TimingStats {
   /** Comparisons beyond the plausible-distance limit: the spatial pre-filter prize. */
   beyondMaxDistance: number;
   shortlist: {
+    mean: number;
     p50: number;
     p90: number;
     p95: number;
@@ -161,9 +162,18 @@ export interface CandidateMetrics {
   candidatePairsPerRecord: number;
   fromSpatial: number;
   fromIdentifierOnly: number;
+  cellSupersetCandidates: number;
+  rejectedByExactRadius: number;
+  exactSpatialCandidates: number;
+  identifierCandidates: number;
+  identifierOnlyCandidates: number;
+  identifierRescuedBeyondRadius: number;
+  finalCandidatePairs: number;
+  exactRadiusPruningRatio: number;
   cellsInspected: number;
   generationMs: number;
   shortlist: {
+    mean: number;
     p50: number;
     p90: number;
     p95: number;
@@ -216,7 +226,26 @@ export interface TierMetrics {
   review: ReviewPressure;
 
   quality: QualitySample[];
-  geography?: Record<string, { records: number; meanMsPerRecord: number; meanShortlist: number }>;
+  geography?: Record<
+    string,
+    {
+      records: number;
+      meanMsPerRecord: number;
+      meanShortlist: number;
+      shortlist: { mean: number; p50: number; p95: number; p99: number; max: number };
+      candidate: {
+        candidatePairs: number;
+        cellSupersetCandidates: number;
+        rejectedByExactRadius: number;
+        exactSpatialCandidates: number;
+        identifierCandidates: number;
+        identifierOnlyCandidates: number;
+        identifierRescuedBeyondRadius: number;
+        finalCandidatePairs: number;
+        exactRadiusPruningRatio: number;
+      };
+    }
+  >;
 
   /** Present only when the tier ran against a database. */
   queries?: QueryTiming[];
