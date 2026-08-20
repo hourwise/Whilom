@@ -382,7 +382,8 @@ export function readNationalManifest(): NationalManifest {
   return JSON.parse(readFileSync(NATIONAL_MANIFEST_FILE, 'utf8')) as NationalManifest;
 }
 
-const invokedDirectly = process.argv[1] && resolve(process.argv[1]).endsWith('capture.ts');
+const invokedDirectly =
+  process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (invokedDirectly) {
   const run = async () => {
     if (

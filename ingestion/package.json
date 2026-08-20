@@ -22,7 +22,8 @@
     "regional:opportunity": "tsx regional/coverage-opportunity.ts",
     "national:audit": "tsx scale/national/audit.ts",
     "national:capture": "tsx scale/national/capture.ts",
-    "national:ladder": "tsx scale/national/run-ladder.ts"
+    "national:ladder": "tsx scale/national/run-ladder.ts",
+    "national:workload-audit": "tsx scale/national/workload-audit.ts"
   },
   "dependencies": {
     "@whilom/database": "workspace:*",

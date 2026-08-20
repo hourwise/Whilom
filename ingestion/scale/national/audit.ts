@@ -20,6 +20,7 @@
 
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export const NHLE_SERVICE =
   'https://services-eu1.arcgis.com/ZOdPfBS3aqqDYPUQ/ArcGIS/rest/services/National_Heritage_List_for_England_NHLE_v02_VIEW/FeatureServer';
@@ -180,7 +181,8 @@ export async function auditNationalSource() {
   };
 }
 
-const invokedDirectly = process.argv[1] && resolve(process.argv[1]).endsWith('audit.ts');
+const invokedDirectly =
+  process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (invokedDirectly) {
   auditNationalSource()
     .then((audit) => {

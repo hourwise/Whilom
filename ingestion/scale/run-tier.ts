@@ -27,6 +27,7 @@ import type { CandidateStore } from '../matching/candidates';
 import { CandidateMode, emptyCandidateStats } from '../matching/candidates';
 import type { CandidateGenerationStats } from '../matching/candidates';
 import type { CandidateGenerationDelta } from '../matching/candidates';
+import type { CanonicalPlaceRef, PlaceCandidate } from '../pipeline/candidate';
 import { GATES, mayProceed } from './gates';
 import type { GateResult } from './gates';
 import { TIER_SIZES, buildTierFixture, isTierSize } from './tier';
@@ -282,6 +283,8 @@ export interface TierExecutionOptions {
   /** Enable detailed matcher timing; omitted for ordinary scale runs. */
   profile?: boolean;
   profileSampleEvery?: number;
+  /** Optional diagnostic tap over the final candidate set, before matching. */
+  onCandidateSet?: (candidate: PlaceCandidate, shortlist: readonly CanonicalPlaceRef[]) => void;
 }
 
 function emptyMatchProfile(enabled: boolean, timingSampleEvery: number): MatchProfile {
@@ -389,9 +392,11 @@ export async function executeTier(
         validateMs,
         matchMs,
         candidate,
+        shortlist,
         shortlistSize,
         candidateGeneration,
       }) => {
+        options.onCandidateSet?.(candidate, shortlist);
         normaliseSamples.push(normaliseMs);
         validateSamples.push(validateMs);
         matchSamples.push(matchMs);
