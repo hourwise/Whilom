@@ -7,6 +7,7 @@ const nextConfig = {
     '@whilom/database',
     '@whilom/validation',
     '@whilom/search',
+    '@whilom/discovery',
   ],
 };
 
