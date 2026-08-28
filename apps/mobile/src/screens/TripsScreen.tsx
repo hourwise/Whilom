@@ -9,7 +9,7 @@ export default function TripsScreen() {
     <ScreenShell>
       <View style={styles.header}><BrandMark eyebrow="YOUR WHILOM" /><Text style={[styles.mode, { color: theme.colors.textFaint }]}>TRAVEL NOTES</Text></View>
       <View style={styles.content}>
-        <Text style={[styles.title, { color: theme.colors.text }]}>Make a day of it.</Text>
+        <Text style={[styles.title, { color: theme.colors.text, fontFamily: theme.typography.editorial }]}>Make a day of it.</Text>
         <Text style={[styles.subtitle, { color: theme.colors.textMuted }]}>Trips will gather the places you want to walk, linger and return to — without pretending to be a road-navigation app.</Text>
         <View style={[styles.feature, { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent }]}><Text style={styles.featureKicker}>COMING INTO FOCUS</Text><Text style={styles.featureTitle}>Trails with a sense of place</Text><Text style={styles.featureText}>Collect stops from Discover, shape them into a walking route, and keep the heritage context with you.</Text><Pressable accessibilityRole="button" onPress={() => router.push('/(tabs)/discover')} style={styles.featureButton}><Text style={[styles.featureButtonText, { color: theme.colors.accentStrong }]}>Browse places</Text></Pressable></View>
         <EmptyState icon="⌁" title="No trips yet" detail="Your saved trails and day plans will appear here. The route planner is a future layer; directions will hand off to your device." action="Explore Discover" onAction={() => router.push('/(tabs)/discover')} />
@@ -35,4 +35,3 @@ const styles = StyleSheet.create({
   futureTitle: { fontSize: 13, fontWeight: '900', marginBottom: 2 },
   futureItem: { fontSize: 12, lineHeight: 18 },
 });
-

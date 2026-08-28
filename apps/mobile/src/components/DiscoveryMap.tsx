@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { categoryForPlace, type DemoPlace } from '../lib/fixtures';
+import { displayCategory, type DisplayCategory, type MapCluster, type MapPlace } from '@whilom/discovery';
 import { useMobileTheme } from '../theme';
 
 export interface MapViewport {
@@ -13,7 +13,7 @@ export interface DiscoveryMarker {
   id: string;
   coordinate: { latitude: number; longitude: number };
   title: string;
-  category: ReturnType<typeof categoryForPlace>;
+  category: DisplayCategory;
   selected?: boolean;
   clusterCount?: number;
 }
@@ -21,6 +21,7 @@ export interface DiscoveryMarker {
 export interface DiscoveryMapProps {
   viewport: MapViewport;
   markers: DiscoveryMarker[];
+  clusters?: MapCluster[];
   selectedPlaceId?: string | null;
   coverageState: 'full' | 'partial' | 'outside';
   userPosition?: { latitude: number; longitude: number };
@@ -36,7 +37,7 @@ export interface DiscoveryMapProps {
  * filters, or detail navigation. The visual canvas below is intentionally a
  * lightweight development presentation, not a geographic renderer.
  */
-export function DiscoveryMap({ markers, selectedPlaceId, coverageState, onMarkerPress }: DiscoveryMapProps) {
+export function DiscoveryMap({ markers, clusters = [], selectedPlaceId, coverageState, onMarkerPress }: DiscoveryMapProps) {
   const theme = useMobileTheme();
   return (
     <View accessible accessibilityLabel="Whilom map discovery area" style={[styles.frame, { backgroundColor: theme.colors.mapWater, borderColor: theme.colors.border }]}>
@@ -45,7 +46,7 @@ export function DiscoveryMap({ markers, selectedPlaceId, coverageState, onMarker
       <View style={styles.topographicLineTwo} />
       <View style={styles.mapHeader}>
         <View style={[styles.mapChip, { backgroundColor: `${theme.colors.surface}e8` }]}>
-          <Text style={[styles.mapChipText, { color: theme.colors.text }]}>DEVELOPMENT MAP</Text>
+          <Text style={[styles.mapChipText, { color: theme.colors.text }]}>MAP PREVIEW</Text>
         </View>
         <View style={[styles.mapChip, { backgroundColor: `${theme.colors.surface}e8` }]}>
           <Text style={[styles.mapChipText, { color: theme.colors.textMuted }]}>{markers.length} places</Text>
@@ -64,6 +65,11 @@ export function DiscoveryMap({ markers, selectedPlaceId, coverageState, onMarker
           </Pressable>
         );
       })}
+      {markers.length === 0 && clusters.map((cluster, index) => {
+        const left = 18 + ((index * 43) % 68);
+        const top = 34 + ((index * 31) % 36);
+        return <View key={cluster.cell_key} style={[styles.cluster, { left: `${left}%`, top: `${top}%`, backgroundColor: theme.colors.accent }]}><Text style={styles.clusterText}>{cluster.place_count}</Text></View>;
+      })}
       {coverageState !== 'full' ? (
         <View style={[styles.coverageStripe, { backgroundColor: `${theme.colors.warning}22`, borderColor: `${theme.colors.warning}66` }]}>
           <Text style={[styles.coverageStripeText, { color: theme.colors.text }]}>Detailed coverage {coverageState === 'outside' ? 'not activated here' : 'currently partial'}</Text>
@@ -75,18 +81,18 @@ export function DiscoveryMap({ markers, selectedPlaceId, coverageState, onMarker
   );
 }
 
-export function markersForPlaces(places: readonly DemoPlace[], selectedPlaceId?: string | null): DiscoveryMarker[] {
+export function markersForPlaces(places: readonly MapPlace[], selectedPlaceId?: string | null): DiscoveryMarker[] {
   return places.map((place) => ({
     id: place.id,
-    coordinate: place.location,
+    coordinate: { latitude: place.lat, longitude: place.lng },
     title: place.name,
-    category: categoryForPlace(place),
+    category: displayCategory(place.display_category),
     selected: place.id === selectedPlaceId,
   }));
 }
 
 const styles = StyleSheet.create({
-  frame: { height: 310, borderWidth: 1, borderRadius: 20, overflow: 'hidden', position: 'relative' },
+  frame: { height: 310, borderWidth: 1, borderRadius: 8, overflow: 'hidden', position: 'relative' },
   landMass: { position: 'absolute', width: '125%', height: '92%', left: '-12%', top: '8%', borderRadius: 120, transform: [{ rotate: '-13deg' }] },
   topographicLineOne: { position: 'absolute', width: '120%', height: 110, left: '-8%', top: 75, borderWidth: 1, borderColor: '#ffffff2c', borderRadius: 70, transform: [{ rotate: '-12deg' }] },
   topographicLineTwo: { position: 'absolute', width: '110%', height: 80, left: '-5%', top: 140, borderWidth: 1, borderColor: '#ffffff3a', borderRadius: 60, transform: [{ rotate: '8deg' }] },
@@ -98,6 +104,8 @@ const styles = StyleSheet.create({
   markerSymbol: { color: '#fff', fontSize: 14, fontWeight: '800' },
   markerCallout: { maxWidth: 140, paddingHorizontal: 7, paddingVertical: 4, borderRadius: 6, marginTop: 3, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
   markerCalloutText: { fontSize: 10, fontWeight: '800' },
+  cluster: { position: 'absolute', width: 42, height: 42, borderRadius: 21, borderWidth: 2, borderColor: '#ffffffcc', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.14, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  clusterText: { color: '#fff', fontSize: 12, fontWeight: '900' },
   coverageStripe: { position: 'absolute', bottom: 14, left: 14, right: 14, paddingHorizontal: 10, paddingVertical: 7, borderWidth: 1, borderRadius: 8 },
   coverageStripeText: { fontSize: 10, fontWeight: '700', textAlign: 'center' },
   mapCompass: { position: 'absolute', right: 12, bottom: 46, width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
@@ -105,4 +113,3 @@ const styles = StyleSheet.create({
   mapScale: { position: 'absolute', left: 12, bottom: 15, paddingHorizontal: 7, paddingVertical: 4, borderRadius: 5 },
   mapScaleText: { fontSize: 9, fontWeight: '700' },
 });
-

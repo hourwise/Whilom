@@ -1,40 +1,85 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { type DiscoveryPlace } from '@whilom/discovery';
 import { BrandMark, EmptyState, PlaceCard, SectionHeader, ScreenShell } from '../components/WhilomUI';
-import { developmentDataSource } from '../lib/fixtures';
+import { getMobileDiscoveryRuntime } from '../lib/data-source';
+import { useEphemeralPlaceState } from '../lib/ephemeral-state';
 import { useMobileTheme } from '../theme';
+
+type LoadState = 'loading' | 'success' | 'error';
 
 export default function SavedScreen() {
   const theme = useMobileTheme();
-  const savedPlaces = developmentDataSource.places.filter((place) => place.saved);
+  const runtime = useMemo(() => getMobileDiscoveryRuntime(), []);
+  const { isSaved, toggleSaved } = useEphemeralPlaceState();
+  const [places, setPlaces] = useState<DiscoveryPlace[]>([]);
+  const [loadState, setLoadState] = useState<LoadState>('loading');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (runtime.configuration === 'unavailable') {
+      setLoadState('error');
+      setError('Live mode is selected, but public Supabase configuration is unavailable. No network request was made.');
+      return () => { cancelled = true; };
+    }
+    void runtime.source.getSavedPlaces().then((nextPlaces) => {
+      if (cancelled) return;
+      setPlaces(nextPlaces);
+      setLoadState('success');
+    }).catch((cause: unknown) => {
+      if (cancelled) return;
+      setError(cause instanceof Error ? cause.message : 'Saved places could not be loaded.');
+      setLoadState('error');
+    });
+    return () => { cancelled = true; };
+  }, [runtime]);
+
+  const savedPlaces = places.filter((place) => isSaved(place.id, place.saved));
+  const modeLabel = runtime.configuration === 'unavailable' ? 'LIVE READ · NOT CONFIGURED' : runtime.mode === 'live' ? 'LIVE READ MODE' : 'DEVELOPMENT FIXTURES';
+
   return (
     <ScreenShell>
-      <View style={styles.header}><BrandMark eyebrow="YOUR WHILOM" /><Text style={[styles.mode, { color: theme.colors.textFaint }]}>DEMO PROFILE</Text></View>
+      <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+        <BrandMark eyebrow="YOUR WHILOM" />
+        <Text style={[styles.mode, { color: theme.colors.textFaint }]}>{modeLabel}</Text>
+      </View>
       <View style={styles.content}>
-        <Text style={[styles.title, { color: theme.colors.text }]}>Keep a thread.</Text>
+        <Text style={[styles.kicker, { color: theme.colors.accent }]}>YOUR THREAD THROUGH THE MAP</Text>
+        <Text style={[styles.title, { color: theme.colors.text, fontFamily: theme.typography.editorial }]}>Keep a thread.</Text>
         <Text style={[styles.subtitle, { color: theme.colors.textMuted }]}>Save places as you find them. Later they can become a day out, a trail, or a reason to turn down an unfamiliar road.</Text>
-        <View style={[styles.segment, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}><Text style={[styles.segmentActive, { color: theme.colors.accent, borderBottomColor: theme.colors.accent }]}>Saved places</Text><Text style={[styles.segmentInactive, { color: theme.colors.textFaint }]}>Wishlist · soon</Text></View>
-        <SectionHeader title="Your saved places" detail={`${savedPlaces.length} in this development profile`} action="Discover" onAction={() => router.push('/(tabs)/discover')} />
-        <View style={styles.stack}>{savedPlaces.map((place) => <PlaceCard key={place.id} place={place} compact onPress={() => router.push({ pathname: '/place/[id]', params: { id: place.id } })} />)}</View>
-        {!savedPlaces.length ? <EmptyState icon="♡" title="Nothing saved yet" detail="When a place stays with you, save it here for later." action="Start discovering" onAction={() => router.push('/(tabs)/discover')} /> : null}
-        <View style={[styles.note, { backgroundColor: theme.colors.accentSoft }]}><Text style={[styles.noteTitle, { color: theme.colors.accentStrong }]}>A truthful beginning</Text><Text style={[styles.noteText, { color: theme.colors.textMuted }]}>This shell uses development-only fixtures. Saved state will move behind the account data seam when authentication and persistence are connected.</Text></View>
+        <View accessibilityRole="tablist" style={[styles.segment, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <Text accessibilityRole="tab" accessibilityState={{ selected: true }} style={[styles.segmentActive, { color: theme.colors.accent, borderBottomColor: theme.colors.accent }]}>Saved places</Text>
+          <Text accessibilityRole="tab" accessibilityState={{ selected: false }} style={[styles.segmentInactive, { color: theme.colors.textFaint }]}>Wishlist · soon</Text>
+        </View>
+        <SectionHeader title="Your saved places" detail={loadState === 'loading' ? 'Reading your saved-place source…' : `${savedPlaces.length} in this ${runtime.mode === 'fixture' ? 'development profile' : 'account view'}`} action="Discover" onAction={() => router.push('/(tabs)/discover')} />
+        {error ? <View style={[styles.error, { backgroundColor: `${theme.colors.danger}12`, borderColor: `${theme.colors.danger}55` }]}><Text style={[styles.errorTitle, { color: theme.colors.danger }]}>Saved places unavailable</Text><Text style={[styles.errorText, { color: theme.colors.text }]}>{error}</Text></View> : null}
+        <View style={styles.stack}>
+          {savedPlaces.map((place) => <PlaceCard key={place.id} place={place} compact onSave={() => toggleSaved(place.id, place.saved)} onPress={() => router.push({ pathname: '/place/[id]', params: { id: place.id } })} />)}
+        </View>
+        {loadState === 'success' && !savedPlaces.length ? <EmptyState icon="♡" title="Nothing saved yet" detail={runtime.mode === 'live' ? 'Account-backed saved places will appear here when personal persistence is connected. You can continue exploring in the meantime.' : 'When a place stays with you, save it here for later.'} action="Start discovering" onAction={() => router.push('/(tabs)/discover')} /> : null}
+        <View style={[styles.note, { backgroundColor: theme.colors.surfaceMuted, borderColor: theme.colors.border }]}><Text style={[styles.noteTitle, { color: theme.colors.accentStrong }]}>EPHEMERAL PRESENTATION STATE</Text><Text style={[styles.noteText, { color: theme.colors.textMuted }]}>This phase keeps save and visited interactions in memory only. The data-source boundary is ready for account persistence; nothing is written to device storage or Supabase.</Text></View>
       </View>
     </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: 18, paddingTop: 14, paddingBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  mode: { fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
-  content: { paddingHorizontal: 18, paddingTop: 20, gap: 14 },
+  header: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1 },
+  mode: { fontSize: 9, fontWeight: '800', letterSpacing: 0.6 },
+  content: { paddingHorizontal: 16, paddingTop: 20, gap: 14 },
+  kicker: { fontSize: 10, fontWeight: '900', letterSpacing: 1.1 },
   title: { fontSize: 30, lineHeight: 34, fontWeight: '900', letterSpacing: -0.8 },
   subtitle: { fontSize: 14, lineHeight: 21 },
-  segment: { borderWidth: 1, borderRadius: 12, flexDirection: 'row', paddingHorizontal: 14, gap: 18 },
+  segment: { borderWidth: 1, borderRadius: 8, flexDirection: 'row', paddingHorizontal: 14, gap: 18 },
   segmentActive: { paddingVertical: 11, fontSize: 12, fontWeight: '900', borderBottomWidth: 2 },
   segmentInactive: { paddingVertical: 11, fontSize: 12, fontWeight: '700' },
   stack: { gap: 9 },
-  note: { borderRadius: 14, padding: 13, gap: 4 },
-  noteTitle: { fontSize: 12, fontWeight: '900' },
+  error: { borderWidth: 1, borderRadius: 8, padding: 12, gap: 4 },
+  errorTitle: { fontSize: 13, fontWeight: '900' },
+  errorText: { fontSize: 12, lineHeight: 17 },
+  note: { borderWidth: 1, borderRadius: 8, padding: 13, gap: 4 },
+  noteTitle: { fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   noteText: { fontSize: 12, lineHeight: 17 },
 });
-

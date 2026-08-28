@@ -35,27 +35,32 @@ export type MobileTheme = {
     lg: number;
     pill: number;
   };
+  typography: {
+    /** Temporary platform fallback until EB Garamond/Public Sans are packaged. */
+    editorial: string;
+    ui: string | undefined;
+  };
 };
 
 const shared = {
   spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 },
-  radius: { sm: 8, md: 14, lg: 22, pill: 999 },
+  radius: { sm: 4, md: 8, lg: 8, pill: 999 },
 };
 
 const light: MobileTheme = {
   mode: 'light',
   colors: {
-    background: '#f4f1eb',
-    surface: '#fffdf9',
+    background: '#fbf9f4',
+    surface: '#f5f3ee',
     surfaceRaised: '#ffffff',
-    surfaceMuted: '#ebe7df',
-    text: '#17211f',
-    textMuted: '#5a6561',
-    textFaint: '#7a837f',
-    border: '#d9d6cd',
-    accent: '#1e625a',
-    accentSoft: '#dcece7',
-    accentStrong: '#164c46',
+    surfaceMuted: '#eae8e3',
+    text: '#1b1c19',
+    textMuted: '#5d625e',
+    textFaint: '#788079',
+    border: '#cfd0c9',
+    accent: '#173124',
+    accentSoft: '#dce5dc',
+    accentStrong: '#2d4739',
     mapWater: '#d9e8e8',
     mapLand: '#edf0e8',
     success: '#2f7d6f',
@@ -64,22 +69,23 @@ const light: MobileTheme = {
     white: '#ffffff',
   },
   ...shared,
+  typography: { editorial: 'Georgia', ui: undefined },
 };
 
 const dark: MobileTheme = {
   mode: 'dark',
   colors: {
-    background: '#101918',
-    surface: '#172321',
-    surfaceRaised: '#1d2b28',
-    surfaceMuted: '#263531',
-    text: '#eff4ef',
-    textMuted: '#b6c3bc',
-    textFaint: '#87968f',
-    border: '#344740',
-    accent: '#83c8b7',
-    accentSoft: '#254941',
-    accentStrong: '#b4e4d8',
+    background: '#121a15',
+    surface: '#1b261f',
+    surfaceRaised: '#223028',
+    surfaceMuted: '#2b382f',
+    text: '#f2f1e9',
+    textMuted: '#b8c0b8',
+    textFaint: '#8a968d',
+    border: '#3c4b40',
+    accent: '#b8d6c0',
+    accentSoft: '#2d4739',
+    accentStrong: '#d8eadb',
     mapWater: '#183335',
     mapLand: '#28342e',
     success: '#7fc7a1',
@@ -88,6 +94,7 @@ const dark: MobileTheme = {
     white: '#ffffff',
   },
   ...shared,
+  typography: { editorial: 'Georgia', ui: undefined },
 };
 
 export function useMobileTheme(): MobileTheme {
@@ -99,4 +106,3 @@ export function formatDistance(miles: number | null | undefined): string | null 
   if (miles < 0.1) return 'Nearby';
   return `${miles.toFixed(miles < 10 ? 1 : 0)} mi away`;
 }
-

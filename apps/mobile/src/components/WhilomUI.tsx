@@ -9,7 +9,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import { DemoPerson, DemoPlace, categoryForPlace, relationshipLabel } from '../lib/fixtures';
+import { displayCategory, type DiscoveryPerson, type DiscoveryPlace, type SearchResult } from '@whilom/discovery';
 import { MOBILE_PERIODS, TIME_MODE_OPTIONS, type MobileTimeMode } from '../lib/periods';
 import { DISPLAY_CATEGORIES, type DisplayCategoryId } from '../lib/taxonomy';
 import { formatDistance, useMobileTheme } from '../theme';
@@ -29,7 +29,7 @@ export function BrandMark({ eyebrow = 'HERITAGE, IN PLACE' }: { eyebrow?: string
         <Text style={[styles.brandMarkText, { color: theme.colors.white }]}>W</Text>
       </View>
       <View>
-        <Text style={[styles.brandName, { color: theme.colors.text }]}>Whilom</Text>
+        <Text style={[styles.brandName, { color: theme.colors.text, fontFamily: theme.typography.editorial }]}>Whilom</Text>
         <Text style={[styles.brandEyebrow, { color: theme.colors.textFaint }]}>{eyebrow}</Text>
       </View>
     </View>
@@ -45,11 +45,11 @@ export function SectionHeader({ title, detail, action, onAction }: { title: stri
   return (
     <View style={styles.sectionHeader}>
       <View style={{ flex: 1 }}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{title}</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text, fontFamily: theme.typography.editorial }]}>{title}</Text>
         {detail ? <Text style={[styles.sectionDetail, { color: theme.colors.textMuted }]}>{detail}</Text> : null}
       </View>
       {action && onAction ? (
-        <Pressable accessibilityRole="button" onPress={onAction} hitSlop={8}>
+        <Pressable accessibilityRole="button" accessibilityLabel={action} onPress={onAction} hitSlop={8}>
           <Text style={[styles.sectionAction, { color: theme.colors.accent }]}>{action}</Text>
         </Pressable>
       ) : null}
@@ -65,7 +65,7 @@ export function Pill({ label, selected = false, onPress, icon, style }: { label:
       <Text style={[styles.pillLabel, { color: selected ? theme.colors.white : theme.colors.text }]}>{label}</Text>
     </View>
   );
-  return onPress ? <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress}>{body}</Pressable> : body;
+  return onPress ? <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected }} onPress={onPress}>{body}</Pressable> : body;
 }
 
 export function SearchField({ value, onChangeText, onSubmitEditing, placeholder = 'Search places or people' }: { value: string; onChangeText: (value: string) => void; onSubmitEditing?: () => void; placeholder?: string }) {
@@ -135,8 +135,8 @@ export function TimeRuler({ mode, selectedPeriod, onModeChange, onPeriodChange }
         {MOBILE_PERIODS.map((period) => {
           const selected = selectedPeriod === period.id;
           return (
-            <Pressable key={period.id} accessibilityRole="button" accessibilityLabel={`Filter by ${period.label}`} accessibilityState={{ selected }} onPress={() => onPeriodChange(selected ? null : period.id)} style={[styles.periodItem, { borderColor: selected ? theme.colors.accent : theme.colors.border, backgroundColor: selected ? theme.colors.accentSoft : theme.colors.surface }]}>
-              <Text style={[styles.periodLabel, { color: selected ? theme.colors.accentStrong : theme.colors.text }]}>{period.label}</Text>
+            <Pressable key={period.id} accessibilityRole="button" accessibilityLabel={`Filter by ${period.name}`} accessibilityState={{ selected }} onPress={() => onPeriodChange(selected ? null : period.id)} style={[styles.periodItem, { borderColor: selected ? theme.colors.accent : theme.colors.border, backgroundColor: selected ? theme.colors.accentSoft : theme.colors.surface }]}>
+              <Text style={[styles.periodLabel, { color: selected ? theme.colors.accentStrong : theme.colors.text }]}>{period.name}</Text>
             </Pressable>
           );
         })}
@@ -146,12 +146,12 @@ export function TimeRuler({ mode, selectedPeriod, onModeChange, onPeriodChange }
   );
 }
 
-export function PlaceCard({ place, onPress, onSave, compact = false }: { place: DemoPlace; onPress: () => void; onSave?: () => void; compact?: boolean }) {
+export function PlaceCard({ place, onPress, onSave, compact = false }: { place: DiscoveryPlace; onPress: () => void; onSave?: () => void; compact?: boolean }) {
   const theme = useMobileTheme();
-  const category = categoryForPlace(place);
+  const category = displayCategory(place.category);
   const distance = formatDistance(place.distanceMiles);
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={[styles.placeCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }, compact && styles.placeCardCompact]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`Open place ${place.name}`} onPress={onPress} style={[styles.placeCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }, compact && styles.placeCardCompact]}>
       <View style={[styles.placeAccent, { backgroundColor: category.colour }]} />
       <View style={styles.placeCardBody}>
         <View style={styles.cardTopline}>
@@ -174,14 +174,29 @@ export function PlaceCard({ place, onPress, onSave, compact = false }: { place: 
   );
 }
 
-export function PersonCard({ person, onPress }: { person: DemoPerson; onPress: () => void }) {
+export function PersonCard({ person, onPress }: { person: DiscoveryPerson; onPress: () => void }) {
   const theme = useMobileTheme();
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={[styles.personCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`Open person ${person.name}`} onPress={onPress} style={[styles.personCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
       <View style={[styles.personAvatar, { backgroundColor: theme.colors.accentSoft }]}><Text style={[styles.personInitial, { color: theme.colors.accentStrong }]}>{person.name.charAt(0)}</Text></View>
       <View style={{ flex: 1 }}>
         <Text style={[styles.personName, { color: theme.colors.text }]}>{person.name}</Text>
         <Text style={[styles.personMeta, { color: theme.colors.textMuted }]}>{person.lifeDates}  ·  {person.role}</Text>
+      </View>
+      <Text style={[styles.chevron, { color: theme.colors.textFaint }]}>›</Text>
+    </Pressable>
+  );
+}
+
+export function SearchResultCard({ result, onPress }: { result: SearchResult; onPress: () => void }) {
+  const theme = useMobileTheme();
+  const isPerson = result.kind === 'person';
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={`Open ${isPerson ? 'person' : 'place'} ${result.display_name}`} onPress={onPress} style={[styles.personCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+      <View style={[styles.personAvatar, { backgroundColor: isPerson ? theme.colors.accentSoft : theme.colors.surfaceMuted }]}><Text style={[styles.personInitial, { color: isPerson ? theme.colors.accentStrong : theme.colors.textMuted }]}>{isPerson ? '◉' : '⌖'}</Text></View>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.personName, { color: theme.colors.text }]}>{result.display_name}</Text>
+        <Text numberOfLines={2} style={[styles.personMeta, { color: theme.colors.textMuted }]}>{result.detail ?? result.context ?? (isPerson ? 'Person' : 'Place')}</Text>
       </View>
       <Text style={[styles.chevron, { color: theme.colors.textFaint }]}>›</Text>
     </Pressable>
@@ -224,7 +239,7 @@ export const uiStyles = StyleSheet.create({
   shell: { flex: 1 },
   scrollContent: { paddingBottom: 36 },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  brandMark: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  brandMark: { width: 34, height: 34, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
   brandMarkText: { fontSize: 22, fontWeight: '800', letterSpacing: -1 },
   brandName: { fontSize: 22, fontWeight: '800', letterSpacing: -0.6 },
   brandEyebrow: { fontSize: 9, fontWeight: '700', letterSpacing: 1.2, marginTop: 1 },
@@ -232,21 +247,21 @@ export const uiStyles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: '800', letterSpacing: -0.2 },
   sectionDetail: { fontSize: 12, lineHeight: 17, marginTop: 2 },
   sectionAction: { fontSize: 13, fontWeight: '800' },
-  pill: { minHeight: 38, borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  pill: { minHeight: 38, borderWidth: 1, borderRadius: 4, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   pillLabel: { fontSize: 13, fontWeight: '700' },
-  searchField: { borderWidth: 1, borderRadius: 14, minHeight: 52, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, gap: 9 },
+  searchField: { borderWidth: 1, borderRadius: 8, minHeight: 52, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, gap: 9 },
   searchInput: { flex: 1, fontSize: 16, minHeight: 48 },
   searchScope: { fontSize: 10, fontWeight: '800', letterSpacing: 1 },
-  coverageNotice: { borderWidth: 1, borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 9 },
+  coverageNotice: { borderWidth: 1, borderRadius: 8, padding: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 9 },
   coverageText: { flex: 1, fontSize: 12, lineHeight: 17 },
   horizontalRow: { gap: 8, paddingBottom: 3 },
-  keyItem: { flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1, borderRadius: 11, paddingHorizontal: 10, paddingVertical: 9 },
+  keyItem: { flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 9 },
   keyLabel: { fontSize: 12, fontWeight: '700' },
   periodRow: { borderTopWidth: 1, borderBottomWidth: 1, paddingVertical: 10, gap: 8, marginTop: 12 },
-  periodItem: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 11, paddingVertical: 9 },
+  periodItem: { borderWidth: 1, borderRadius: 4, paddingHorizontal: 11, paddingVertical: 9 },
   periodLabel: { fontSize: 12, fontWeight: '700' },
   timeHint: { fontSize: 11, marginTop: 7 },
-  placeCard: { borderWidth: 1, borderRadius: 16, flexDirection: 'row', overflow: 'hidden', minHeight: 130 },
+  placeCard: { borderWidth: 1, borderRadius: 8, flexDirection: 'row', overflow: 'hidden', minHeight: 130 },
   placeCardCompact: { minHeight: 96 },
   placeAccent: { width: 6 },
   placeCardBody: { flex: 1, padding: 13, gap: 4 },
@@ -260,19 +275,19 @@ export const uiStyles = StyleSheet.create({
   designationBadge: { maxWidth: '86%', overflow: 'hidden', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 5, fontSize: 10 },
   visitedBadge: { fontSize: 10, fontWeight: '800' },
   chevron: { fontSize: 26, paddingRight: 10, alignSelf: 'center' },
-  saveButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  saveButtonCompact: { width: 28, height: 28, borderRadius: 14 },
+  saveButton: { width: 32, height: 32, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
+  saveButtonCompact: { width: 28, height: 28, borderRadius: 4 },
   saveGlyph: { fontSize: 18 },
-  personCard: { minHeight: 74, borderWidth: 1, borderRadius: 14, padding: 11, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  personCard: { minHeight: 74, borderWidth: 1, borderRadius: 8, padding: 11, flexDirection: 'row', alignItems: 'center', gap: 11 },
   personAvatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   personInitial: { fontSize: 19, fontWeight: '800' },
   personName: { fontSize: 15, fontWeight: '800' },
   personMeta: { fontSize: 11, lineHeight: 16, marginTop: 2 },
-  emptyState: { borderWidth: 1, borderRadius: 18, alignItems: 'center', paddingHorizontal: 24, paddingVertical: 28 },
+  emptyState: { borderWidth: 1, borderRadius: 8, alignItems: 'center', paddingHorizontal: 24, paddingVertical: 28 },
   emptyIcon: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   emptyTitle: { fontSize: 18, fontWeight: '800', textAlign: 'center' },
   emptyDetail: { fontSize: 13, lineHeight: 19, textAlign: 'center', marginTop: 7 },
-  primaryButton: { borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, marginTop: 16 },
+  primaryButton: { borderRadius: 4, paddingHorizontal: 16, paddingVertical: 12, marginTop: 16 },
   primaryButtonText: { fontSize: 13, fontWeight: '800' },
   infoRow: { minHeight: 42, borderBottomWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 9 },
   infoLabel: { fontSize: 12, width: 100 },
