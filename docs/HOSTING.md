@@ -1,7 +1,22 @@
 # Whilom hosting readiness
 
-Status: repository preparation only. No Cloudflare account, Worker, secret,
-route, custom domain, DNS record, or `whilom.co.uk` change has been made.
+Status: W2 repository/runtime-certification preparation. No Cloudflare account,
+Worker deployment, secret, route, custom domain, DNS record, or `whilom.co.uk`
+change has been made.
+
+## W2 maturity levels
+
+The compatibility gates are deliberately separate from deployment:
+
+1. **Next production build verified** — passed on Next.js 15.5.24.
+2. **OpenNext transform verified** — the local adapter build is run against
+   the pinned stack; Linux CI repeats this gate.
+3. **Local Linux Workers runtime verified** — the compatibility workflow boots
+   `.open-next/worker.js` with Wrangler/workerd and smoke-tests HTTP routes.
+4. **`workers.dev` deployment** — not verified; no Cloudflare account access is
+   used by this repository workflow.
+5. **Live Supabase integration** — not verified by this compatibility slice.
+6. **Custom domain/DNS** — not configured; `whilom.co.uk` is untouched.
 
 ## Decision for the current Web baseline
 
@@ -20,14 +35,12 @@ This is a compatibility-based choice, not a claim that a production deployment
 has already been certified. OpenNext adapts the output of the existing
 `next build` and its Cloudflare adapter documents support for the App Router,
 RSC, SSR, route handlers, Server Actions, middleware and image optimisation.
-The repository's current Next 15 baseline fits the supported Next 14/15 line
-documented by OpenNext. The currently selected adapter (`@opennextjs/cloudflare`
-1.20.4) declares a peer floor of Next 15.5.24, while this repository currently
-resolves Next 15.5.23. The adapter build succeeds against the current checkout,
-but that peer mismatch remains a release gate. This slice does not upgrade Next
-merely to follow a hosting guide; a separate controlled patch must either move
-Next to a compatible 15.5.x patch or select an adapter release whose peer range
-explicitly includes the repository baseline, followed by a fresh validation.
+The repository remains on the supported Next 15 line documented by OpenNext.
+The W2 security/compatibility patch moves Next and `eslint-config-next` from
+15.5.23 to the maintenance-patched 15.5.24 release, satisfying the
+`@opennextjs/cloudflare` 1.20.4 peer floor without starting a Next 16
+migration. The certified deployment-tool baseline is pinned to
+`@opennextjs/cloudflare` 1.20.4 and Wrangler 4.127.0.
 The existing middleware is the standard
 `@supabase/ssr` cookie-refresh pattern rather than Next.js Node middleware, and
 the runtime audit found no application-side `fs`, `path`, `net`, `tls`,
@@ -41,10 +54,13 @@ promising a compatibility layer for this Next 15 application. Upgrading Next
 or migrating the application to vinext would be a separate compatibility and
 product-risk decision.
 
-The OpenNext choice still requires a Workers-runtime preview and deployment
-certification in Linux CI or WSL before production use. OpenNext documents that
-Windows support is not guaranteed. That validation was intentionally not run in
-this remote preparation slice.
+The repository now carries a focused Linux GitHub Actions compatibility
+workflow at `.github/workflows/web-workers-compat.yml`. It uses the declared
+pnpm 9.12.0 toolchain, performs the normal Web checks, builds OpenNext, starts
+the generated Worker locally with Wrangler/workerd, and checks `/api/health`
+plus the public `/` route. It has no Cloudflare credentials and contains no
+deployment or domain operation. OpenNext documents that Windows support is not
+guaranteed, so Linux CI is the authoritative runtime certification environment.
 
 ## Repository preparation
 
@@ -58,6 +74,8 @@ The Web app now has the minimum manual OpenNext shape:
   The deploy script is a future operator command; it was not invoked here.
 - `apps/web/next.config.mjs` transpiles `@whilom/discovery`, matching the
   other source-distributed workspace packages consumed by Web.
+- `.github/workflows/web-workers-compat.yml` is a compatibility-only Linux
+  workflow. It never authenticates or contacts a Cloudflare account.
 
 The Workers adapter and Wrangler are build/deployment tooling. They do not
 replace Supabase and do not grant the Worker database authority.
@@ -110,8 +128,8 @@ committed to Git.
 
 ## Future release checklist
 
-1. Run the OpenNext build and Workers-runtime preview in Linux CI or WSL using
-   the declared pnpm version.
+1. Record a passing Linux CI run for the OpenNext build and Workers-runtime
+   preview using the declared pnpm version.
 2. Exercise public discovery, Supabase auth cookie refresh, Server Actions,
    admin authorization, dynamic routes, the health route, and the MapLibre
    browser boundary through the preview.
@@ -127,6 +145,18 @@ committed to Git.
 No step in this document has been executed by this task. In particular,
 `whilom.co.uk` is not attached, DNS is untouched, and the Yorkshire dataset
 has not been activated.
+
+## W2 security release record
+
+The Web security baseline moved from Next.js 15.5.23 to 15.5.24, with the
+matching `eslint-config-next` release. This is a maintenance/security patch and
+OpenNext peer-compatibility fix, not a feature upgrade or a Next 16 migration.
+
+The local Linux runtime workflow uses harmless loopback Supabase placeholders
+only so the SSR client can be instantiated without contacting the hosted
+project. It does not certify Supabase connectivity or authenticated behaviour;
+those checks require separately managed public configuration, test identities,
+and the later Yorkshire/live-integration gates.
 
 ## UI ownership
 

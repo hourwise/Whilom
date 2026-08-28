@@ -1,0 +1,133 @@
+name: Web Workers compatibility
+
+on:
+  push:
+    branches:
+      - codex/whilom-web-workers-runtime-cert
+    paths:
+      - apps/web/**
+      - packages/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - .npmrc
+      - .nvmrc
+      - .github/workflows/web-workers-compat.yml
+  pull_request:
+    paths:
+      - apps/web/**
+      - packages/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - .npmrc
+      - .nvmrc
+      - .github/workflows/web-workers-compat.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-workers-compat-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  workers-compat:
+    name: OpenNext Worker compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: true
+      # These loopback values only let the SSR client initialise during a
+      # local runtime smoke. They cannot reach Whilom Supabase or represent a
+      # successful backend connection.
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:9
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: workers-runtime-smoke-placeholder
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Select repository pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Verify declared toolchain
+        run: |
+          node --version
+          corepack pnpm --version
+          test "$(pnpm --version)" = "9.12.0"
+
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Web typecheck
+        run: pnpm --filter @whilom/web typecheck
+
+      - name: Web tests
+        run: pnpm --filter @whilom/web test
+
+      - name: Next production build
+        run: pnpm --filter @whilom/web build
+
+      - name: OpenNext Workers build
+        run: pnpm --filter @whilom/web workers:build
+
+      - name: Local Workers runtime smoke
+        working-directory: apps/web
+        shell: bash
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/whilom-workers.log"
+          pidfile="$RUNNER_TEMP/whilom-workers.pid"
+
+          cleanup() {
+            if [[ -f "$pidfile" ]]; then
+              pid="$(cat "$pidfile")"
+              kill "$pid" 2>/dev/null || true
+              wait "$pid" 2>/dev/null || true
+            fi
+            echo "----- Wrangler/workerd log -----"
+            cat "$log" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          pnpm exec wrangler dev --local --port 8787 --inspector-port 0 \
+            --show-interactive-dev-session=false >"$log" 2>&1 &
+          echo $! >"$pidfile"
+
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error \
+              http://127.0.0.1:8787/api/health \
+              >"$RUNNER_TEMP/whilom-health.json"; then
+              break
+            fi
+            if ! kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+              exit 1
+            fi
+            sleep 1
+          done
+
+          test -s "$RUNNER_TEMP/whilom-health.json"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = `${process.env.RUNNER_TEMP}/whilom-health.json`;
+          const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+          if (data.status !== 'ok' || data.app !== 'web') {
+            console.error(data);
+            process.exit(1);
+          }
+          NODE
+
+          status="$(curl --silent --show-error \
+            --output "$RUNNER_TEMP/whilom-root.html" \
+            --write-out "%{http_code}" \
+            http://127.0.0.1:8787/)"
+          test "$status" = "200"
+          test -s "$RUNNER_TEMP/whilom-root.html"
