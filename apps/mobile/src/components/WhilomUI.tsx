@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import {
   Pressable,
   ScrollView,
+  StyleProp,
   StyleSheet,
   Text,
   TextInput,
