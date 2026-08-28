@@ -65,6 +65,13 @@ describe('centuries', () => {
     // no 61st century, and accepting one would put a milepost in the year 6001.
     expect(readCentury('Milepost 159 Metres North East of the Junction With the C61 Road')).toBeNull();
   });
+
+  it.each(['C1827', 'C1854', 'C1800', 'C1901', 'C18123'])(
+    'refuses a century prefix inside a longer token: %s',
+    (value) => {
+      expect(readCentury(value)).toBeNull();
+    },
+  );
 });
 
 describe('early, mid and late', () => {

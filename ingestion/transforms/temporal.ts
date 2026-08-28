@@ -187,7 +187,7 @@ const PERIOD_LABELS: Record<string, string> = {
  */
 function centuryFragments(text: string): string[] {
   const pattern =
-    /\b(?:(?:early|earlier|mid|middle|late|later|beginning|end)(?:\s+of\s+the)?[\s-]+)?(?:C\d{1,2}|\d{1,2}(?:st|nd|rd|th)[\s-]+century|(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth|thirteenth|fourteenth|fifteenth|sixteenth|seventeenth|eighteenth|nineteenth|twentieth)[\s-]+century)(?:\s*(?:BCE|BC))?/gi;
+    /\b(?:(?:early|earlier|mid|middle|late|later|beginning|end)(?:\s+of\s+the)?[\s-]+)?(?:C\d{1,2}\b|\d{1,2}(?:st|nd|rd|th)[\s-]+century|(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth|thirteenth|fourteenth|fifteenth|sixteenth|seventeenth|eighteenth|nineteenth|twentieth)[\s-]+century)(?:\s*(?:BCE|BC))?/gi;
   return [...text.matchAll(pattern)].map((m) => m[0].trim());
 }
 

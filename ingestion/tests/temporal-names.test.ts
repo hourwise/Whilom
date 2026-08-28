@@ -95,6 +95,29 @@ describe('centuries, qualified and repeated', () => {
   it('still reads a bare century wherever it appears', () => {
     expect(extractTemporalClaims('Wall incorporating C18 water supply point')[0]!.startYear).toBe(1701);
   });
+
+  it.each([
+    'C1827',
+    'C1854',
+    'C1800',
+    'C1901',
+    'NHLE-C18X identifier',
+    'PAIR OF CHEST TOMBS TO THE ASQUITH FAMILY C1827 AND 1854 APPROXIMATELY 25 METRES NORTH WEST OF WEST DOOR OF CHURCH OF ST MARY',
+  ])('does not extract a century from a larger token: %s', (name) => {
+    expect(extractTemporalClaims(name).filter((claim) => claim.precision === 'century')).toEqual([]);
+  });
+
+  it.each([
+    'C18',
+    'C18.',
+    'C18?',
+    'late C18',
+    'late-C18',
+    'Early C19',
+    'late 17th century',
+  ])('keeps a supported century token at a valid boundary: %s', (name) => {
+    expect(extractTemporalClaims(name).find((claim) => claim.precision === 'century')).toBeDefined();
+  });
 });
 
 describe('a battle is an event, not a building', () => {
