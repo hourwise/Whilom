@@ -11,6 +11,8 @@ out/
 .expo/
 .turbo/
 *.tsbuildinfo
+/.pnpm-store/
+/apps/web/.open-next/
 
 # Env / secrets
 .env
