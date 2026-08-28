@@ -2,30 +2,42 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { relationshipLabel, type DiscoveryDataSource, type DiscoveryPerson, type DiscoveryPlace } from '@whilom/discovery';
-import { BrandMark, EmptyState, PlaceCard, SectionHeader, styles as uiStyles } from '../components/WhilomUI';
+import { AsyncNotice, BrandMark, EmptyState, PlaceCard, SectionHeader, styles as uiStyles } from '../components/WhilomUI';
 import { useMobileTheme } from '../theme';
 
 export default function PersonDetailScreen({ person, source }: { person: DiscoveryPerson; source: DiscoveryDataSource }) {
   const theme = useMobileTheme();
   const [places, setPlaces] = useState<Array<{ place: DiscoveryPlace; predicate: string; note: string }>>([]);
   const [relatedPeople, setRelatedPeople] = useState<DiscoveryPerson[]>([]);
+  const [loadState, setLoadState] = useState<'loading' | 'success' | 'error'>('loading');
+  const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
   useEffect(() => {
     let cancelled = false;
-    void Promise.all(person.placeLinks.map(async (link) => ({ link, place: await source.getPlace(link.placeId) }))).then((results) => {
-      if (!cancelled) setPlaces(results.flatMap(({ link, place }) => place ? [{ place, predicate: link.predicate, note: link.note }] : []));
-    });
-    void Promise.all(person.relatedPeople.map((id) => source.getPerson(id))).then((results) => {
-      if (!cancelled) setRelatedPeople(results.filter((related): related is DiscoveryPerson => Boolean(related)));
+    setLoadState('loading');
+    setError(null);
+    void Promise.all([
+      Promise.all(person.placeLinks.map(async (link) => ({ link, place: await source.getPlace(link.placeId) }))),
+      Promise.all(person.relatedPeople.map((id) => source.getPerson(id))),
+    ]).then(([placeResults, relatedResults]) => {
+      if (cancelled) return;
+      setPlaces(placeResults.flatMap(({ link, place }) => place ? [{ place, predicate: link.predicate, note: link.note }] : []));
+      setRelatedPeople(relatedResults.filter((related): related is DiscoveryPerson => Boolean(related)));
+      setLoadState('success');
+    }).catch((cause: unknown) => {
+      if (cancelled) return;
+      setLoadState('error');
+      setError(cause instanceof Error ? cause.message : 'Whilom could not load this person’s connected places.');
     });
     return () => { cancelled = true; };
-  }, [person.placeLinks, person.relatedPeople, source]);
+  }, [person.placeLinks, person.relatedPeople, reloadToken, source]);
   return (
     <ScrollView style={{ backgroundColor: theme.colors.background }} contentContainerStyle={personStyles.content}>
-      <View style={personStyles.topBar}><Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()} style={[personStyles.backButton, { backgroundColor: theme.colors.surface }]}><Text style={[personStyles.backGlyph, { color: theme.colors.text }]}>‹</Text></Pressable><BrandMark eyebrow="PERSON DETAIL" /><View style={{ width: 38 }} /></View>
+      <View style={personStyles.topBar}><Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()} style={[personStyles.backButton, { width: theme.controls.touchTarget, height: theme.controls.touchTarget, backgroundColor: theme.colors.surface }]}><Text style={[personStyles.backGlyph, { color: theme.colors.text }]}>‹</Text></Pressable><BrandMark eyebrow="PERSON DETAIL" /><View style={{ width: theme.controls.touchTarget }} /></View>
       <View style={[personStyles.identity, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}><View style={[personStyles.avatar, { backgroundColor: theme.colors.accentSoft }]}><Text style={[personStyles.avatarText, { color: theme.colors.accentStrong }]}>{person.name.charAt(0)}</Text></View><Text style={[personStyles.name, { color: theme.colors.text, fontFamily: theme.typography.editorial }]}>{person.name}</Text><Text style={[personStyles.lifeDates, { color: theme.colors.accent }]}>{person.lifeDates}</Text><Text style={[personStyles.role, { color: theme.colors.textMuted }]}>{person.role}</Text></View>
       <Text style={[personStyles.description, { color: theme.colors.text }]}>{person.description}</Text>
-      <View style={personStyles.section}><SectionHeader title="Places in their story" detail="Each link retains the relationship predicate and its source note." /><View style={personStyles.stack}>{places.map(({ place, predicate, note }) => <View key={place.id} style={personStyles.linkBlock}><Text style={[personStyles.predicate, { color: theme.colors.accent }]}>{relationshipLabel(predicate).toUpperCase()}</Text><PlaceCard place={place} compact onPress={() => router.push({ pathname: '/place/[id]', params: { id: place.id } })} /><Text style={[personStyles.linkNote, { color: theme.colors.textMuted }]}>{note}</Text></View>)}</View>{!places.length ? <EmptyState icon="◌" title="No place links yet" detail="Whilom only shows relationships supported by the heritage graph." /> : null}</View>
-      <View style={personStyles.section}><SectionHeader title="Related people" detail="Only graph-backed relationships are shown." />{relatedPeople.length ? <View style={personStyles.stack}>{relatedPeople.map((related) => <Pressable key={related.id} accessibilityRole="button" accessibilityLabel={`Open person ${related.name}`} onPress={() => router.push({ pathname: '/person/[id]', params: { id: related.id } })} style={[personStyles.related, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}><Text style={[personStyles.relatedName, { color: theme.colors.text }]}>{related.name}</Text><Text style={[personStyles.relatedDates, { color: theme.colors.textMuted }]}>{related.lifeDates}</Text><Text style={[uiStyles.chevron, { color: theme.colors.textFaint }]}>›</Text></Pressable>)}</View> : <Text style={[personStyles.muted, { color: theme.colors.textMuted }]}>No related-person edges are recorded in this source.</Text>}</View>
+      <View style={personStyles.section}><SectionHeader title="Places in their story" detail="Each link retains the relationship predicate and its source note." />{loadState === 'loading' ? <AsyncNotice kind="loading" title="Reading connected places" detail="Following the graph-backed relationships for this person." /> : null}{loadState === 'error' ? <AsyncNotice kind="error" title="Connected places unavailable" detail={error ?? 'Whilom could not load this person’s connected places.'} action="Try again" onAction={() => setReloadToken((current) => current + 1)} /> : null}<View style={personStyles.stack}>{places.map(({ place, predicate, note }) => <View key={place.id} style={personStyles.linkBlock}><Text style={[personStyles.predicate, { color: theme.colors.accent }]}>{relationshipLabel(predicate).toUpperCase()}</Text><PlaceCard place={place} compact onPress={() => router.push({ pathname: '/place/[id]', params: { id: place.id } })} /><Text style={[personStyles.linkNote, { color: theme.colors.textMuted }]}>{note}</Text></View>)}</View>{loadState === 'success' && !places.length ? <EmptyState icon="◌" title="No place links yet" detail="Whilom only shows relationships supported by the heritage graph." /> : null}</View>
+      <View style={personStyles.section}><SectionHeader title="Related people" detail="Only graph-backed relationships are shown." />{relatedPeople.length ? <View style={personStyles.stack}>{relatedPeople.map((related) => <Pressable key={related.id} accessibilityRole="button" accessibilityLabel={`Open person ${related.name}`} onPress={() => router.push({ pathname: '/person/[id]', params: { id: related.id } })} style={[personStyles.related, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}><Text style={[personStyles.relatedName, { color: theme.colors.text }]}>{related.name}</Text><Text style={[personStyles.relatedDates, { color: theme.colors.textMuted }]}>{related.lifeDates}</Text><Text style={[uiStyles.chevron, { color: theme.colors.textFaint }]}>›</Text></Pressable>)}</View> : <Text style={[personStyles.muted, { color: theme.colors.textMuted }]}>{loadState === 'error' ? 'Related people could not be loaded.' : 'No related-person edges are recorded in this source.'}</Text>}</View>
     </ScrollView>
   );
 }
@@ -33,7 +45,7 @@ export default function PersonDetailScreen({ person, source }: { person: Discove
 const personStyles = StyleSheet.create({
   content: { paddingBottom: 40, gap: 17 },
   topBar: { paddingHorizontal: 16, paddingTop: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  backButton: { width: 38, height: 38, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
+  backButton: { borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
   backGlyph: { fontSize: 30, lineHeight: 32, marginTop: -2 },
   identity: { marginHorizontal: 16, borderWidth: 1, borderRadius: 8, alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20 },
   avatar: { width: 76, height: 76, borderRadius: 38, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },

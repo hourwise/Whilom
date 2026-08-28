@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { type DiscoveryPlace } from '@whilom/discovery';
-import { BrandMark, EmptyState, PlaceCard, SectionHeader, ScreenShell } from '../components/WhilomUI';
+import { AsyncNotice, BrandMark, EmptyState, PlaceCard, SectionHeader, ScreenShell } from '../components/WhilomUI';
 import { getMobileDiscoveryRuntime } from '../lib/data-source';
 import { useEphemeralPlaceState } from '../lib/ephemeral-state';
 import { useMobileTheme } from '../theme';
@@ -16,6 +16,7 @@ export default function SavedScreen() {
   const [places, setPlaces] = useState<DiscoveryPlace[]>([]);
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,7 +35,7 @@ export default function SavedScreen() {
       setLoadState('error');
     });
     return () => { cancelled = true; };
-  }, [runtime]);
+  }, [reloadToken, runtime]);
 
   const savedPlaces = places.filter((place) => isSaved(place.id, place.saved));
   const modeLabel = runtime.configuration === 'unavailable' ? 'LIVE READ · NOT CONFIGURED' : runtime.mode === 'live' ? 'LIVE READ MODE' : 'DEVELOPMENT FIXTURES';
@@ -54,7 +55,7 @@ export default function SavedScreen() {
           <Text accessibilityRole="tab" accessibilityState={{ selected: false }} style={[styles.segmentInactive, { color: theme.colors.textFaint }]}>Wishlist · soon</Text>
         </View>
         <SectionHeader title="Your saved places" detail={loadState === 'loading' ? 'Reading your saved-place source…' : `${savedPlaces.length} in this ${runtime.mode === 'fixture' ? 'development profile' : 'account view'}`} action="Discover" onAction={() => router.push('/(tabs)/discover')} />
-        {error ? <View style={[styles.error, { backgroundColor: `${theme.colors.danger}12`, borderColor: `${theme.colors.danger}55` }]}><Text style={[styles.errorTitle, { color: theme.colors.danger }]}>Saved places unavailable</Text><Text style={[styles.errorText, { color: theme.colors.text }]}>{error}</Text></View> : null}
+        {error ? <AsyncNotice kind="error" title="Saved places unavailable" detail={error} action="Try again" onAction={() => setReloadToken((current) => current + 1)} /> : null}
         <View style={styles.stack}>
           {savedPlaces.map((place) => <PlaceCard key={place.id} place={place} compact onSave={() => toggleSaved(place.id, place.saved)} onPress={() => router.push({ pathname: '/place/[id]', params: { id: place.id } })} />)}
         </View>
@@ -76,9 +77,6 @@ const styles = StyleSheet.create({
   segmentActive: { paddingVertical: 11, fontSize: 12, fontWeight: '900', borderBottomWidth: 2 },
   segmentInactive: { paddingVertical: 11, fontSize: 12, fontWeight: '700' },
   stack: { gap: 9 },
-  error: { borderWidth: 1, borderRadius: 8, padding: 12, gap: 4 },
-  errorTitle: { fontSize: 13, fontWeight: '900' },
-  errorText: { fontSize: 12, lineHeight: 17 },
   note: { borderWidth: 1, borderRadius: 8, padding: 13, gap: 4 },
   noteTitle: { fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   noteText: { fontSize: 12, lineHeight: 17 },

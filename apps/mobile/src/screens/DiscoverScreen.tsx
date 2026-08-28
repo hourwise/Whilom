@@ -16,6 +16,7 @@ import {
 } from '@whilom/discovery';
 import { DiscoveryMap, markersForPlaces } from '../components/DiscoveryMap';
 import {
+  AsyncNotice,
   BrandMark,
   CoverageNotice,
   EmptyState,
@@ -102,6 +103,8 @@ export default function DiscoverScreen() {
   const [searchState, setSearchState] = useState<AsyncState>('idle');
   const [searchError, setSearchError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
+  const [searchReloadToken, setSearchReloadToken] = useState(0);
 
   const discoveryState = useMemo<DiscoveryState>(() => ({
     ...DEFAULT_STATE,
@@ -151,7 +154,7 @@ export default function DiscoverScreen() {
       });
     }, query.trim() ? 180 : 0);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [bounds, discoveryState, query, runtime]);
+  }, [bounds, discoveryState, query, reloadToken, runtime]);
 
   useEffect(() => {
     let cancelled = false;
@@ -180,7 +183,7 @@ export default function DiscoverScreen() {
       setSearchError(cause instanceof Error ? cause.message : 'Whilom could not search this discovery window.');
     });
     return () => { cancelled = true; };
-  }, [query, runtime]);
+  }, [query, runtime, searchReloadToken]);
 
   useEffect(() => {
     let cancelled = false;
@@ -218,16 +221,16 @@ export default function DiscoverScreen() {
       <View style={screenStyles.content}>
         <View style={screenStyles.intro}><Text style={[screenStyles.kicker, { color: theme.colors.accent }]}>WHERE · WHEN · WHO · WHAT</Text><Text style={[screenStyles.title, { color: theme.colors.text, fontFamily: theme.typography.editorial }]}>Find the history in view.</Text><Text style={[screenStyles.subtitle, { color: theme.colors.textMuted }]}>A map for discovery, with the source trail kept close.</Text></View>
         <SearchField value={query} onChangeText={setQuery} />
-        <View style={screenStyles.locationRow}>{LOCATION_OPTIONS.map((option) => <Pressable key={option.id} accessibilityRole="button" accessibilityLabel={`${option.label}: ${option.detail}`} accessibilityState={{ selected: locationMode === option.id }} onPress={() => { setLocationMode(option.id); setSelectedPlaceId(null); }} style={[screenStyles.locationControl, { backgroundColor: locationMode === option.id ? theme.colors.accent : theme.colors.surface, borderColor: locationMode === option.id ? theme.colors.accent : theme.colors.border }]}><Text style={[screenStyles.locationLabel, { color: locationMode === option.id ? '#fff' : theme.colors.text }]}>{option.label}</Text></Pressable>)}</View>
+        <View style={screenStyles.locationRow}>{LOCATION_OPTIONS.map((option) => <Pressable key={option.id} accessibilityRole="button" accessibilityLabel={`${option.label}: ${option.detail}`} accessibilityState={{ selected: locationMode === option.id }} onPress={() => { setLocationMode(option.id); setSelectedPlaceId(null); }} style={[screenStyles.locationControl, { backgroundColor: locationMode === option.id ? theme.colors.accent : theme.colors.surface, borderColor: locationMode === option.id ? theme.colors.accent : theme.colors.border }]}><Text style={[screenStyles.locationLabel, { color: locationMode === option.id ? theme.colors.white : theme.colors.text }]}>{option.label}</Text></Pressable>)}</View>
         <Text style={[screenStyles.locationDetail, { color: theme.colors.textFaint }]}>{LOCATION_OPTIONS.find((option) => option.id === locationMode)?.detail}</Text>
         {selectedCoverage ? <CoverageNotice level={selectedCoverage.level} text={selectedCoverage.text} /> : null}
         {runtime.configuration === 'unavailable' ? <EmptyState icon="⚙" title="Live read mode needs public configuration" detail={error ?? 'Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY, then opt into live mode. Fixture mode remains the safe default.'} /> : null}
-        {dataState === 'error' && runtime.configuration === 'available' ? <View style={[screenStyles.errorNotice, { backgroundColor: `${theme.colors.danger}12`, borderColor: `${theme.colors.danger}55` }]}><Text style={[screenStyles.errorTitle, { color: theme.colors.danger }]}>Could not load this view</Text><Text style={[screenStyles.errorText, { color: theme.colors.text }]}>{error ?? 'Please try again.'}</Text></View> : null}
+        {dataState === 'error' && runtime.configuration === 'available' ? <AsyncNotice kind="error" title="Could not load this view" detail={error ?? 'Whilom could not load this discovery window.'} action="Try again" onAction={() => setReloadToken((current) => current + 1)} /> : null}
         <View style={[screenStyles.mapCard, { backgroundColor: theme.colors.surfaceRaised, borderColor: theme.colors.border }]}><View style={screenStyles.mapTitleRow}><View><Text style={[screenStyles.mapTitle, { color: theme.colors.text }]}>Around your view</Text><Text style={[screenStyles.mapDetail, { color: theme.colors.textMuted }]}>{dataState === 'loading' ? 'Reading bounded discovery data…' : `${mapPlaces.length} places · ${periodCounts.length} period${periodCounts.length === 1 ? '' : 's'} represented`}</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Center on current view" onPress={() => setLocationMode('nearby')} style={[screenStyles.centerButton, { backgroundColor: theme.colors.accentSoft }]}><Text style={[screenStyles.centerGlyph, { color: theme.colors.accentStrong }]}>⌖</Text></Pressable></View><DiscoveryMap viewport={viewportForMode(locationMode)} markers={markersForPlaces(mapPlaces, selectedPlaceId)} clusters={clusters} selectedPlaceId={selectedPlaceId} coverageState={mapCoverage} onMarkerPress={(marker) => setSelectedPlaceId(marker.id)} /><Text style={[screenStyles.mapFootnote, { color: theme.colors.textFaint }]}>Bounded map contract · clusters are available at broad zoom.</Text></View>
         {detailPlace ? <View style={screenStyles.previewSection}><SectionHeader title="Place preview" detail="Overview first; depth lives on the place page" /><PlaceCard place={detailPlace} compact onSave={() => toggleSaved(detailPlace.id, detailPlace.saved)} onPress={() => openPlace(detailPlace.id)} /></View> : null}
         <View style={screenStyles.sectionBlock}><TimeRuler mode={timeMode} selectedPeriod={selectedPeriod} onModeChange={setTimeMode} onPeriodChange={setSelectedPeriod} /></View>
         <View style={screenStyles.sectionBlock}><MapKey activeCategory={activeCategory} onToggle={(category) => setActiveCategory(activeCategory === category ? null : category)} /></View>
-        {query.trim() ? <View style={screenStyles.sectionBlock}><SectionHeader title="Search results" detail={searchState === 'loading' ? 'Searching the shared place/person contract…' : `${searchResults.length} result${searchResults.length === 1 ? '' : 's'} · places and people in one field`} />{searchState === 'error' ? <View style={[screenStyles.errorNotice, { backgroundColor: `${theme.colors.danger}12`, borderColor: `${theme.colors.danger}55` }]}><Text style={[screenStyles.errorTitle, { color: theme.colors.danger }]}>Search unavailable</Text><Text style={[screenStyles.errorText, { color: theme.colors.text }]}>{searchError ?? 'Whilom could not search this discovery window.'}</Text></View> : null}<Text style={[screenStyles.subheading, { color: theme.colors.textMuted }]}>Places</Text><View style={screenStyles.cardStack}>{placeSearchResults.map((result) => <SearchResultCard key={result.id} result={result} onPress={() => openPlace(result.id)} />)}</View><Text style={[screenStyles.subheading, { color: theme.colors.textMuted }]}>People</Text><View style={screenStyles.cardStack}>{personSearchResults.map((result) => <SearchResultCard key={result.id} result={result} onPress={() => router.push({ pathname: '/person/[id]', params: { id: result.id } })} />)}</View>{searchState === 'success' && !searchResults.length ? <EmptyState icon="⌕" title={`Nothing matching “${query}”`} detail="Try a different place, person, or spelling. An empty result means Whilom has no matching record here — not that the location has no history." /> : null}</View> : <View style={screenStyles.sectionBlock}><SectionHeader title="Nearby places" detail={dataState === 'loading' ? 'Loading the bounded result set…' : 'Tap a marker or card to go deeper'} /><View style={screenStyles.cardStack}>{mapCards.slice(0, 4).map((place) => <PlaceCard key={place.id} place={placeWithState(place, isSaved, isVisited)} onSave={() => toggleSaved(place.id, place.saved)} onPress={() => openPlace(place.id)} />)}{dataState === 'success' && !mapCards.length ? <EmptyState icon="◌" title="Nothing in Whilom here yet" detail="This area may have plenty of history. Whilom has not activated detailed coverage or has no matching record for these filters." action="Show covered view" onAction={() => { setLocationMode('nearby'); setSelectedPeriod(null); setActiveCategory(null); }} /> : null}</View></View>}
+        {query.trim() ? <View style={screenStyles.sectionBlock}><SectionHeader title="Search results" detail={searchState === 'loading' ? 'Searching the shared place/person contract…' : `${searchResults.length} result${searchResults.length === 1 ? '' : 's'} · places and people in one field`} />{searchState === 'error' ? <AsyncNotice kind="error" title="Search unavailable" detail={searchError ?? 'Whilom could not search this discovery window.'} action="Try again" onAction={() => setSearchReloadToken((current) => current + 1)} /> : null}<Text style={[screenStyles.subheading, { color: theme.colors.textMuted }]}>Places</Text><View style={screenStyles.cardStack}>{placeSearchResults.map((result) => <SearchResultCard key={result.id} result={result} onPress={() => openPlace(result.id)} />)}</View><Text style={[screenStyles.subheading, { color: theme.colors.textMuted }]}>People</Text><View style={screenStyles.cardStack}>{personSearchResults.map((result) => <SearchResultCard key={result.id} result={result} onPress={() => router.push({ pathname: '/person/[id]', params: { id: result.id } })} />)}</View>{searchState === 'success' && !searchResults.length ? <EmptyState icon="⌕" title={`Nothing matching “${query}”`} detail="Try a different place, person, or spelling. An empty result means Whilom has no matching record here — not that the location has no history." /> : null}</View> : <View style={screenStyles.sectionBlock}><SectionHeader title="Nearby places" detail={dataState === 'loading' ? 'Loading the bounded result set…' : 'Tap a marker or card to go deeper'} /><View style={screenStyles.cardStack}>{mapCards.slice(0, 4).map((place) => <PlaceCard key={place.id} place={placeWithState(place, isSaved, isVisited)} onSave={() => toggleSaved(place.id, place.saved)} onPress={() => openPlace(place.id)} />)}{dataState === 'success' && !mapCards.length ? <EmptyState icon="◌" title="Nothing in Whilom here yet" detail="This area may have plenty of history. Whilom has not activated detailed coverage or has no matching record for these filters." action="Show covered view" onAction={() => { setLocationMode('nearby'); setSelectedPeriod(null); setActiveCategory(null); }} /> : null}</View></View>}
       </View>
     </ScreenShell>
   );
@@ -245,12 +248,9 @@ const screenStyles = StyleSheet.create({
   title: { fontSize: 28, lineHeight: 32, fontWeight: '900', letterSpacing: -0.7 },
   subtitle: { fontSize: 14, lineHeight: 20 },
   locationRow: { flexDirection: 'row', gap: 7 },
-  locationControl: { minHeight: 38, borderWidth: 1, borderRadius: 4, paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center', flex: 1 },
-  locationLabel: { fontSize: 11, fontWeight: '800', textAlign: 'center' },
+  locationControl: { minHeight: 40, borderWidth: 1, borderRadius: 4, paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center', flex: 1, minWidth: 0 },
+  locationLabel: { fontSize: 11, lineHeight: 15, fontWeight: '800', textAlign: 'center', flexShrink: 1 },
   locationDetail: { fontSize: 11, marginTop: -8 },
-  errorNotice: { borderWidth: 1, borderRadius: 8, padding: 12, gap: 3 },
-  errorTitle: { fontSize: 13, fontWeight: '900' },
-  errorText: { fontSize: 12, lineHeight: 17 },
   mapCard: { borderWidth: 1, borderRadius: 8, padding: 10, gap: 10 },
   mapTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 2 },
   mapTitle: { fontSize: 18, fontWeight: '800' },
