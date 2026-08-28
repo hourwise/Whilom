@@ -95,6 +95,18 @@ present. Missing public configuration produces an explicit unavailable state
 and makes no network request. The mobile adapter only calls bounded public
 read/RPC contracts and never carries service-role or ingestion credentials.
 
+Mobile community and account behaviour follows the same boundary. `apps/mobile`
+uses the shared schemas in `@whilom/validation` for credentials, wishlist items,
+visits, reviews and correction proposals. Its `MobileSessionProvider` and
+`MobileBehaviourProvider` keep a development account and activity in memory;
+fixture actions exercise the real input shapes without writing to Supabase.
+The future live action adapter must use the authenticated anon client and RLS
+for `wishlists`/`wishlist_items`, `visits`, `reviews` and `corrections` — never a
+service-role key. In the current remote slice, live behaviour writes are
+explicitly blocked while public route reads use bounded `routes` and
+`route_stops` contracts. The same action states (`idle`, `submitting`,
+`success`, `error`) are rendered by platform-specific components.
+
 ## Data flow
 
 ```

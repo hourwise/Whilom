@@ -181,10 +181,11 @@ export function TimeRuler({ mode, selectedPeriod, onModeChange, onPeriodChange }
   );
 }
 
-export function PlaceCard({ place, onPress, onSave, compact = false }: { place: DiscoveryPlace; onPress: () => void; onSave?: () => void; compact?: boolean }) {
+export function PlaceCard({ place, onPress, onSave, compact = false, saved, saveBusy = false }: { place: DiscoveryPlace; onPress: () => void; onSave?: () => void; compact?: boolean; saved?: boolean; saveBusy?: boolean }) {
   const theme = useMobileTheme();
   const category = displayCategory(place.category);
   const distance = formatDistance(place.distanceMiles);
+  const savedState = saved ?? place.saved;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`Open place ${place.name}`} onPress={onPress} style={[styles.placeCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }, compact && styles.placeCardCompact]}>
       <View style={[styles.placeAccent, { backgroundColor: category.colour }]} />
@@ -194,7 +195,7 @@ export function PlaceCard({ place, onPress, onSave, compact = false }: { place: 
             <IconGlyph symbol={category.symbol} colour={category.colour} size={15} />
             <Text style={[styles.cardEyebrow, { color: theme.colors.textMuted }]}>{category.label}</Text>
           </View>
-          {onSave ? <SaveButton saved={place.saved} onPress={onSave} compact /> : null}
+          {onSave ? <SaveButton saved={savedState} onPress={onSave} compact busy={saveBusy} /> : null}
         </View>
         <Text numberOfLines={2} style={[styles.placeName, { color: theme.colors.text, fontFamily: theme.typography.editorial }]}>{place.name}</Text>
         <Text numberOfLines={1} style={[styles.placeLocation, { color: theme.colors.textMuted }]}>{place.location.label}{distance ? `  ·  ${distance}` : ''}</Text>
@@ -238,11 +239,11 @@ export function SearchResultCard({ result, onPress }: { result: SearchResult; on
   );
 }
 
-export function SaveButton({ saved, onPress, compact = false }: { saved: boolean; onPress: () => void; compact?: boolean }) {
+export function SaveButton({ saved, onPress, compact = false, busy = false }: { saved: boolean; onPress: () => void; compact?: boolean; busy?: boolean }) {
   const theme = useMobileTheme();
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={saved ? 'Remove from saved places' : 'Save place'} accessibilityState={{ selected: saved }} onPress={onPress} hitSlop={4} style={[styles.saveButton, { width: compact ? theme.controls.compactTarget : theme.controls.touchTarget, height: compact ? theme.controls.compactTarget : theme.controls.touchTarget, backgroundColor: saved ? theme.colors.accentSoft : theme.colors.surfaceMuted }]}>
-      <Text style={[styles.saveGlyph, { color: saved ? theme.colors.accentStrong : theme.colors.textMuted }]}>{saved ? '♥' : '♡'}</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel={saved ? 'Remove from saved places' : 'Save place'} accessibilityState={{ selected: saved, busy }} onPress={onPress} disabled={busy} hitSlop={4} style={[styles.saveButton, { width: compact ? theme.controls.compactTarget : theme.controls.touchTarget, height: compact ? theme.controls.compactTarget : theme.controls.touchTarget, backgroundColor: saved ? theme.colors.accentSoft : theme.colors.surfaceMuted, opacity: busy ? 0.6 : 1 }]}>
+      {busy ? <ActivityIndicator accessibilityLabel="Saving place" size="small" color={theme.colors.accent} /> : <Text style={[styles.saveGlyph, { color: saved ? theme.colors.accentStrong : theme.colors.textMuted }]}>{saved ? '♥' : '♡'}</Text>}
     </Pressable>
   );
 }

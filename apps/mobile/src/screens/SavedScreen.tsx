@@ -4,7 +4,8 @@ import { router } from 'expo-router';
 import { type DiscoveryPlace } from '@whilom/discovery';
 import { AsyncNotice, BrandMark, EmptyState, PlaceCard, SectionHeader, ScreenShell } from '../components/WhilomUI';
 import { getMobileDiscoveryRuntime } from '../lib/data-source';
-import { useEphemeralPlaceState } from '../lib/ephemeral-state';
+import { useMobileBehaviour } from '../lib/behaviour';
+import { useMobileSession } from '../lib/session';
 import { useMobileTheme } from '../theme';
 
 type LoadState = 'loading' | 'success' | 'error';
@@ -12,7 +13,8 @@ type LoadState = 'loading' | 'success' | 'error';
 export default function SavedScreen() {
   const theme = useMobileTheme();
   const runtime = useMemo(() => getMobileDiscoveryRuntime(), []);
-  const { isSaved, toggleSaved } = useEphemeralPlaceState();
+  const { state: session } = useMobileSession();
+  const { isSaved, isSaving, toggleSaved } = useMobileBehaviour();
   const [places, setPlaces] = useState<DiscoveryPlace[]>([]);
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [error, setError] = useState<string | null>(null);
@@ -54,13 +56,14 @@ export default function SavedScreen() {
           <Text accessibilityRole="tab" accessibilityState={{ selected: true }} style={[styles.segmentActive, { color: theme.colors.accent, borderBottomColor: theme.colors.accent }]}>Saved places</Text>
           <Text accessibilityRole="tab" accessibilityState={{ selected: false }} style={[styles.segmentInactive, { color: theme.colors.textFaint }]}>Wishlist · soon</Text>
         </View>
+        {session.status !== 'signed_in' ? <EmptyState icon="♙" title="Sign in to keep a thread" detail="Saved places belong to your account. Fixture mode keeps this demo account in memory for the current session." action="Sign in" onAction={() => router.push('/auth/sign-in')} /> : null}
         <SectionHeader title="Your saved places" detail={loadState === 'loading' ? 'Reading your saved-place source…' : `${savedPlaces.length} in this ${runtime.mode === 'fixture' ? 'development profile' : 'account view'}`} action="Discover" onAction={() => router.push('/(tabs)/discover')} />
         {error ? <AsyncNotice kind="error" title="Saved places unavailable" detail={error} action="Try again" onAction={() => setReloadToken((current) => current + 1)} /> : null}
         <View style={styles.stack}>
-          {savedPlaces.map((place) => <PlaceCard key={place.id} place={place} compact onSave={() => toggleSaved(place.id, place.saved)} onPress={() => router.push({ pathname: '/place/[id]', params: { id: place.id } })} />)}
+          {session.status === 'signed_in' ? savedPlaces.map((place) => <PlaceCard key={place.id} place={place} compact saved={isSaved(place.id, place.saved)} saveBusy={isSaving(place.id)} onSave={() => void toggleSaved(place.id, place.saved)} onPress={() => router.push({ pathname: '/place/[id]', params: { id: place.id } })} />) : null}
         </View>
-        {loadState === 'success' && !savedPlaces.length ? <EmptyState icon="♡" title="Nothing saved yet" detail={runtime.mode === 'live' ? 'Account-backed saved places will appear here when personal persistence is connected. You can continue exploring in the meantime.' : 'When a place stays with you, save it here for later.'} action="Start discovering" onAction={() => router.push('/(tabs)/discover')} /> : null}
-        <View style={[styles.note, { backgroundColor: theme.colors.surfaceMuted, borderColor: theme.colors.border }]}><Text style={[styles.noteTitle, { color: theme.colors.accentStrong }]}>EPHEMERAL PRESENTATION STATE</Text><Text style={[styles.noteText, { color: theme.colors.textMuted }]}>This phase keeps save and visited interactions in memory only. The data-source boundary is ready for account persistence; nothing is written to device storage or Supabase.</Text></View>
+        {session.status === 'signed_in' && loadState === 'success' && !savedPlaces.length ? <EmptyState icon="♡" title="Nothing saved yet" detail={runtime.mode === 'live' ? 'Account-backed saved places will appear here when personal persistence is connected. You can continue exploring in the meantime.' : 'When a place stays with you, save it here for later.'} action="Start discovering" onAction={() => router.push('/(tabs)/discover')} /> : null}
+        <View style={[styles.note, { backgroundColor: theme.colors.surfaceMuted, borderColor: theme.colors.border }]}><Text style={[styles.noteTitle, { color: theme.colors.accentStrong }]}>SESSION-ONLY PRESENTATION STATE</Text><Text style={[styles.noteText, { color: theme.colors.textMuted }]}>Fixture saves are account-shaped but remain in memory for this app session. The future live adapter maps them to wishlists and wishlist_items under RLS.</Text></View>
       </View>
     </ScreenShell>
   );
