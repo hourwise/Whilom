@@ -120,10 +120,6 @@ export interface ActivationPlan {
   outcomes: Record<MatchOutcome, number>;
   candidatePairs: number;
   candidatePairsPerRecord: number;
-  matchMs: number;
-  candidateGenerationMs: number;
-  ingestionMs: number;
-  recordsPerSecond: number;
   /** Distribution of the classification the normaliser actually assigned. */
   placeTypes: Record<string, number>;
   designations: Record<string, number>;
@@ -137,10 +133,39 @@ export interface ActivationPlan {
   /** Why records are queued, grouped so the queue reads as causes not rows. */
   reviewCauses: { cause: string; count: number; share: number; example: string }[];
   reviewMinutesEstimate: number;
+}
+
+/** Runtime measurements are deliberately not part of ActivationPlan. */
+export interface ActivationTelemetry {
+  matchMs: number;
+  candidateGenerationMs: number;
+  ingestionMs: number;
+  recordsPerSecond: number;
+}
+
+export interface ActivationBuild {
+  plan: ActivationPlan;
+  telemetry: ActivationTelemetry;
   report: RunReport;
 }
 
-export async function buildActivation(outDir: string): Promise<ActivationPlan> {
+/**
+ * Serialise only deterministic activation evidence. Do not add timestamps,
+ * runtime measurements, machine paths, or other run-specific values here.
+ */
+export function serializeActivationPlan(plan: ActivationPlan): string {
+  return JSON.stringify(plan, null, 2) + '\n';
+}
+
+/** Runtime telemetry is intentionally separate and is not an activation seal. */
+export function serializeActivationTelemetry(
+  telemetry: ActivationTelemetry,
+  generatedAt = new Date().toISOString(),
+): string {
+  return JSON.stringify({ generatedAt, ...telemetry }, null, 2) + '\n';
+}
+
+export async function buildActivation(outDir: string): Promise<ActivationBuild> {
   const manifest = readRegionalManifest();
   const matchStats: MatchStats = {
     comparisons: 0,
@@ -342,11 +367,7 @@ export async function buildActivation(outDir: string): Promise<ActivationPlan> {
     outcomes: report.outcomes,
     candidatePairs: candidateStats.candidatePairs,
     candidatePairsPerRecord:
-      Math.round((candidateStats.candidatePairs / Math.max(1, matchSamples.length)) * 10) / 10,
-    matchMs: Math.round(matchMs),
-    candidateGenerationMs: Math.round(candidateStats.generationMs),
-    ingestionMs,
-    recordsPerSecond: Math.round((report.sourceRows / Math.max(1, ingestionMs)) * 1000),
+      Math.round((candidateStats.candidatePairs / Math.max(1, report.decided.length)) * 10) / 10,
     placeTypes,
     designations,
     genericallyTyped: report.genericallyTyped,
@@ -366,7 +387,6 @@ export async function buildActivation(outDir: string): Promise<ActivationPlan> {
     // Two minutes per decision, the figure used throughout the scale work. An
     // estimate from a documented assumption, not observed reviewer productivity.
     reviewMinutesEstimate: counts[PublicationClass.ReviewRequired] * 2,
-    report,
   };
 
   // Manifest composition is a claim about the region; assert the run agrees.
@@ -376,18 +396,29 @@ export async function buildActivation(outDir: string): Promise<ActivationPlan> {
     );
   }
 
-  return plan;
+  return {
+    plan,
+    telemetry: {
+      matchMs: Math.round(matchMs),
+      candidateGenerationMs: Math.round(candidateStats.generationMs),
+      ingestionMs,
+      recordsPerSecond: Math.round((report.sourceRows / Math.max(1, ingestionMs)) * 1000),
+    },
+    report,
+  };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const outDir = process.cwd();
   buildActivation(outDir)
-    .then((plan) => {
-      const { report, ...summary } = plan;
-      void report;
+    .then(({ plan, telemetry }) => {
       writeFileSync(
         resolve(outDir, 'regional-activation-plan.json'),
-        JSON.stringify(summary, null, 2) + '\n',
+        serializeActivationPlan(plan),
+      );
+      writeFileSync(
+        resolve(outDir, 'regional-activation-telemetry.json'),
+        serializeActivationTelemetry(telemetry),
       );
       console.log(`dataset          ${plan.datasetId}@${plan.datasetVersion}`);
       console.log(`source rows      ${plan.sourceRows}`);
@@ -397,7 +428,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       console.log(`expected merges  ${plan.expectedAttachments} (attach to an existing place)`);
       console.log(`rejected early   ${plan.rejectedBeforeCandidate} ${JSON.stringify(plan.rejectionReasons)}`);
       console.log(`candidate pairs  ${plan.candidatePairs} (${plan.candidatePairsPerRecord}/record)`);
-      console.log(`ingestion        ${plan.ingestionMs}ms (${plan.recordsPerSecond} rec/s)`);
+      console.log(`ingestion        ${telemetry.ingestionMs}ms (${telemetry.recordsPerSecond} rec/s)`);
       console.log(`place types      ${Object.keys(plan.placeTypes).length} distinct`);
       console.log(`batch size       ${PUBLISH_BATCH_SIZE}`);
       console.log(`review causes    ${plan.reviewCauses.map((c) => `${c.cause} (${c.count})`).join('; ')}`);

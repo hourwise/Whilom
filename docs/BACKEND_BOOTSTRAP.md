@@ -69,7 +69,11 @@ Do not substitute a project ref from another application.
     manifest/cache. The supported commands are
     `pnpm --filter @whilom/ingestion regional:capture` and
     `pnpm --filter @whilom/ingestion regional:activate`; inspect the generated
-    plan and CSVs before loading them. Do not recapture if the manifest/cache
+    plan and CSVs before loading them. `regional-activation-plan.json` is the
+    deterministic activation evidence and must reproduce byte-for-byte from
+    the same inputs. Runtime measurements, if emitted in
+    `regional-activation-telemetry.json`, are operational telemetry only and
+    are not part of the activation seal. Do not recapture if the manifest/cache
     digest already matches.
 14. Load only the regional CSVs through `supabase/regional/activate.sql` in a
     controlled editor/service-role lane. The SQL is designed to publish via
