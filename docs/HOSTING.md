@@ -1,10 +1,10 @@
 # Whilom hosting readiness
 
-Status: W2 repository/runtime-certification preparation. No Cloudflare account,
-Worker deployment, secret, route, custom domain, DNS record, or `whilom.co.uk`
-change has been made.
+Status: W3 deployment-certification blocked before upload. No Cloudflare
+account mutation, Worker deployment, secret, route, custom domain, DNS record,
+or `whilom.co.uk` change has been made.
 
-## W2 maturity levels
+## Hosting maturity levels
 
 The compatibility gates are deliberately separate from deployment:
 
@@ -15,10 +15,36 @@ The compatibility gates are deliberately separate from deployment:
    [33180393492](https://github.com/hourwise/Whilom/actions/runs/33180393492),
    which booted `.open-next/worker.js` with Wrangler/workerd and smoke-tested
    HTTP routes.
-4. **`workers.dev` deployment** — not verified; no Cloudflare account access is
-   used by this repository workflow.
+4. **Real `workers.dev` deployment** — blocked before upload because the
+   available Wrangler authentication is invalid/expired.
 5. **Live Supabase integration** — not verified by this compatibility slice.
 6. **Custom domain/DNS** — not configured; `whilom.co.uk` is untouched.
+
+## W3 deployment-certification result
+
+The W2-certified stack remains suitable for a bounded preview deployment:
+
+- Next.js 15.5.24;
+- React and React DOM 18.3.1;
+- `@opennextjs/cloudflare` 1.20.4;
+- Wrangler 4.127.0;
+- pnpm 9.12.0;
+- Node 22 for the Wrangler compatibility path.
+
+The intended non-production Worker name is `whilom-web-preview`, supplied
+explicitly at deployment time rather than changing the W2 default config name.
+It was not possible to enumerate Cloudflare resources or establish whether
+that name or a `workers.dev` subdomain already exists because the read-only
+Wrangler account check failed with an invalid/expired token. No upload was
+attempted.
+
+The safe future sequence, after an operator restores valid Wrangler
+authentication and confirms the target account/name, is to build the already
+validated OpenNext output and deploy it with the explicit preview name. The
+deployment must receive only the public Supabase URL/anon credential and
+optional map-style value through an approved external configuration mechanism;
+no service-role key, PostgreSQL password, ingestion credential, or Supabase
+access token belongs in this path.
 
 ## Decision for the current Web baseline
 
@@ -139,7 +165,9 @@ committed to Git.
 3. Configure Workers Build variables and secrets in the Cloudflare account;
    never put them in the repository or browser bundle unless they are public
    `NEXT_PUBLIC_*` values.
-4. Validate an isolated `workers.dev` URL before any domain change.
+4. Restore valid Wrangler authentication, inspect the target account and
+   `whilom-web-preview` name, then validate its isolated `workers.dev` URL
+   before any domain change.
 5. Attach a custom domain only after the Worker preview is accepted, then
    perform the separate DNS/HTTPS/canonical-host review for `whilom.co.uk`.
 6. Keep Supabase migrations, RLS, Auth, and the Yorkshire activation workflow
