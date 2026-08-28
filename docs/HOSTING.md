@@ -9,10 +9,12 @@ change has been made.
 The compatibility gates are deliberately separate from deployment:
 
 1. **Next production build verified** — passed on Next.js 15.5.24.
-2. **OpenNext transform verified** — the local adapter build is run against
-   the pinned stack; Linux CI repeats this gate.
-3. **Local Linux Workers runtime verified** — the compatibility workflow boots
-   `.open-next/worker.js` with Wrangler/workerd and smoke-tests HTTP routes.
+2. **OpenNext transform verified** — passed locally and in Linux CI against the
+   pinned stack.
+3. **Local Linux Workers runtime verified** — passed in compatibility run
+   [33180393492](https://github.com/hourwise/Whilom/actions/runs/33180393492),
+   which booted `.open-next/worker.js` with Wrangler/workerd and smoke-tested
+   HTTP routes.
 4. **`workers.dev` deployment** — not verified; no Cloudflare account access is
    used by this repository workflow.
 5. **Live Supabase integration** — not verified by this compatibility slice.
@@ -129,8 +131,8 @@ committed to Git.
 
 ## Future release checklist
 
-1. Record a passing Linux CI run for the OpenNext build and Workers-runtime
-   preview using the declared pnpm version.
+1. Keep a passing Linux CI run for the OpenNext build and Workers-runtime
+   preview using the declared pnpm version for each relevant release change.
 2. Exercise public discovery, Supabase auth cookie refresh, Server Actions,
    admin authorization, dynamic routes, the health route, and the MapLibre
    browser boundary through the preview.
@@ -143,9 +145,9 @@ committed to Git.
 6. Keep Supabase migrations, RLS, Auth, and the Yorkshire activation workflow
    under their existing controlled release gates.
 
-No step in this document has been executed by this task. In particular,
-`whilom.co.uk` is not attached, DNS is untouched, and the Yorkshire dataset
-has not been activated.
+The compatibility checks described above were executed by this task. No hosted
+deployment step was executed: `whilom.co.uk` is not attached, DNS is untouched,
+and the Yorkshire dataset has not been activated.
 
 ## W2 security release record
 
