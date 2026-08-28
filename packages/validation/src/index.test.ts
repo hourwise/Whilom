@@ -7,6 +7,10 @@ import {
   placeSearchSchema,
   reviewSchema,
   slugSchema,
+  tripDaySchema,
+  tripSchema,
+  tripStopSchema,
+  tripUpdateSchema,
   visitSchema,
   wishlistItemSchema,
 } from './index';
@@ -65,6 +69,23 @@ describe('web mutation schemas', () => {
     expect(slugSchema.parse('fountains-abbey')).toBe('fountains-abbey');
     expect(() => slugSchema.parse('Fountains Abbey')).toThrow();
     expect(() => slugSchema.parse('fountains--abbey')).toThrow();
+  });
+});
+
+describe('trip schemas', () => {
+  const tripId = crypto.randomUUID();
+  const placeId = crypto.randomUUID();
+
+  it('accepts database-shaped trip planning inputs', () => {
+    expect(tripSchema.parse({ name: 'York day out', transport: 'walking' }).name).toBe('York day out');
+    expect(tripUpdateSchema.parse({ notes: 'Bring a coat.' }).notes).toBe('Bring a coat.');
+    expect(tripDaySchema.parse({ tripId, dayIndex: 0 }).dayIndex).toBe(0);
+    expect(tripStopSchema.parse({ tripId, placeId }).status).toBe('planned');
+  });
+
+  it('rejects unsupported transport and invalid planned minutes', () => {
+    expect(() => tripSchema.parse({ name: 'Trip', transport: 'flying' })).toThrow();
+    expect(() => tripStopSchema.parse({ tripId, placeId, plannedMinutes: 0 })).toThrow();
   });
 });
 

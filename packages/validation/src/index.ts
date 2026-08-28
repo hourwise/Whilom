@@ -124,6 +124,47 @@ export const signUpSchema = credentialsSchema.extend({
 });
 export type SignUpInput = z.infer<typeof signUpSchema>;
 
+/** User-owned itinerary inputs. These mirror the existing trip table fields. */
+export const tripTransportSchema = z.enum(['walking', 'cycling', 'driving', 'public_transport']);
+
+export const tripSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  startDate: z.string().date().optional(),
+  endDate: z.string().date().optional(),
+  transport: tripTransportSchema.optional(),
+  maxRadiusM: z.number().int().nonnegative().max(200_000).optional(),
+  notes: z.string().trim().max(5000).optional(),
+  isPublic: z.boolean().optional(),
+});
+export type TripInput = z.infer<typeof tripSchema>;
+
+export const tripUpdateSchema = tripSchema.partial();
+export type TripUpdateInput = z.infer<typeof tripUpdateSchema>;
+
+export const tripDaySchema = z.object({
+  tripId: uuidSchema,
+  dayIndex: z.number().int().min(0).max(366),
+  date: z.string().date().optional(),
+  notes: z.string().trim().max(5000).optional(),
+});
+export type TripDayInput = z.infer<typeof tripDaySchema>;
+
+export const tripStopStatusSchema = z.enum(['planned', 'completed', 'skipped']);
+
+export const tripStopSchema = z.object({
+  tripId: uuidSchema,
+  tripDayId: uuidSchema.optional(),
+  placeId: uuidSchema,
+  position: z.number().int().min(0).max(10_000).default(0),
+  plannedMinutes: z.number().int().positive().max(24 * 60).optional(),
+  status: tripStopStatusSchema.default('planned'),
+  notes: z.string().trim().max(5000).optional(),
+});
+export type TripStopInput = z.infer<typeof tripStopSchema>;
+
+export const tripStopUpdateSchema = tripStopSchema.omit({ tripId: true, placeId: true }).partial();
+export type TripStopUpdateInput = z.infer<typeof tripStopUpdateSchema>;
+
 /** Relationship suggestion — a *historical claim*, requires strong moderation. */
 export const relationshipSuggestionSchema = z.object({
   subjectType: enumValues(EntityType),
