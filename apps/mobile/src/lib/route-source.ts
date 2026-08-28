@@ -1,6 +1,7 @@
 import type { Database, HeritageClient } from '@whilom/database';
 import type { DiscoveryPlace } from '@whilom/discovery';
 import { developmentDataSource } from './fixtures';
+import { getMobileRuntimePolicy } from './runtime';
 import { getMobileSupabaseClient } from './supabase';
 
 type RouteRow = Database['public']['Tables']['routes']['Row'];
@@ -137,15 +138,16 @@ function liveRouteSource(client: HeritageClient): MobileRouteDataSource {
 export interface MobileRouteRuntime {
   mode: 'fixture' | 'live';
   configuration: 'available' | 'unavailable';
+  reason?: string;
   source: MobileRouteDataSource;
 }
 
 export function getMobileRouteRuntime(): MobileRouteRuntime {
-  const requestedMode = process.env.EXPO_PUBLIC_WHILOM_DATA_MODE?.trim().toLowerCase();
-  if (requestedMode !== 'live') return { mode: 'fixture', configuration: 'available', source: fixtureRouteSource };
+  const policy = getMobileRuntimePolicy();
+  if (policy.fixtureAllowed) return { mode: 'fixture', configuration: 'available', reason: policy.reason, source: fixtureRouteSource };
   const client = getMobileSupabaseClient();
-  if (!client) return { mode: 'live', configuration: 'unavailable', source: unavailableRouteSource };
-  return { mode: 'live', configuration: 'available', source: liveRouteSource(client) };
+  if (!policy.liveReadsAllowed || !client) return { mode: policy.requestedMode, configuration: 'unavailable', reason: policy.reason, source: { ...unavailableRouteSource, mode: policy.requestedMode } };
+  return { mode: 'live', configuration: 'available', reason: policy.reason, source: liveRouteSource(client) };
 }
 
 export { fixtureRouteSource, fixtureRoutes, fixtureStops };

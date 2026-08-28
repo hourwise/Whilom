@@ -18,6 +18,7 @@ import {
   type MapQuery,
 } from '@whilom/discovery';
 import { developmentDataSource, placesForCoverage, type DemoPerson, type DemoPlace } from './fixtures';
+import { getMobileRuntimePolicy } from './runtime';
 import { getMobileSupabaseClient } from './supabase';
 
 export type MobileDataMode = 'fixture' | 'live';
@@ -25,6 +26,7 @@ export type MobileDataMode = 'fixture' | 'live';
 export interface MobileDiscoveryRuntime {
   mode: MobileDataMode;
   configuration: 'available' | 'unavailable';
+  reason?: string;
   source: DiscoveryDataSource;
 }
 
@@ -184,26 +186,26 @@ const unavailableSource: DiscoveryDataSource = {
   ...fixtureSource,
   mode: 'live',
   configuration: 'unavailable',
-  async getMapPlaces() { throw new Error('Live discovery is selected but public Supabase configuration is unavailable.'); },
-  async getMapClusters() { throw new Error('Live discovery is selected but public Supabase configuration is unavailable.'); },
-  async getCoverage() { throw new Error('Live discovery is selected but public Supabase configuration is unavailable.'); },
-  async getPeriodCounts() { throw new Error('Live discovery is selected but public Supabase configuration is unavailable.'); },
-  async searchDiscovery() { throw new Error('Live discovery is selected but public Supabase configuration is unavailable.'); },
-  async getPersonPlaces() { throw new Error('Live discovery is selected but public Supabase configuration is unavailable.'); },
-  async resolvePerson() { throw new Error('Live discovery is selected but public Supabase configuration is unavailable.'); },
-  async getRelatedPeople() { throw new Error('Live discovery is selected but public Supabase configuration is unavailable.'); },
-  async getPlace() { throw new Error('Live discovery is selected but public Supabase configuration is unavailable.'); },
-  async getPerson() { throw new Error('Live discovery is selected but public Supabase configuration is unavailable.'); },
-  async getSavedPlaces() { throw new Error('Live discovery is selected but public Supabase configuration is unavailable.'); },
-  async getVisitedPlaces() { throw new Error('Live discovery is selected but public Supabase configuration is unavailable.'); },
+  async getMapPlaces() { throw new Error('Whilom data is unavailable in the current runtime configuration.'); },
+  async getMapClusters() { throw new Error('Whilom data is unavailable in the current runtime configuration.'); },
+  async getCoverage() { throw new Error('Whilom data is unavailable in the current runtime configuration.'); },
+  async getPeriodCounts() { throw new Error('Whilom data is unavailable in the current runtime configuration.'); },
+  async searchDiscovery() { throw new Error('Whilom data is unavailable in the current runtime configuration.'); },
+  async getPersonPlaces() { throw new Error('Whilom data is unavailable in the current runtime configuration.'); },
+  async resolvePerson() { throw new Error('Whilom data is unavailable in the current runtime configuration.'); },
+  async getRelatedPeople() { throw new Error('Whilom data is unavailable in the current runtime configuration.'); },
+  async getPlace() { throw new Error('Whilom data is unavailable in the current runtime configuration.'); },
+  async getPerson() { throw new Error('Whilom data is unavailable in the current runtime configuration.'); },
+  async getSavedPlaces() { throw new Error('Whilom data is unavailable in the current runtime configuration.'); },
+  async getVisitedPlaces() { throw new Error('Whilom data is unavailable in the current runtime configuration.'); },
 };
 
 export function getMobileDiscoveryRuntime(): MobileDiscoveryRuntime {
-  const requestedMode = process.env.EXPO_PUBLIC_WHILOM_DATA_MODE?.trim().toLowerCase();
-  if (requestedMode !== 'live') return { mode: 'fixture', configuration: 'available', source: fixtureSource };
+  const policy = getMobileRuntimePolicy();
+  if (policy.fixtureAllowed) return { mode: 'fixture', configuration: 'available', reason: policy.reason, source: fixtureSource };
   const client = getMobileSupabaseClient();
-  if (!client) return { mode: 'live', configuration: 'unavailable', source: unavailableSource };
-  return { mode: 'live', configuration: 'available', source: createSupabaseDiscoverySource(client) };
+  if (!policy.liveReadsAllowed || !client) return { mode: policy.requestedMode, configuration: 'unavailable', reason: policy.reason, source: { ...unavailableSource, mode: policy.requestedMode } };
+  return { mode: 'live', configuration: 'available', reason: policy.reason, source: createSupabaseDiscoverySource(client) };
 }
 
 export { fixtureSource };

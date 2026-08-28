@@ -2,6 +2,7 @@ import { createContext, type ReactNode, useCallback, useContext, useMemo, useSta
 import { correctionSchema, reviewSchema, visitSchema, wishlistItemSchema, type CorrectionInput, type ReviewInput, type VisitInput } from '@whilom/validation';
 import { developmentDataSource } from './fixtures';
 import { actionError, idleAction, type ActionState } from './action-state';
+import { getMobileRuntimePolicy } from './runtime';
 import { useMobileSession } from './session';
 
 export const FIXTURE_PLACE_UUIDS: Readonly<Record<string, string>> = {
@@ -19,6 +20,7 @@ export type MobileCorrectionDraft = Omit<CorrectionInput, 'entityId'> & { entity
 export interface FixtureVisit extends MobileVisitDraft {
   id: string;
   createdAt: string;
+  placeName?: string;
 }
 
 export interface FixtureReview extends MobileReviewDraft {
@@ -79,7 +81,7 @@ function createFixtureSource() {
     async recordVisit(input: MobileVisitDraft): Promise<FixtureVisit> {
       const parsed = visitSchema.safeParse({ ...input, placeId: mutationPlaceId(input.placeId) });
       if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? 'Visit details are invalid.');
-      return { ...input, id: `fixture-visit-${Date.now()}`, createdAt: now() };
+      return { ...input, id: `fixture-visit-${Date.now()}`, createdAt: now(), placeName: developmentDataSource.placeById(input.placeId)?.name };
     },
     async submitReview(input: MobileReviewDraft): Promise<FixtureReview> {
       const parsed = reviewSchema.safeParse({ ...input, placeId: mutationPlaceId(input.placeId) });
@@ -110,6 +112,7 @@ const BehaviourContext = createContext<MobileBehaviourContextValue | null>(null)
 
 export function MobileBehaviourProvider({ children }: { children: ReactNode }) {
   const { state: session } = useMobileSession();
+  const policy = getMobileRuntimePolicy();
   const [savedOverrides, setSavedOverrides] = useState<Record<string, boolean>>({});
   const [visitedOverrides, setVisitedOverrides] = useState<Record<string, boolean>>({});
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
@@ -117,7 +120,7 @@ export function MobileBehaviourProvider({ children }: { children: ReactNode }) {
   const [visits, setVisits] = useState<FixtureVisit[]>(seedVisits);
   const [reviews, setReviews] = useState<FixtureReview[]>(seedReviews);
   const [corrections, setCorrections] = useState<FixtureCorrection[]>(seedCorrections);
-  const source = session.mode === 'live' ? blockedLiveSource : fixtureSource;
+  const source = policy.fixtureAllowed ? fixtureSource : blockedLiveSource;
 
   const isSaved = useCallback((id: string, fallback = false) => savedOverrides[id] ?? fallback, [savedOverrides]);
   const isVisited = useCallback((id: string, fallback = false) => visitedOverrides[id] ?? fallback, [visitedOverrides]);
@@ -148,8 +151,8 @@ export function MobileBehaviourProvider({ children }: { children: ReactNode }) {
     try {
       const next = !isVisited(id, fallback);
       if (next) {
-        await source.recordVisit({ placeId: id, visitedOn: now().slice(0, 10) });
-        setVisits((current) => [{ id: `fixture-visit-${Date.now()}`, placeId: id, visitedOn: now().slice(0, 10), createdAt: now() }, ...current]);
+        const visit = await source.recordVisit({ placeId: id, visitedOn: now().slice(0, 10) });
+        setVisits((current) => [visit, ...current.filter((item) => item.placeId !== id)]);
       }
       setVisitedOverrides((current) => ({ ...current, [id]: next }));
       return { status: 'success' };
@@ -197,7 +200,10 @@ export function MobileBehaviourProvider({ children }: { children: ReactNode }) {
     }
   }, [session.status, source]);
 
-  const savedPlaceIds = useMemo(() => developmentDataSource.places.filter((place) => isSaved(place.id, place.saved)).map((place) => place.id), [isSaved]);
+  const visibleVisits = policy.fixtureAllowed ? visits : [];
+  const visibleReviews = policy.fixtureAllowed ? reviews : [];
+  const visibleCorrections = policy.fixtureAllowed ? corrections : [];
+  const savedPlaceIds = useMemo(() => policy.fixtureAllowed ? developmentDataSource.places.filter((place) => isSaved(place.id, place.saved)).map((place) => place.id) : [], [isSaved, policy.fixtureAllowed]);
   const value = useMemo<MobileBehaviourContextValue>(() => ({
     isSaved,
     isVisited,
@@ -209,12 +215,12 @@ export function MobileBehaviourProvider({ children }: { children: ReactNode }) {
     recordVisit,
     submitReview,
     submitCorrection,
-    visits,
-    reviews,
-    corrections,
+    visits: visibleVisits,
+    reviews: visibleReviews,
+    corrections: visibleCorrections,
     savedPlaceIds,
-    reviewsForPlace: (placeId) => reviews.filter((review) => review.placeId === placeId),
-  }), [corrections, isSaved, isVisited, recordVisit, reviews, savePlace, savedPlaceIds, savingIds, submitCorrection, submitReview, toggleSaved, toggleVisited, visitingIds, visits]);
+    reviewsForPlace: (placeId) => visibleReviews.filter((review) => review.placeId === placeId),
+  }), [isSaved, isVisited, recordVisit, savePlace, savedPlaceIds, savingIds, submitCorrection, submitReview, toggleSaved, toggleVisited, visibleCorrections, visibleReviews, visibleVisits, visitingIds]);
   return <BehaviourContext.Provider value={value}>{children}</BehaviourContext.Provider>;
 }
 

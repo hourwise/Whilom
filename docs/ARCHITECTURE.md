@@ -97,15 +97,26 @@ read/RPC contracts and never carries service-role or ingestion credentials.
 
 Mobile community and account behaviour follows the same boundary. `apps/mobile`
 uses the shared schemas in `@whilom/validation` for credentials, wishlist items,
-visits, reviews and correction proposals. Its `MobileSessionProvider` and
-`MobileBehaviourProvider` keep a development account and activity in memory;
-fixture actions exercise the real input shapes without writing to Supabase.
-The future live action adapter must use the authenticated anon client and RLS
-for `wishlists`/`wishlist_items`, `visits`, `reviews` and `corrections` — never a
-service-role key. In the current remote slice, live behaviour writes are
-explicitly blocked while public route reads use bounded `routes` and
-`route_stops` contracts. The same action states (`idle`, `submitting`,
-`success`, `error`) are rendered by platform-specific components.
+visits, reviews, correction proposals and user-owned trips. Its
+`MobileSessionProvider`, `MobileBehaviourProvider` and `MobileTripProvider` keep
+development identity/activity/trip state in memory; fixture actions exercise the
+real input shapes without writing to Supabase. The live adapters in
+`apps/mobile/src/lib/live-adapters.ts` use the authenticated anon client and RLS
+for `wishlists`/`wishlist_items`, `visits`, `reviews`, `corrections` and
+owner-scoped `trips`/`trip_days`/`trip_stops` — never a service-role key.
+
+`apps/mobile/src/lib/runtime.ts` is the release-safety gate. In development,
+fixture mode is the safe default. Live mode requires both public Supabase
+configuration values; missing configuration is an explicit unavailable state
+and makes no network request. Production-context fixture mode also fails closed.
+Phase 6E keeps `liveWritesAllowed` false, so screens cannot accidentally invoke
+the live mutation adapters during remote development; eventual production
+authorization remains Supabase Auth plus RLS, not this client-side flag. The
+same action states (`idle`, `submitting`, `success`, `error`) are rendered by
+platform-specific components. The `fixture@whilom.test` identity is
+development-only and is never a live credential or release fallback. Auth
+session persistence remains intentionally limited until a managed Expo storage
+adapter is introduced and device-tested.
 
 ## Data flow
 
