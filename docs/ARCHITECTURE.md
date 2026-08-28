@@ -17,6 +17,12 @@ connects both (spec §54).
   modes, ten display categories, bounded map-query builders, coverage wording,
   search/person result shapes and pure graph helpers. Web and Mobile may render
   differently, but they do not define separate historical or discovery rules.
+- **UI design has one tracked source of truth.**
+  [`docs/UI_DESIGN_SYSTEM.md`](UI_DESIGN_SYSTEM.md) defines Whilom's Heritage
+  Archival System / Modern Editorial visual language. Luna's detailed UI plans
+  refine that system and Codex/frontend implementation follows it. Web and
+  React Native may use platform-specific components, but shared tokens,
+  semantics and component-state conventions should not drift.
 - **Privileged secrets never enter a client.** The service-role key and source
   credentials are server/ingestion only. Clients use the anon key; access is
   governed by Row Level Security. (spec §38)

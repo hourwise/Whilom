@@ -16,6 +16,7 @@ import {
 describe('shared discovery vocabulary', () => {
   it('uses one ordered period registry with no year zero', () => {
     expect(PERIODS.length).toBe(20);
+    expect(PERIODS.some((period) => period.id === 'prehistory')).toBe(false);
     expect(PERIODS[0]!.startYear).toBeLessThan(-100_000);
     expect(PERIODS.at(-1)!.endYear).toBe(2100);
     expect(PERIODS.every((period) => period.startYear !== 0 && period.endYear !== 0)).toBe(true);

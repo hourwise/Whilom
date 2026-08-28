@@ -278,7 +278,10 @@ rather than a boolean, because a view straddling the boundary is where yes/no
 misleads. Absence of data outside these areas means "not yet activated", never
 "no history here".
 
-`period_counts_for_viewport` answers all twenty-one epochs in one grouped query.
+`period_counts_for_viewport` answers all 21 historical-period registry rows in
+one grouped query. The `prehistory` row is a parent/grouping row; the client
+navigation renders the 20 selectable periods rather than treating it as a
+twenty-first clickable band.
 
 `search_discovery` returns places and people from one call, tagged by kind.
 `person_places`, `place_people` and `related_people` walk the published graph in

@@ -274,12 +274,14 @@ It reappears under All time, where it belongs.
 
 ### Epoch bands
 
-Twenty-one clickable bands across the ruler, alternately tinted so neighbours
-separate without needing twenty-one distinct colours. Clicking selects the
-period by stable id — `?period=victorian`, never a display string. Counts come
-from `period_counts_for_viewport`, one grouped query for all twenty-one epochs,
-because twenty-one round trips to label a timeline would cost more than
-everything else the map does.
+Twenty selectable bands across the ruler, alternately tinted so neighbours
+separate without needing twenty distinct colours. The database registry has 21
+rows because `prehistory` is a parent/grouping row; it is not a selectable
+period band in the application navigation. Clicking a selectable period uses
+its stable id — `?period=victorian`, never a display string. Counts come from
+`period_counts_for_viewport`, one grouped query for all 21 registry rows, with
+the parent row available to database logic but skipped when rendering the
+selectable navigation.
 
 A count means *records Whilom currently associates with this period in this
 view*. It does not mean *places that existed then*, and with dated coverage

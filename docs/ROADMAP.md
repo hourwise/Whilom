@@ -151,7 +151,8 @@ first-class control rather than a filter buried in a panel.
 
 - broad views aggregate in the database — the region arrives as a few hundred
   cells, never 23,171 points
-- a 21-stop period registry, signed years with no year zero, prehistory to today
+- a 21-row period registry (20 selectable periods plus the `prehistory`
+  grouping row), signed years with no year zero, prehistory to today
 - temporal claims are provenance-backed and derived only from the source's own
   period language; **designation dates are structurally forbidden** as historic
   dates, asserted by a CI gate
@@ -170,7 +171,8 @@ The discovery model becomes three questions rather than a filter panel.
 - the homepage **is** the map, defaulting to the United Kingdom
 - coverage is explicit: an empty area says Whilom has not activated there, never
   that the area has no history
-- a century ruler with twenty-one clickable epoch bands, BCE/CE display, no year
+- a century ruler with 20 selectable epoch bands plus the non-selectable
+  `prehistory` grouping row, BCE/CE display, no year
   zero, and four time modes whose fill carries their meaning
 - a ten-group map key using colour **and** symbol, doubling as a filter
 - one search box for places and people, with canonical identity rather than name
