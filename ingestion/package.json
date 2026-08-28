@@ -15,7 +15,18 @@
     "scale:commons": "tsx scale/commons-throughput.ts",
     "scale:equivalence": "tsx scale/equivalence.ts",
     "regional:capture": "tsx regional/capture.ts",
-    "regional:activate": "tsx regional/activate.ts"
+    "regional:activate": "tsx regional/activate.ts",
+    "regional:people": "tsx regional/people.ts",
+    "regional:temporal": "tsx regional/temporal-enrichment.ts",
+    "regional:temporal-audit": "tsx regional/temporal-audit.ts",
+    "regional:opportunity": "tsx regional/coverage-opportunity.ts",
+    "national:audit": "tsx scale/national/audit.ts",
+    "national:capture": "tsx scale/national/capture.ts",
+    "national:ladder": "tsx scale/national/run-ladder.ts",
+    "national:workload-audit": "tsx scale/national/workload-audit.ts",
+    "national:controlled": "tsx scale/national/controlled-run.ts",
+    "national:controlled-summary": "tsx scale/national/controlled-summary.ts",
+    "national:governance-report": "tsx scale/national/governance-report.ts"
   },
   "dependencies": {
     "@whilom/database": "workspace:*",

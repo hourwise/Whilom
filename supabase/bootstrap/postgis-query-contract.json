@@ -1,0 +1,56 @@
+{
+  "contractVersion": 1,
+  "status": "DESIGN_CONTRACT_SCHEMA_GAP_REMAINS",
+  "radiusMetres": 5000,
+  "spatial": {
+    "authoritativePredicate": "ST_DWithin(c.location, incoming_point::geography, 5000)",
+    "coarseWorkUnitUse": "optional_batch_locality_only",
+    "requiredIndex": "GiST on the canonical candidate location geography",
+    "hydrationRule": "exact spatial eligibility is decided before full canonical payload hydration where the backend candidate representation permits it"
+  },
+  "identifierLookup": {
+    "geographicRestriction": "none",
+    "requiredInputs": ["source identity", "external identifier values"],
+    "semantics": "global identifier candidates are unioned with spatial candidates and are not discarded for distance"
+  },
+  "designationReferenceLookup": {
+    "geographicRestriction": "none",
+    "requiredInputs": ["designation reference values"],
+    "semantics": "global designation-reference candidates are unioned with spatial candidates"
+  },
+  "union": {
+    "deduplicateBy": "canonical place identity",
+    "retain": [
+      "candidate provenance",
+      "source identity",
+      "source record identity",
+      "designation identities",
+      "insertion sequence"
+    ],
+    "orderBy": "canonical insertion sequence ascending"
+  },
+  "governance": {
+    "sameRegisterRule": "preserve-and-apply-before-hydration",
+    "sameRecordMultipart": "retain",
+    "crossSource": "retain when spatially eligible or globally identified",
+    "matcherAuthority": "the governed matcher remains the identity/scoring authority; SQL only produces candidates"
+  },
+  "productionEquivalentSqlTemplate": {
+    "spatial": "SELECT c.* FROM candidate_index c WHERE ST_DWithin(c.location, ST_SetSRID(ST_Point(:lng, :lat), 4326)::geography, :radius_m)",
+    "identifiers": "SELECT c.* FROM candidate_identifier_index c WHERE c.identifier_value = ANY(:identifier_values)",
+    "designationReferences": "SELECT c.* FROM candidate_designation_reference_index c WHERE c.reference_value = ANY(:designation_reference_values)",
+    "final": "UNION DISTINCT the three candidate streams, apply the shared same-register predicate, order by insertion_sequence, then hydrate and invoke the matcher"
+  },
+  "schemaGap": {
+    "code": "BACKEND_SCHEMA_GAP",
+    "description": "The current public schema has places.location, place_designations.reference and source_records(source_id, external_id), but no dedicated compact candidate index exposing sourceRecordId, designation identities, identifier/reference lookup keys and canonical insertion sequence as one efficient backend contract.",
+    "batch21BAction": "design and validate the smallest staging/candidate representation and indexes in a disposable PostGIS database before adding a corrective migration",
+    "migrationAddedIn21A": false
+  },
+  "workUnit": {
+    "scheme": "OSGB10_EPSG27700_V1",
+    "key": "E<floor(easting/10000)>N<floor(northing/10000)>",
+    "halo": "enumerate all cells touched by the 5000m-expanded point envelope; do not hand-code only eight neighbours",
+    "authoritativeTruth": "PostGIS ST_DWithin"
+  }
+}

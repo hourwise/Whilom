@@ -49,6 +49,8 @@
 
 import type { CanonicalPlaceRef, PlaceCandidate } from '../pipeline/candidate';
 import { THRESHOLDS } from './matcher';
+import { distanceMeters } from '../transforms/osgb';
+import { classifyRegisterCandidate, RegisterCandidateClass } from './source-relation';
 
 /**
  * The radius within which the matcher might still say "same place".
@@ -116,6 +118,108 @@ export interface CandidateGenerationStats {
   cellsInspected: number;
   /** Time spent generating candidates, milliseconds. */
   generationMs: number;
+  /** Shortlist length for each valid source row, retained for bounded diagnostics. */
+  shortlistSizes: number[];
+  /** Candidates found by the coarse cell lookup before exact-radius filtering. */
+  cellSupersetCandidates: number;
+  /** Coarse spatial candidates rejected by the exact matcher radius. */
+  rejectedByExactRadius: number;
+  /** Spatial candidates surviving the exact-radius test. */
+  exactSpatialCandidates: number;
+  /** Unique candidates found through identifier lookup, including overlaps. */
+  identifierCandidates: number;
+  /** Identifier candidates added after spatial selection. */
+  identifierOnlyCandidates: number;
+  /** Identifier candidates restored despite being beyond the spatial radius. */
+  identifierRescuedBeyondRadius: number;
+  /** Final unique candidates delivered to the matcher. */
+  finalCandidatePairs: number;
+  /** Exact-radius shortlist candidates matching the existing register veto. */
+  registerVetoCandidates: number;
+  /** Same-source candidates with the same source record id. */
+  sameSourceSameRecordCandidates: number;
+  /** Same-source candidates with different, non-overlapping designations. */
+  sameSourceDifferentDesignationCandidates: number;
+  /** Candidates with source identities on both sides but different sources. */
+  crossSourceCandidates: number;
+  /** Candidates whose canonical side has no source identity. */
+  missingSourceIdentityCandidates: number;
+  /** Exact-radius shortlist candidates surviving the register predicate. */
+  survivingRegisterCandidates: number;
+}
+
+export interface CandidateGenerationDelta {
+  candidatePairs: number;
+  cellSupersetCandidates: number;
+  rejectedByExactRadius: number;
+  exactSpatialCandidates: number;
+  identifierCandidates: number;
+  identifierOnlyCandidates: number;
+  identifierRescuedBeyondRadius: number;
+  finalCandidatePairs: number;
+  registerVetoCandidates: number;
+  sameSourceSameRecordCandidates: number;
+  sameSourceDifferentDesignationCandidates: number;
+  crossSourceCandidates: number;
+  missingSourceIdentityCandidates: number;
+  survivingRegisterCandidates: number;
+}
+
+export function observeRegisterClass(
+  stats: CandidateGenerationStats | CandidateGenerationDelta,
+  classification: RegisterCandidateClass,
+): void {
+  switch (classification) {
+    case RegisterCandidateClass.SameRegisterDifferentEntry:
+      stats.registerVetoCandidates += 1;
+      break;
+    case RegisterCandidateClass.SameSourceSameRecord:
+      stats.sameSourceSameRecordCandidates += 1;
+      break;
+    case RegisterCandidateClass.SameSourceDifferentDesignation:
+      stats.sameSourceDifferentDesignationCandidates += 1;
+      break;
+    case RegisterCandidateClass.CrossSource:
+      stats.crossSourceCandidates += 1;
+      break;
+    case RegisterCandidateClass.MissingSourceIdentity:
+      stats.missingSourceIdentityCandidates += 1;
+      break;
+  }
+  if (classification !== RegisterCandidateClass.SameRegisterDifferentEntry) {
+    stats.survivingRegisterCandidates += 1;
+  }
+}
+
+/**
+ * Storage contract used by the ingestion runner. CandidateIndex is the
+ * in-memory implementation; national runs may provide a disk-backed,
+ * chunked implementation without changing matcher semantics.
+ */
+export interface CandidateStore {
+  readonly size: number;
+  add(record: CanonicalPlaceRef, candidate?: PlaceCandidate): void | Promise<void>;
+  candidatesFor(
+    candidate: PlaceCandidate,
+    stats?: CandidateGenerationStats,
+  ): CanonicalPlaceRef[] | Promise<CanonicalPlaceRef[]>;
+  getCandidate?(id: string): PlaceCandidate | undefined | Promise<PlaceCandidate | undefined>;
+  getSourceIdentity?(id: string):
+    | {
+        provenance: { sourceId: string; sourceRecordId: string };
+        designations: readonly { designation: string }[];
+      }
+    | undefined
+    | Promise<
+        | {
+            provenance: { sourceId: string; sourceRecordId: string };
+            designations: readonly { designation: string }[];
+          }
+        | undefined
+      >;
+  beginChunk?(): void | Promise<void>;
+  workingSetStats?(): unknown;
+  close?(): void | Promise<void>;
 }
 
 export function emptyCandidateStats(): CandidateGenerationStats {
@@ -126,6 +230,20 @@ export function emptyCandidateStats(): CandidateGenerationStats {
     fromIdentifierOnly: 0,
     cellsInspected: 0,
     generationMs: 0,
+    shortlistSizes: [],
+    cellSupersetCandidates: 0,
+    rejectedByExactRadius: 0,
+    exactSpatialCandidates: 0,
+    identifierCandidates: 0,
+    identifierOnlyCandidates: 0,
+    identifierRescuedBeyondRadius: 0,
+    finalCandidatePairs: 0,
+    registerVetoCandidates: 0,
+    sameSourceSameRecordCandidates: 0,
+    sameSourceDifferentDesignationCandidates: 0,
+    crossSourceCandidates: 0,
+    missingSourceIdentityCandidates: 0,
+    survivingRegisterCandidates: 0,
   };
 }
 
@@ -133,13 +251,22 @@ export function emptyCandidateStats(): CandidateGenerationStats {
 export const CandidateMode = {
   /** Every known record. The original behaviour; the equivalence oracle. */
   Exhaustive: 'exhaustive',
-  /** Spatially bounded plus identifier lookups. */
+  /** The pre-Batch-17 coarse cell superset, retained for causal diagnostics. */
+  CellSuperset: 'cell-superset',
+  /** Exact-radius spatial candidates plus global identifier lookups. */
   Bounded: 'bounded',
+  /** Exact-radius candidates with the existing register hard veto pre-applied. */
+  RegisterPruned: 'register-pruned',
 } as const;
 export type CandidateMode = (typeof CandidateMode)[keyof typeof CandidateMode];
 
 export function isCandidateMode(value: string): value is CandidateMode {
-  return value === CandidateMode.Exhaustive || value === CandidateMode.Bounded;
+  return (
+    value === CandidateMode.Exhaustive ||
+    value === CandidateMode.CellSuperset ||
+    value === CandidateMode.Bounded ||
+    value === CandidateMode.RegisterPruned
+  );
 }
 
 /**
@@ -154,10 +281,18 @@ export function isCandidateMode(value: string): value is CandidateMode {
  */
 export class CandidateIndex {
   private readonly records: CanonicalPlaceRef[] = [];
+  private readonly candidates = new Map<string, PlaceCandidate>();
+  private readonly sourceIdentities = new Map<
+    string,
+    {
+      provenance: { sourceId: string; sourceRecordId: string };
+      designations: readonly { designation: string }[];
+    }
+  >();
   private readonly grid = new Map<string, number[]>();
   private readonly byIdentifier = new Map<string, number[]>();
 
-  constructor(private readonly mode: CandidateMode = CandidateMode.Bounded) {}
+  constructor(private readonly mode: CandidateMode = CandidateMode.RegisterPruned) {}
 
   get size(): number {
     return this.records.length;
@@ -168,9 +303,19 @@ export class CandidateIndex {
     return this.records;
   }
 
-  add(record: CanonicalPlaceRef): void {
+  add(record: CanonicalPlaceRef, candidate?: PlaceCandidate): void {
     const index = this.records.length;
     this.records.push(record);
+    if (candidate) this.candidates.set(record.id, candidate);
+    if (record.sourceIdentity) {
+      this.sourceIdentities.set(record.id, {
+        provenance: {
+          sourceId: record.sourceIdentity.sourceId,
+          sourceRecordId: record.sourceIdentity.sourceRecordId,
+        },
+        designations: record.sourceIdentity.designations.map((designation) => ({ designation })),
+      });
+    }
 
     const key = cellKey(latCell(record.location.lat), lngCell(record.location.lng));
     const cell = this.grid.get(key);
@@ -182,6 +327,24 @@ export class CandidateIndex {
       if (bucket) bucket.push(index);
       else this.byIdentifier.set(identifier, [index]);
     }
+  }
+
+  getCandidate(id: string): PlaceCandidate | undefined {
+    return this.candidates.get(id);
+  }
+
+  getSourceIdentity(id: string):
+    | {
+        provenance: { sourceId: string; sourceRecordId: string };
+        designations: readonly { designation: string }[];
+      }
+    | undefined {
+    return this.sourceIdentities.get(id);
+  }
+
+  beginChunk(): void {
+    // The in-memory implementation has no chunk lifecycle; this method keeps
+    // it substitutable for a bounded CandidateStore.
   }
 
   /**
@@ -200,6 +363,11 @@ export class CandidateIndex {
       if (stats) {
         stats.candidatePairs += this.records.length;
         stats.fromSpatial += this.records.length;
+        stats.shortlistSizes.push(this.records.length);
+        stats.finalCandidatePairs += this.records.length;
+        for (const record of this.records) {
+          observeRegisterClass(stats, classifyRegisterCandidate(candidate, record));
+        }
       }
       return this.records;
     }
@@ -215,14 +383,17 @@ export class CandidateIndex {
     // cosine collapses at the poles, and an unbounded span there would turn a
     // locality query back into a full scan.
     const cosLat = Math.cos((candidate.location.lat * Math.PI) / 180);
-    const lngSpanDegrees = Math.min(180, radius / (METRES_PER_DEGREE_LATITUDE * Math.max(cosLat, 0.01)));
+    const lngSpanDegrees = Math.min(
+      180,
+      radius / (METRES_PER_DEGREE_LATITUDE * Math.max(cosLat, 0.01)),
+    );
 
     const latSteps = Math.ceil(latSpanDegrees / CELL_DEGREES);
     const lngSteps = Math.ceil(lngSpanDegrees / CELL_DEGREES);
     const centreLat = latCell(candidate.location.lat);
     const centreLng = lngCell(candidate.location.lng);
 
-    let spatial = 0;
+    let cellSupersetCandidates = 0;
     let cells = 0;
     for (let dLat = -latSteps; dLat <= latSteps; dLat += 1) {
       for (let dLng = -lngSteps; dLng <= lngSteps; dLng += 1) {
@@ -232,10 +403,27 @@ export class CandidateIndex {
         for (const index of bucket) {
           if (!selected.has(index)) {
             selected.add(index);
-            spatial += 1;
+            cellSupersetCandidates += 1;
           }
         }
       }
+    }
+
+    const exact = this.mode === CandidateMode.Bounded || this.mode === CandidateMode.RegisterPruned;
+    let rejectedByExactRadius = 0;
+    let spatial = 0;
+    if (exact) {
+      for (const index of selected) {
+        const record = this.records[index]!;
+        if (distanceMeters(candidate.location, record.location) <= radius) {
+          spatial += 1;
+        } else {
+          selected.delete(index);
+          rejectedByExactRadius += 1;
+        }
+      }
+    } else {
+      spatial = cellSupersetCandidates;
     }
 
     // --- Identifier candidates, regardless of locality ----------------------
@@ -243,27 +431,59 @@ export class CandidateIndex {
     // A Wikidata item and a listed building 200 km apart that assert the same
     // identifier must still reach the matcher, which will then decide whether
     // that assertion survives the names and the coordinates.
+    let identifierCandidates = 0;
     let identifierOnly = 0;
+    let identifierRescuedBeyondRadius = 0;
+    const identifierSeen = new Set<number>();
     for (const key of identifierKeysOfCandidate(candidate)) {
       const bucket = this.byIdentifier.get(key);
       if (!bucket) continue;
       for (const index of bucket) {
+        if (identifierSeen.has(index)) continue;
+        identifierSeen.add(index);
+        identifierCandidates += 1;
         if (!selected.has(index)) {
           selected.add(index);
           identifierOnly += 1;
+          if (distanceMeters(candidate.location, this.records[index]!.location) > radius) {
+            identifierRescuedBeyondRadius += 1;
+          }
         }
       }
     }
 
-    const ordered = [...selected].sort((a, b) => a - b).map((index) => this.records[index]!);
+    const orderedBeforeRegister = [...selected].sort((a, b) => a - b);
+    const registerClasses = orderedBeforeRegister.map((index) => {
+      const record = this.records[index]!;
+      return classifyRegisterCandidate(candidate, record);
+    });
+    if (stats) {
+      for (const classification of registerClasses) observeRegisterClass(stats, classification);
+    }
+    const ordered =
+      this.mode === CandidateMode.RegisterPruned
+        ? orderedBeforeRegister.filter(
+            (_, position) =>
+              registerClasses[position] !== RegisterCandidateClass.SameRegisterDifferentEntry,
+          )
+        : orderedBeforeRegister;
+    const orderedRecords = ordered.map((index) => this.records[index]!);
 
     if (stats) {
-      stats.candidatePairs += ordered.length;
+      stats.candidatePairs += orderedRecords.length;
       stats.fromSpatial += spatial;
       stats.fromIdentifierOnly += identifierOnly;
+      stats.cellSupersetCandidates += cellSupersetCandidates;
+      stats.rejectedByExactRadius += rejectedByExactRadius;
+      stats.exactSpatialCandidates += spatial;
+      stats.identifierCandidates += identifierCandidates;
+      stats.identifierOnlyCandidates += identifierOnly;
+      stats.identifierRescuedBeyondRadius += identifierRescuedBeyondRadius;
+      stats.finalCandidatePairs += ordered.length;
       stats.cellsInspected += cells;
+      stats.shortlistSizes.push(orderedRecords.length);
       stats.generationMs += performance.now() - started;
     }
-    return ordered;
+    return orderedRecords;
   }
 }

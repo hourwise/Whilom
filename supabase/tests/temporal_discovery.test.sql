@@ -6,7 +6,7 @@
 
 begin;
 create extension if not exists pgtap;
-select plan(27);
+select plan(28);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'user@example.test'),
@@ -39,8 +39,16 @@ select ok(
   'the Iron Age starts before the common era');
 
 select is(
-  (select end_year from public.historical_periods where id = 'iron_age'), -43,
-  'and ends at the conventional Roman invasion, as a negative year');
+  (select end_year from public.historical_periods where id = 'iron_age'), 42,
+  'and ends the year before the Roman invasion of AD 43, leaving no gap');
+
+select is(
+  (select count(*) from public.historical_periods a
+     join public.historical_periods b
+       on b.display_order = (select min(c.display_order) from public.historical_periods c
+                              where c.display_order > a.display_order and c.parent_id is null)
+    where a.parent_id is null and b.start_year <> a.end_year + 1),
+  0::bigint, 'the registry has no gap a dated claim could fall through');
 
 select is(
   (select start_year from public.historical_periods where id = 'roman'), 43,
@@ -67,7 +75,7 @@ insert into public.temporal_associations
 values
   ('place', 'aaaaaaaa-0000-0000-0000-000000000001', 'built', 43, 409, 'period', 'roman',
    '50000000-0000-0000-0000-000000000001', 'Roman', 'source names the period'),
-  ('place', 'aaaaaaaa-0000-0000-0000-000000000002', 'built', -800, -43, 'period', 'iron_age',
+  ('place', 'aaaaaaaa-0000-0000-0000-000000000002', 'built', -800, 42, 'period', 'iron_age',
    '50000000-0000-0000-0000-000000000001', 'Iron Age', 'source names the period');
 
 select throws_ok(

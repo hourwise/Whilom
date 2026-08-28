@@ -23,13 +23,22 @@ import { runIngestion } from '../pipeline/run';
 import type { DecidedCandidate } from '../pipeline/run';
 import { MatchOutcome } from '../pipeline/candidate';
 import type { MatchStats } from '../matching/matcher';
+import type { CandidateStore } from '../matching/candidates';
 import { CandidateMode, emptyCandidateStats } from '../matching/candidates';
 import type { CandidateGenerationStats } from '../matching/candidates';
+import type { CandidateGenerationDelta } from '../matching/candidates';
+import type { CanonicalPlaceRef, PlaceCandidate } from '../pipeline/candidate';
 import { GATES, mayProceed } from './gates';
 import type { GateResult } from './gates';
 import { TIER_SIZES, buildTierFixture, isTierSize } from './tier';
-import { evenSample, round, timingStats } from './metrics';
-import type { QualitySample, ReviewPressure, TierMetrics } from './metrics';
+import { evenSample, percentile, round, timingStats } from './metrics';
+import type {
+  MatchProfile,
+  QualitySample,
+  ReviewPressure,
+  TierMetrics,
+  WorkingSetStats,
+} from './metrics';
 
 const SAMPLE_SIZE = 20;
 
@@ -53,12 +62,16 @@ function parseTier(argv: readonly string[]): number {
 function reviewCause(decided: DecidedCandidate): string {
   const { decision } = decided;
   if (decision.outcome === MatchOutcome.ConflictReview) {
-    const fields = decision.conflicts.map((c) => c.field).sort().join(' + ');
+    const fields = decision.conflicts
+      .map((c) => c.field)
+      .sort()
+      .join(' + ');
     return `sources disagree on ${fields || 'an unnamed field'}`;
   }
   const why = decision.rationale.split('needs review: ')[1] ?? decision.rationale;
   if (why.includes('association rather than identity')) return 'one name contains the other';
-  if (why.includes('protects a landscape')) return 'landscape designation versus a structure inside it';
+  if (why.includes('protects a landscape'))
+    return 'landscape designation versus a structure inside it';
   if (why.includes('the name is not distinctive')) return 'name is not distinctive';
   if (why.includes('scores almost as well')) return 'two candidates score alike';
   if (why.includes('outside the')) return 'position outside the agreement radius';
@@ -97,6 +110,87 @@ function buildReviewPressure(decided: readonly DecidedCandidate[], valid: number
         count: items.length,
         share: round(items.length / Math.max(1, queued.length), 4),
         example: `${items[0]!.candidate.name} — ${items[0]!.decision.rationale}`,
+      }))
+      .sort((a, b) => b.count - a.count),
+  };
+}
+
+interface DecisionAggregates {
+  samples: Record<QualitySample['category'], DecidedCandidate[]>;
+  matchReview: number;
+  conflictReview: number;
+  causes: Map<string, { count: number; example: string }>;
+  conflictFields: Map<string, number>;
+}
+
+function emptyDecisionAggregates(): DecisionAggregates {
+  return {
+    samples: { auto_match: [], new_canonical: [], review_match: [], conflict: [] },
+    matchReview: 0,
+    conflictReview: 0,
+    causes: new Map(),
+    conflictFields: new Map(),
+  };
+}
+
+function decisionCategory(decided: DecidedCandidate): QualitySample['category'] {
+  switch (decided.decision.outcome) {
+    case MatchOutcome.MatchConfident:
+      return 'auto_match';
+    case MatchOutcome.NewCanonical:
+      return 'new_canonical';
+    case MatchOutcome.MatchReview:
+      return 'review_match';
+    case MatchOutcome.ConflictReview:
+      return 'conflict';
+    default:
+      return 'new_canonical';
+  }
+}
+
+function observeDecision(aggregates: DecisionAggregates, decided: DecidedCandidate): void {
+  const category = decisionCategory(decided);
+  if (aggregates.samples[category].length < SAMPLE_SIZE) aggregates.samples[category].push(decided);
+  if (decided.decision.outcome === MatchOutcome.MatchReview) aggregates.matchReview += 1;
+  if (decided.decision.outcome === MatchOutcome.ConflictReview) aggregates.conflictReview += 1;
+  if (
+    decided.decision.outcome === MatchOutcome.MatchReview ||
+    decided.decision.outcome === MatchOutcome.ConflictReview
+  ) {
+    const cause = reviewCause(decided);
+    const existing = aggregates.causes.get(cause);
+    if (existing) existing.count += 1;
+    else
+      aggregates.causes.set(cause, {
+        count: 1,
+        example: `${decided.candidate.name} — ${decided.decision.rationale}`,
+      });
+  }
+  for (const conflict of decided.decision.conflicts) {
+    aggregates.conflictFields.set(
+      conflict.field,
+      (aggregates.conflictFields.get(conflict.field) ?? 0) + 1,
+    );
+  }
+}
+
+function buildStreamingReviewPressure(
+  aggregates: DecisionAggregates,
+  valid: number,
+): ReviewPressure {
+  const totalForReview = aggregates.matchReview + aggregates.conflictReview;
+  return {
+    matchReview: aggregates.matchReview,
+    conflictReview: aggregates.conflictReview,
+    totalForReview,
+    shareOfValid: valid > 0 ? round(totalForReview / valid, 5) : 0,
+    estimatedReviewHours: round((totalForReview * 2) / 60, 2),
+    causes: [...aggregates.causes.entries()]
+      .map(([cause, value]) => ({
+        cause,
+        count: value.count,
+        share: round(value.count / Math.max(1, totalForReview), 4),
+        example: value.example,
       }))
       .sort((a, b) => b.count - a.count),
   };
@@ -155,6 +249,7 @@ function loadPreviousTier(tier: number): TierMetrics | undefined {
 /** One tier executed under one candidate strategy, with everything measured. */
 export interface TierExecution {
   fixture: ReturnType<typeof buildTierFixture>;
+  candidateMode: CandidateMode;
   report: Awaited<ReturnType<typeof runIngestion>>;
   matchStats: MatchStats;
   candidateStats: CandidateGenerationStats;
@@ -164,6 +259,76 @@ export interface TierExecution {
   startedAt: Date;
   finishedAt: Date;
   wallClockMs: number;
+  decisionAggregates: DecisionAggregates;
+  retainedDecided: boolean;
+  workingSet?: WorkingSetStats;
+  profile?: MatchProfile;
+  geography: Record<
+    string,
+    {
+      records: number;
+      matchMs: number;
+      shortlist: number;
+      shortlistSizes: number[];
+      candidate: CandidateGenerationDelta;
+    }
+  >;
+  peakHeapUsedMb: number;
+}
+
+export interface TierExecutionOptions {
+  candidateStore?: CandidateStore;
+  retainDecided?: boolean;
+  chunkSize?: number;
+  /** Enable detailed matcher timing; omitted for ordinary scale runs. */
+  profile?: boolean;
+  profileSampleEvery?: number;
+  /** Optional diagnostic tap over the final candidate set, before matching. */
+  onCandidateSet?: (candidate: PlaceCandidate, shortlist: readonly CanonicalPlaceRef[]) => void;
+}
+
+function emptyMatchProfile(enabled: boolean, timingSampleEvery: number): MatchProfile {
+  return {
+    enabled,
+    timingSampleEvery,
+    timedComparisons: 0,
+    timingsMs: {
+      identifierPhase: 0,
+      registerVeto: 0,
+      distance: 0,
+      nameDistinctness: 0,
+      nameSimilarity: 0,
+      scoringAndConflicts: 0,
+      scoredResultAllocation: 0,
+      filtering: 0,
+      sortingOrTopTwo: 0,
+      outcomeConstruction: 0,
+    },
+    counts: {
+      comparisons: 0,
+      survivingRegister: 0,
+      survivingDistance: 0,
+      reachingNameComparison: 0,
+      reachingFullScoring: 0,
+      scoredCandidates: 0,
+      zeroViable: 0,
+      oneViable: 0,
+      twoOrMoreViable: 0,
+    },
+  };
+}
+
+function geographyBucket(lat: number, lng: number): string {
+  if (lat >= 51.25 && lat <= 51.75 && lng >= -0.6 && lng <= 0.8) return 'TQ/London-envelope';
+  if (lat >= 51.1 && lat <= 51.7 && lng >= -3.0 && lng <= -2.0) return 'ST/Bristol-Bath-envelope';
+  if (lat < 51 || lng < -3.0 || lng > 0.8) return 'sparser-outside-dense-envelopes';
+  return 'other';
+}
+
+function maxOrZero(values: readonly number[]): number {
+  let max = 0;
+  for (const value of values) max = Math.max(max, value);
+  return max;
 }
 
 /**
@@ -175,40 +340,117 @@ export interface TierExecution {
  */
 export async function executeTier(
   tier: number,
-  candidateMode: CandidateMode = CandidateMode.Bounded,
+  candidateMode: CandidateMode = CandidateMode.RegisterPruned,
+  buildFixture: (size: number) => ReturnType<typeof buildTierFixture> = buildTierFixture,
+  options: TierExecutionOptions = {},
 ): Promise<TierExecution> {
-  const fixture = buildTierFixture(tier);
+  const fixture = buildFixture(tier);
   const startedAt = new Date();
 
-  const matchStats: MatchStats = { comparisons: 0, vetoedByDistance: 0, vetoedByName: 0, vetoedByRegister: 0, beyondMaxDistance: 0 };
+  const matchStats: MatchStats = {
+    comparisons: 0,
+    vetoedByDistance: 0,
+    vetoedByName: 0,
+    vetoedByRegister: 0,
+    beyondMaxDistance: 0,
+    profile: options.profile ? emptyMatchProfile(true, options.profileSampleEvery ?? 0) : undefined,
+  };
   const candidateStats = emptyCandidateStats();
   const normaliseSamples: number[] = [];
   const validateSamples: number[] = [];
   const matchSamples: number[] = [];
+  const decisionAggregates = emptyDecisionAggregates();
+  const geography: Record<
+    string,
+    {
+      records: number;
+      matchMs: number;
+      shortlist: number;
+      shortlistSizes: number[];
+      candidate: CandidateGenerationDelta;
+    }
+  > = {};
+  let peakHeapUsedBytes = process.memoryUsage().heapUsed;
 
   const report = await runIngestion({
     importRunId: `scale-${tier}`,
     candidateMode,
     sources: [
       {
-        adapter: new HistoricEnglandNhleAdapter({ kind: 'file', path: fixture.path }),
+        adapter: new HistoricEnglandNhleAdapter({
+          kind: fixture.mode ?? 'file',
+          path: fixture.path,
+        }),
         normalise: normaliseNhleRecord,
       },
     ],
     observer: {
       matchStats,
       candidateStats,
-      onRecord: ({ normaliseMs, validateMs, matchMs }) => {
+      onRecord: ({
+        normaliseMs,
+        validateMs,
+        matchMs,
+        candidate,
+        shortlist,
+        shortlistSize,
+        candidateGeneration,
+      }) => {
+        options.onCandidateSet?.(candidate, shortlist);
         normaliseSamples.push(normaliseMs);
         validateSamples.push(validateMs);
         matchSamples.push(matchMs);
+        const bucket = geographyBucket(candidate.location.lat, candidate.location.lng);
+        const current = geography[bucket] ?? {
+          records: 0,
+          matchMs: 0,
+          shortlist: 0,
+          shortlistSizes: [],
+          candidate: {
+            candidatePairs: 0,
+            cellSupersetCandidates: 0,
+            rejectedByExactRadius: 0,
+            exactSpatialCandidates: 0,
+            identifierCandidates: 0,
+            identifierOnlyCandidates: 0,
+            identifierRescuedBeyondRadius: 0,
+            finalCandidatePairs: 0,
+            registerVetoCandidates: 0,
+            sameSourceSameRecordCandidates: 0,
+            sameSourceDifferentDesignationCandidates: 0,
+            crossSourceCandidates: 0,
+            missingSourceIdentityCandidates: 0,
+            survivingRegisterCandidates: 0,
+          },
+        };
+        current.records += 1;
+        current.matchMs += matchMs;
+        current.shortlist += shortlistSize;
+        current.shortlistSizes.push(shortlistSize);
+        if (candidateGeneration) {
+          for (const key of Object.keys(current.candidate) as (keyof CandidateGenerationDelta)[]) {
+            current.candidate[key] += candidateGeneration[key];
+          }
+        }
+        geography[bucket] = current;
+        if (matchSamples.length % 4_096 === 0) {
+          peakHeapUsedBytes = Math.max(peakHeapUsedBytes, process.memoryUsage().heapUsed);
+        }
       },
+      onDecision: (decided) => observeDecision(decisionAggregates, decided),
     },
+    candidateStore: options.candidateStore,
+    chunkSize: options.chunkSize,
+    retainDecided: options.retainDecided,
   });
 
   const finishedAt = new Date();
+  peakHeapUsedBytes = Math.max(peakHeapUsedBytes, process.memoryUsage().heapUsed);
+  const workingSet = options.candidateStore?.workingSetStats?.() as WorkingSetStats | undefined;
+  await options.candidateStore?.close?.();
   return {
     fixture,
+    candidateMode,
     report,
     matchStats,
     candidateStats,
@@ -218,16 +460,48 @@ export async function executeTier(
     startedAt,
     finishedAt,
     wallClockMs: finishedAt.getTime() - startedAt.getTime(),
+    decisionAggregates,
+    retainedDecided: options.retainDecided !== false,
+    workingSet,
+    profile: matchStats.profile,
+    geography,
+    peakHeapUsedMb: Math.round(peakHeapUsedBytes / 1_048_576),
   };
 }
 
 export async function runTier(
   tier: number,
-  candidateMode: CandidateMode = CandidateMode.Bounded,
+  candidateMode: CandidateMode = CandidateMode.RegisterPruned,
+  buildFixture: (size: number) => ReturnType<typeof buildTierFixture> = buildTierFixture,
+  options: TierExecutionOptions = {},
 ): Promise<TierMetrics> {
-  const execution = await executeTier(tier, candidateMode);
-  const { fixture, report, matchStats, candidateStats, normaliseSamples, validateSamples, matchSamples, startedAt, finishedAt } =
-    execution;
+  const execution = await executeTier(tier, candidateMode, buildFixture, options);
+  const metrics = buildTierMetrics(execution, tier);
+  metrics.gates = evaluateGates(metrics, loadPreviousTier(tier));
+  metrics.proceeded = mayProceed(metrics.gates);
+  return metrics;
+}
+
+/**
+ * Assemble a tier's metrics from an execution.
+ *
+ * Extracted so the national ladder measures with exactly the same code as the
+ * regional ladder — the numbers can only be compared across scales if they are
+ * produced identically.
+ */
+export function buildTierMetrics(execution: TierExecution, tier: number): TierMetrics {
+  const {
+    fixture,
+    candidateMode,
+    report,
+    matchStats,
+    candidateStats,
+    normaliseSamples,
+    validateSamples,
+    matchSamples,
+    startedAt,
+    finishedAt,
+  } = execution;
 
   const rejectionReasons = new Map<string, number>();
   for (const rejection of report.rejections) {
@@ -239,18 +513,17 @@ export async function runTier(
   }
 
   const conflictFields = new Map<string, number>();
-  for (const decided of report.decided) {
-    for (const conflict of decided.decision.conflicts) {
-      conflictFields.set(conflict.field, (conflictFields.get(conflict.field) ?? 0) + 1);
-    }
-  }
+  for (const [field, count] of execution.decisionAggregates.conflictFields)
+    conflictFields.set(field, count);
 
   const matchTiming = timingStats(matchSamples);
   const valid = report.valid;
   const outcomes = report.outcomes;
   const autoMatched = outcomes[MatchOutcome.MatchConfident];
 
-  const review = buildReviewPressure(report.decided, valid);
+  const review = !execution.retainedDecided
+    ? buildStreamingReviewPressure(execution.decisionAggregates, valid)
+    : buildReviewPressure(report.decided, valid);
 
   const metrics: TierMetrics = {
     tier,
@@ -263,6 +536,7 @@ export async function runTier(
       ci: process.env['CI'] === 'true',
     },
     composition: fixture.mix,
+    peakHeapUsedMb: execution.peakHeapUsedMb,
     ingestion: {
       sourceRows: report.sourceRows,
       valid,
@@ -299,10 +573,38 @@ export async function runTier(
         vetoedByName: matchStats.vetoedByName,
         vetoedByRegister: matchStats.vetoedByRegister,
         beyondMaxDistance: matchStats.beyondMaxDistance,
+        shortlist: {
+          mean: round(
+            candidateStats.shortlistSizes.reduce((sum, value) => sum + value, 0) /
+              Math.max(1, candidateStats.shortlistSizes.length),
+            2,
+          ),
+          p50: percentile(
+            [...candidateStats.shortlistSizes].sort((a, b) => a - b),
+            50,
+          ),
+          p90: percentile(
+            [...candidateStats.shortlistSizes].sort((a, b) => a - b),
+            90,
+          ),
+          p95: percentile(
+            [...candidateStats.shortlistSizes].sort((a, b) => a - b),
+            95,
+          ),
+          p99: percentile(
+            [...candidateStats.shortlistSizes].sort((a, b) => a - b),
+            99,
+          ),
+          max: maxOrZero(candidateStats.shortlistSizes),
+          zero: candidateStats.shortlistSizes.filter((n) => n === 0).length,
+          one: candidateStats.shortlistSizes.filter((n) => n === 1).length,
+          twoOrMore: candidateStats.shortlistSizes.filter((n) => n >= 2).length,
+        },
       },
       conflictFields: [...conflictFields.entries()]
         .map(([field, count]) => ({ field, count }))
         .sort((a, b) => b.count - a.count),
+      ...(execution.profile ? { profile: execution.profile } : {}),
     },
     candidates: {
       mode: candidateMode,
@@ -313,38 +615,135 @@ export async function runTier(
         candidateStats.possiblePairs > 0
           ? round(1 - candidateStats.candidatePairs / candidateStats.possiblePairs, 5)
           : 0,
-      candidatePairsPerRecord: round(candidateStats.candidatePairs / Math.max(1, matchSamples.length), 2),
+      candidatePairsPerRecord: round(
+        candidateStats.candidatePairs / Math.max(1, matchSamples.length),
+        2,
+      ),
       fromSpatial: candidateStats.fromSpatial,
       fromIdentifierOnly: candidateStats.fromIdentifierOnly,
+      cellSupersetCandidates: candidateStats.cellSupersetCandidates,
+      rejectedByExactRadius: candidateStats.rejectedByExactRadius,
+      exactSpatialCandidates: candidateStats.exactSpatialCandidates,
+      identifierCandidates: candidateStats.identifierCandidates,
+      identifierOnlyCandidates: candidateStats.identifierOnlyCandidates,
+      identifierRescuedBeyondRadius: candidateStats.identifierRescuedBeyondRadius,
+      finalCandidatePairs: candidateStats.finalCandidatePairs,
+      registerVetoCandidates: candidateStats.registerVetoCandidates,
+      sameSourceSameRecordCandidates: candidateStats.sameSourceSameRecordCandidates,
+      sameSourceDifferentDesignationCandidates:
+        candidateStats.sameSourceDifferentDesignationCandidates,
+      crossSourceCandidates: candidateStats.crossSourceCandidates,
+      missingSourceIdentityCandidates: candidateStats.missingSourceIdentityCandidates,
+      survivingRegisterCandidates: candidateStats.survivingRegisterCandidates,
+      exactRadiusPruningRatio:
+        candidateStats.cellSupersetCandidates > 0
+          ? round(candidateStats.rejectedByExactRadius / candidateStats.cellSupersetCandidates, 5)
+          : 0,
       cellsInspected: candidateStats.cellsInspected,
       generationMs: round(candidateStats.generationMs),
+      shortlist: {
+        mean: round(
+          candidateStats.shortlistSizes.reduce((sum, value) => sum + value, 0) /
+            Math.max(1, candidateStats.shortlistSizes.length),
+          2,
+        ),
+        p50: percentile(
+          [...candidateStats.shortlistSizes].sort((a, b) => a - b),
+          50,
+        ),
+        p90: percentile(
+          [...candidateStats.shortlistSizes].sort((a, b) => a - b),
+          90,
+        ),
+        p95: percentile(
+          [...candidateStats.shortlistSizes].sort((a, b) => a - b),
+          95,
+        ),
+        p99: percentile(
+          [...candidateStats.shortlistSizes].sort((a, b) => a - b),
+          99,
+        ),
+        max: maxOrZero(candidateStats.shortlistSizes),
+      },
     },
 
     review,
     quality: [
       sampleFor(
         'auto_match',
-        report.decided.filter((d) => d.decision.outcome === MatchOutcome.MatchConfident),
+        !execution.retainedDecided
+          ? execution.decisionAggregates.samples.auto_match
+          : report.decided.filter((d) => d.decision.outcome === MatchOutcome.MatchConfident),
       ),
       sampleFor(
         'new_canonical',
-        report.decided.filter((d) => d.decision.outcome === MatchOutcome.NewCanonical),
+        !execution.retainedDecided
+          ? execution.decisionAggregates.samples.new_canonical
+          : report.decided.filter((d) => d.decision.outcome === MatchOutcome.NewCanonical),
       ),
       sampleFor(
         'review_match',
-        report.decided.filter((d) => d.decision.outcome === MatchOutcome.MatchReview),
+        !execution.retainedDecided
+          ? execution.decisionAggregates.samples.review_match
+          : report.decided.filter((d) => d.decision.outcome === MatchOutcome.MatchReview),
       ),
       sampleFor(
         'conflict',
-        report.decided.filter((d) => d.decision.outcome === MatchOutcome.ConflictReview),
+        !execution.retainedDecided
+          ? execution.decisionAggregates.samples.conflict
+          : report.decided.filter((d) => d.decision.outcome === MatchOutcome.ConflictReview),
       ),
     ],
+    ...(execution.workingSet ? { workingSet: execution.workingSet } : {}),
+    ...(Object.keys(execution.geography).length > 0
+      ? {
+          geography: Object.fromEntries(
+            Object.entries(execution.geography).map(([key, value]) => [
+              key,
+              {
+                records: value.records,
+                meanMsPerRecord: round(value.matchMs / Math.max(1, value.records), 4),
+                meanShortlist: round(value.shortlist / Math.max(1, value.records), 2),
+                shortlist: {
+                  mean: round(value.shortlist / Math.max(1, value.records), 2),
+                  p50: percentile(
+                    [...value.shortlistSizes].sort((a, b) => a - b),
+                    50,
+                  ),
+                  p90: percentile(
+                    [...value.shortlistSizes].sort((a, b) => a - b),
+                    90,
+                  ),
+                  p95: percentile(
+                    [...value.shortlistSizes].sort((a, b) => a - b),
+                    95,
+                  ),
+                  p99: percentile(
+                    [...value.shortlistSizes].sort((a, b) => a - b),
+                    99,
+                  ),
+                  max: maxOrZero(value.shortlistSizes),
+                },
+                candidate: {
+                  ...value.candidate,
+                  exactRadiusPruningRatio:
+                    value.candidate.cellSupersetCandidates > 0
+                      ? round(
+                          value.candidate.rejectedByExactRadius /
+                            value.candidate.cellSupersetCandidates,
+                          5,
+                        )
+                      : 0,
+                },
+              },
+            ]),
+          ),
+        }
+      : {}),
     gates: [],
     proceeded: false,
   };
 
-  metrics.gates = evaluateGates(metrics, loadPreviousTier(tier));
-  metrics.proceeded = mayProceed(metrics.gates);
   return metrics;
 }
 
@@ -412,7 +811,9 @@ export function evaluateGates(metrics: TierMetrics, previous?: TierMetrics): Gat
   results.push({
     ...g('G6-query-latency'),
     passed: true,
-    observed: metrics.queries ? `${metrics.queries.length} queries measured` : 'not measured in this lane',
+    observed: metrics.queries
+      ? `${metrics.queries.length} queries measured`
+      : 'not measured in this lane',
     ...(metrics.queries
       ? {}
       : { notEvaluated: 'Needs a database; measured by the query lane of the scale workflow.' }),
@@ -439,7 +840,9 @@ export function evaluateGates(metrics: TierMetrics, previous?: TierMetrics): Gat
   results.push({
     ...g('G10-storage-linearity'),
     passed: true,
-    observed: metrics.storage ? `${metrics.storage.bytesPerRecord} bytes/record` : 'not measured in this lane',
+    observed: metrics.storage
+      ? `${metrics.storage.bytesPerRecord} bytes/record`
+      : 'not measured in this lane',
     ...(metrics.storage
       ? {}
       : { notEvaluated: 'Needs a database; measured by the storage lane of the scale workflow.' }),

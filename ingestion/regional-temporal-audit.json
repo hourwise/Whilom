@@ -1,0 +1,229 @@
+{
+  "normaliserVersion": "1.0.0",
+  "totalRecords": 23314,
+  "unparseableRows": 0,
+  "source": {
+    "dataset": "National Heritage List for England (NHLE)",
+    "fields": [
+      {
+        "field": "OBJECTID",
+        "kind": "identifier"
+      },
+      {
+        "field": "ListEntry",
+        "kind": "identifier"
+      },
+      {
+        "field": "Name",
+        "kind": "text",
+        "temporal": "the only field that ever carries a historic date"
+      },
+      {
+        "field": "Grade",
+        "kind": "designation"
+      },
+      {
+        "field": "hyperlink",
+        "kind": "reference"
+      },
+      {
+        "field": "NGR",
+        "kind": "location"
+      },
+      {
+        "field": "Easting",
+        "kind": "location"
+      },
+      {
+        "field": "Northing",
+        "kind": "location"
+      },
+      {
+        "field": "CaptureScale",
+        "kind": "location"
+      },
+      {
+        "field": "area_ha",
+        "kind": "measurement"
+      },
+      {
+        "field": "Notes",
+        "kind": "text"
+      },
+      {
+        "field": "ListDate",
+        "kind": "date",
+        "temporal": "when listing was conferred — NOT a historic date"
+      },
+      {
+        "field": "SchedDate",
+        "kind": "date",
+        "temporal": "when scheduling was conferred — NOT a historic date"
+      },
+      {
+        "field": "RegDate",
+        "kind": "date",
+        "temporal": "when registration was conferred — NOT a historic date"
+      },
+      {
+        "field": "InscrDate",
+        "kind": "date",
+        "temporal": "when inscription was conferred — NOT a historic date"
+      },
+      {
+        "field": "AmendDate",
+        "kind": "date",
+        "temporal": "when the entry was amended — NOT a historic date"
+      }
+    ],
+    "structuredHistoricDateFields": 0,
+    "designationDateFields": 5,
+    "conclusion": "The FeatureServer returns every attribute it has (outFields=*). All five date fields record an act of the state. No historic date is being discarded during ingestion, because none is supplied."
+  },
+  "namePatterns": {
+    "centuryAbbreviated": {
+      "records": 6,
+      "note": "\"C18\""
+    },
+    "centuryOrdinal": {
+      "records": 12,
+      "note": "\"18th century\""
+    },
+    "centurySpelled": {
+      "records": 5,
+      "note": "\"eighteenth century\""
+    },
+    "centuryQualified": {
+      "records": 3,
+      "note": "\"late C18\""
+    },
+    "fourDigitNumber": {
+      "records": 39,
+      "note": "may be a year, a grid reference or a house number"
+    },
+    "datedYear": {
+      "records": 10,
+      "note": "a year the record states IS a date"
+    },
+    "yearRange": {
+      "records": 2,
+      "note": "\"1845-1848\""
+    },
+    "circaYear": {
+      "records": 2,
+      "note": "\"circa 1800\""
+    },
+    "circaDistance": {
+      "records": 3,
+      "note": "circa qualifying a DISTANCE, not a date"
+    },
+    "gridReference": {
+      "records": 132,
+      "note": "an explicit grid reference"
+    },
+    "periodWord": {
+      "records": 284,
+      "note": "a named period"
+    },
+    "prehistoric": {
+      "records": 60,
+      "note": "not currently mapped to a registry period"
+    },
+    "vagueLanguage": {
+      "records": 1026,
+      "note": "gestures at the past without dating it"
+    }
+  },
+  "nameExamples": {
+    "vagueLanguage": [
+      "Garden Wall With Gateway Attached to South East Corner of Old Hall",
+      "Bridge at Bewerley Old Hall",
+      "Former Public Benefit Shoe Company Shop at Corner of Coltman Street",
+      "The Old Carpet Mart",
+      "The Old Alexandra Music Hall"
+    ],
+    "centuryAbbreviated": [
+      "All the Medieval Monuments, C18 Font and C18 Sundial in Garden of No 1 (windyridge)",
+      "Bootham Park Hospital: front range, 1886 link block, late-C18 building, 1817 range and 1908 extensio",
+      "Stanley Royd Hospital Eastern Part of Main Range Comprising Early C19 Former Paupers' Lunatic Asylum",
+      "Milepost Approximately 159 Metres North East of the Junction With the C61 Road",
+      "Wall incorporating C18 water supply point and a circa 1800 lamp standard"
+    ],
+    "periodWord": [
+      "All the Medieval Monuments, C18 Font and C18 Sundial in Garden of No 1 (windyridge)",
+      "All the Medieval Monuments in the Garden of No 3 (ivy House)",
+      "Roman Catholic Church of St John of Beverley",
+      "Two Medieval Stone Coffins Situated Adjacent to North Wall of Church of All Saints",
+      "St Patricks Roman Catholic Church"
+    ],
+    "gridReference": [
+      "Boundary Stone at Ngr Se 883542",
+      "Lumb Mill at Ngr Se 047 289",
+      "Guide Post Set in Wall at Ngr Se 12842 86481",
+      "Milestone at Se 0156 6320",
+      "Guide Post (stone Chair) at Junction of West Street Oposite the Duke of York Public House and Slab A"
+    ],
+    "fourDigitNumber": [
+      "Usher House Approximately 8 Metres North-east of Farm Building Dated 1632",
+      "1039 and 1041, Great Horton Road",
+      "Well-house 5 Metres West of Barn Dated 1783 200 Metres South West of Farfield Hall",
+      "Pair of Slabs to Martha Balmforth 1795 and Benjamin Hopperton 1785 Approximately 20 Metres East of C",
+      "Chest Tomb to Anne Lister 1735 and Raised Grave Slab to William Havden 1699 Approximately 10 Metres "
+    ],
+    "datedYear": [
+      "Usher House Approximately 8 Metres North-east of Farm Building Dated 1632",
+      "Well-house 5 Metres West of Barn Dated 1783 200 Metres South West of Farfield Hall",
+      "Cow Byre Dated 1675",
+      "Stables, Piggery, Hen-house and Cartshed Attached to South End of Barn Dated 1783 200 Metres South W",
+      "2 Raised Slabs to John Curtis Dated 1728 and Sarah Barras Dated 1728 Set Approximately 5 Metres Sout"
+    ],
+    "circaDistance": [
+      "Outbuilding Circa 50 Yards East of York House",
+      "Mile Post Circa 320 Metres North East of Wragby",
+      "Memorial Slab Lying to East of Path, Circa 60 Feet to South of South Door"
+    ],
+    "yearRange": [
+      "1189-1195, THORNTON ROAD BD13 (See details for further address information)",
+      "1914-1918 War Memorial"
+    ],
+    "circaYear": [
+      "Pair of Chest Tombs to the Asquith Family C1827 and 1854 Approximately 25 Metres North West of West ",
+      "Wall incorporating C18 water supply point and a circa 1800 lamp standard"
+    ],
+    "centurySpelled": [
+      "The Mount School Nineteenth Century Block",
+      "Barn to Rear of Seventeenth Century Farmhouse in North Yard, Esholt Hall Home Farm",
+      "Helmsley Castle: twelfth century ringwork, twelfth to fourteenth century enclosure castle and sixtee",
+      "Richmond Castle: eleventh to fourteenth century enclosure castle",
+      "Middleham Castle: twelfth century tower, keep, castle and fourteenth century concentric castle."
+    ],
+    "centuryQualified": [
+      "Bootham Park Hospital: front range, 1886 link block, late-C18 building, 1817 range and 1908 extensio",
+      "Stanley Royd Hospital Eastern Part of Main Range Comprising Early C19 Former Paupers' Lunatic Asylum",
+      "Hull Castle, South Blockhouse and part of late 17th century Hull Citadel Fort at Garrison Side"
+    ],
+    "prehistoric": [
+      "Prehistoric enclosure",
+      "How Hill, Low Whita late prehistoric defended settlement site",
+      "Ferrybridge Henge, a prehistoric enclosure, and two round barrows",
+      "Hanging Grimston barrow group: a long barrow 400m east of Wold Farm, incorporating part of a prehist",
+      "Maiden Castle prehistoric defended settlement and adjacent round barrow"
+    ],
+    "centuryOrdinal": [
+      "Pickering Castle: 11th century motte and bailey castle and 13th century shell keep castle",
+      "Skipsea Castle: 11th century motte and bailey castle and inland harbour",
+      "Burton Agnes 12th-century manor house",
+      "Fountains Cistercian Abbey; monastic precinct, mill, water management works, agricultural and indust",
+      "A 17th century park lodge known as Dobpark Lodge in Dob Park, near Otley"
+    ]
+  },
+  "nameDerived": {
+    "recordsWithAtLeastOneClaim": 275,
+    "claimsByPrecision": {
+      "century": 28,
+      "period": 258,
+      "exact_year": 20
+    },
+    "conclusion": "Name text is close to exhausted. Sharpening it further is worth tens of places, not thousands, and a bare four-digit number is more often a grid reference or a house number than a year."
+  }
+}

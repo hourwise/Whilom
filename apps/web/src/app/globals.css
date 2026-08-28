@@ -737,3 +737,716 @@ button.secondary,
     min-width: 5.5rem;
   }
 }
+
+/* ==========================================================================
+   WHERE — WHEN — WHO
+   Map-led home, the historical ruler, the key, and people.
+   ========================================================================== */
+
+/* --- Map-led home -------------------------------------------------------- */
+/* The map gets the screen. The identity is a masthead, not a landing page. */
+
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.home-masthead {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+}
+
+.home-identity {
+  min-width: 16rem;
+}
+
+.home-title {
+  font-size: clamp(2rem, 5vw, 2.9rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.home-tagline {
+  font-size: 1.05rem;
+  color: var(--muted);
+  margin: 0.2rem 0 0;
+}
+
+.home-question {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+}
+
+.definition.is-compact {
+  margin: 0;
+  padding-left: 1rem;
+  max-width: 27rem;
+  font-size: 0.92rem;
+}
+
+.definition.is-compact .definition-word {
+  font-size: 1.15rem;
+}
+
+.definition.is-compact .definition-glosses,
+.definition.is-compact .definition-pronunciation {
+  margin-bottom: 0.3rem;
+}
+
+/* In immersive mode the map takes most of the viewport height rather than a
+   fixed box: the first impression of Whilom should be the country, not a
+   paragraph with a picture under it. */
+.explore.is-immersive .explore-body {
+  min-height: min(62vh, 40rem);
+}
+
+.explore.is-immersive .explore-map {
+  min-height: min(62vh, 40rem);
+}
+
+/* --- Search -------------------------------------------------------------- */
+
+.search {
+  position: relative;
+  flex: 1;
+  min-width: 12rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.search-results {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 15%);
+  max-height: 24rem;
+  overflow-y: auto;
+  padding: 0.25rem;
+  list-style: none;
+  margin: 0;
+}
+
+.search-results ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.search-group {
+  margin: 0.4rem 0 0.2rem;
+  padding: 0 0.5rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.search-result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  text-align: left;
+  gap: 0.05rem;
+  padding: 0.4rem 0.5rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.search-result.is-active,
+.search-result:hover {
+  background: var(--card);
+}
+
+.search-result-name {
+  font-weight: 500;
+}
+
+.search-result-meta {
+  font-size: 0.82rem;
+}
+
+.search-empty {
+  padding: 0.75rem;
+}
+
+.search-empty p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* --- Coverage ------------------------------------------------------------ */
+/* Deliberately quiet. It is a correction to a possible misreading, not an
+   error, and an alarming banner would suggest something is broken. */
+
+.coverage-note {
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--fg);
+}
+
+.coverage-note.is-none {
+  border-left: 3px solid var(--accent);
+}
+
+.explore-dated {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+/* --- The historical ruler ------------------------------------------------ */
+
+.ruler {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.7rem 0.8rem 0.8rem;
+  background: var(--card);
+}
+
+.ruler-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.ruler-title {
+  font-size: 0.8rem;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.ruler-readout {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.ruler-modes {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.ruler-mode {
+  padding: 0.28rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.ruler-mode input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ruler-mode.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+
+.ruler-mode:has(input:focus-visible) {
+  outline: 3px solid var(--fg);
+  outline-offset: 2px;
+}
+
+.ruler-track-wrap {
+  padding: 0 0.2rem;
+}
+
+.ruler-track {
+  position: relative;
+  height: 4.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: none;
+}
+
+/* Fill carries the meaning of the mode: a point, everything before, or
+   everything after. Three visually distinct answers, never one. */
+.ruler-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ruler-fill.is-at {
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.ruler-fill.is-until {
+  border-right: 2px solid var(--accent);
+}
+
+.ruler-fill.is-from {
+  border-left: 2px solid var(--accent);
+}
+
+.ruler-band {
+  position: absolute;
+  top: 0;
+  height: 2.5rem;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  padding: 0.15rem 0.2rem;
+  overflow: hidden;
+  text-align: left;
+  color: inherit;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* Alternating tint so neighbouring epochs separate without needing a distinct
+   colour for each — twenty hues would be noise. */
+.ruler-band.is-alt {
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+}
+
+.ruler-band:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.ruler-band.is-active {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  box-shadow: inset 0 -3px 0 var(--accent);
+}
+
+.ruler-band:focus-visible {
+  outline: 3px solid var(--fg);
+  outline-offset: -3px;
+}
+
+.ruler-band-name {
+  font-size: 0.68rem;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ruler-band-count {
+  font-size: 0.62rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ruler-tick {
+  position: absolute;
+  bottom: 0;
+  height: 0.5rem;
+  border-left: 1px solid color-mix(in srgb, var(--fg) 25%, transparent);
+  z-index: 3;
+}
+
+.ruler-tick.is-labelled {
+  height: 1.1rem;
+  border-left-color: color-mix(in srgb, var(--fg) 55%, transparent);
+}
+
+.ruler-tick-label {
+  position: absolute;
+  bottom: 1.1rem;
+  left: 2px;
+  font-size: 0.6rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.ruler-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--fg);
+  z-index: 4;
+}
+
+.ruler-handle::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--fg);
+}
+
+.ruler-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.55rem;
+}
+
+.ruler-year-input {
+  width: 6.5rem;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.ruler-year-hint {
+  font-size: 0.78rem;
+}
+
+.ruler-caveat {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+}
+
+/* --- Legend -------------------------------------------------------------- */
+
+.legend {
+  position: absolute;
+  left: 0.6rem;
+  top: 0.6rem;
+  z-index: 5;
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.45rem 0.5rem;
+  max-width: 12.5rem;
+  backdrop-filter: blur(2px);
+}
+
+.legend-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.legend-title {
+  margin: 0 0 0.2rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.legend-clear {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.legend-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.05rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0.12rem 0.15rem;
+  border-radius: 4px;
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+}
+
+.legend-item:hover {
+  background: var(--card);
+}
+
+.legend-item.is-active {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.legend-item.is-dimmed {
+  opacity: 0.45;
+}
+
+.legend-item:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
+}
+
+/* The swatch carries a symbol as well as a colour, which is what makes the key
+   usable in greyscale and for colour-vision deficiency. */
+.legend-swatch {
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 3px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 0.62rem;
+  flex: 0 0 auto;
+}
+
+.legend-label {
+  font-size: 0.74rem;
+  line-height: 1.15;
+}
+
+/* --- Results with category swatches -------------------------------------- */
+
+.result-item {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.result-swatch {
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 3px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 0.66rem;
+  flex: 0 0 auto;
+}
+
+.result-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+/* --- Person -------------------------------------------------------------- */
+
+.person-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.7rem 0.8rem;
+  background: var(--card);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.person-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.person-name {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.person-dates {
+  margin: 0.1rem 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.person-titles {
+  margin: 0.1rem 0 0;
+  font-size: 0.85rem;
+}
+
+.person-count {
+  margin: 0;
+  font-weight: 500;
+}
+
+.person-note,
+.person-provenance {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.person-group {
+  border-top: 1px solid var(--border);
+  padding-top: 0.5rem;
+}
+
+.person-group-title {
+  margin: 0 0 0.3rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+}
+
+.person-places,
+.person-related {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.person-places li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.person-place {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 1;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  padding: 0.3rem 0.35rem;
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+}
+
+.person-place:hover,
+.person-place:focus-visible {
+  border-color: var(--border);
+  background: var(--bg);
+}
+
+.person-place-swatch {
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 3px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 0.62rem;
+  flex: 0 0 auto;
+}
+
+.person-place-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.person-place-name {
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.person-place-meta {
+  font-size: 0.75rem;
+}
+
+.person-place-link {
+  font-size: 0.78rem;
+  flex: 0 0 auto;
+}
+
+.person-related-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  padding: 0.3rem 0.35rem;
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+}
+
+.person-related-item:hover,
+.person-related-item:focus-visible {
+  border-color: var(--border);
+  background: var(--bg);
+}
+
+.person-related-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.person-related-meta {
+  font-size: 0.75rem;
+}
+
+/* --- Narrow screens ------------------------------------------------------ */
+
+@media (max-width: 800px) {
+  .home-masthead {
+    gap: 0.75rem;
+  }
+
+  .definition.is-compact {
+    max-width: none;
+  }
+
+  .explore.is-immersive .explore-body,
+  .explore.is-immersive .explore-map {
+    min-height: 24rem;
+  }
+
+  /* The key would swallow a phone-width map, so it collapses to a corner
+     summary that still opens to the full labelled list. */
+  .legend {
+    max-width: 8.5rem;
+    padding: 0.35rem 0.4rem;
+  }
+
+  .legend-label {
+    font-size: 0.68rem;
+  }
+
+  .ruler-track {
+    height: 5.2rem;
+  }
+
+  .ruler-band-name {
+    font-size: 0.62rem;
+  }
+}
