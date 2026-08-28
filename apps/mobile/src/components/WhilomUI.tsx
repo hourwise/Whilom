@@ -140,8 +140,16 @@ export function MapKey({ activeCategory, onToggle }: { activeCategory: DisplayCa
 export function TimeRuler({ mode, selectedPeriod, onModeChange, onPeriodChange }: { mode: MobileTimeMode; selectedPeriod: string | null; onModeChange: (mode: MobileTimeMode) => void; onPeriodChange: (periodId: string | null) => void }) {
   const theme = useMobileTheme();
   const selectedIndex = selectedPeriod ? MOBILE_PERIODS.findIndex((period) => period.id === selectedPeriod) : -1;
-  const fillPercent = selectedIndex < 0 ? 0 : Math.max(8, ((selectedIndex + 1) / MOBILE_PERIODS.length) * 100);
+  const selectedPosition = selectedIndex < 0 ? 0 : ((selectedIndex + 0.5) / MOBILE_PERIODS.length) * 100;
   const modeLabel = TIME_MODE_OPTIONS.find((option) => option.id === mode)?.label ?? 'All time';
+  const percent = (value: number): `${number}%` => `${value}%`;
+  const rulerFillStyle: ViewStyle = selectedIndex < 0 || mode === 'all'
+    ? { left: '0%', width: '0%' }
+    : mode === 'at'
+      ? { left: percent(Math.max(0, selectedPosition - 4)), width: '8%' }
+      : mode === 'until'
+        ? { left: '0%', width: percent(selectedPosition) }
+        : { left: percent(selectedPosition), width: percent(100 - selectedPosition) };
   return (
     <View>
       <SectionHeader title="When" detail="A time filter narrows the records Whilom holds" />
@@ -150,7 +158,7 @@ export function TimeRuler({ mode, selectedPeriod, onModeChange, onPeriodChange }
       </ScrollView>
       <View accessibilityRole="adjustable" accessibilityLabel={`Time ruler: ${selectedPeriod ? MOBILE_PERIODS.find((period) => period.id === selectedPeriod)?.name : 'Any period'}, ${modeLabel}`} style={styles.rulerSummary}>
         <View style={[styles.rulerTrack, { backgroundColor: theme.colors.surfaceMuted, borderColor: theme.colors.border }]}>
-          <View style={[styles.rulerFill, { width: `${fillPercent}%`, backgroundColor: theme.colors.bronze }]} />
+          <View style={[styles.rulerFill, rulerFillStyle, { backgroundColor: theme.colors.bronze }]} />
           <View style={styles.rulerTicks}>{MOBILE_PERIODS.slice(0, 10).map((period) => <View key={period.id} style={[styles.rulerTick, { backgroundColor: theme.colors.border }]} />)}</View>
         </View>
         <Text style={[styles.rulerCaption, { color: theme.colors.textMuted }]}>{selectedPeriod ? MOBILE_PERIODS.find((period) => period.id === selectedPeriod)?.name : 'Any period'} · {modeLabel}</Text>
@@ -296,7 +304,7 @@ export const uiStyles = StyleSheet.create({
   periodLabel: { fontSize: 12, fontWeight: '700' },
   rulerSummary: { marginTop: 12, gap: 5 },
   rulerTrack: { height: 10, borderWidth: 1, borderRadius: 4, overflow: 'hidden', justifyContent: 'center' },
-  rulerFill: { position: 'absolute', left: 0, top: 0, bottom: 0, minWidth: 2 },
+  rulerFill: { position: 'absolute', top: 0, bottom: 0 },
   rulerTicks: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 5 },
   rulerTick: { width: 1, height: 6 },
   rulerCaption: { fontSize: 11, fontWeight: '700' },
