@@ -1,46 +1,17 @@
 import { PlaceType, RelationshipPredicate } from '@whilom/domain';
-import { DISPLAY_CATEGORIES, type DisplayCategoryId } from './taxonomy';
+import type {
+  DiscoveryPerson,
+  DiscoveryPersonPlaceLink,
+  DiscoveryPlace,
+} from '@whilom/discovery';
+import { DISPLAY_CATEGORIES } from './taxonomy';
 
 export type CoverageMode = 'nearby' | 'uk' | 'outside';
 
-export interface DemoPlace {
-  id: string;
-  slug: string;
-  name: string;
-  placeType: PlaceType;
-  category: DisplayCategoryId;
-  location: { label: string; latitude: number; longitude: number };
-  periodIds: string[];
-  periodSummary: string;
-  designation?: string;
-  description: string;
-  source: string;
-  sourceUrl?: string;
-  imageLabel?: string;
-  distanceMiles?: number;
-  saved: boolean;
-  visited: boolean;
-  coverage: 'full' | 'partial' | 'none';
-  people: string[];
-  relatedPlaces: string[];
-}
-
-export interface DemoPersonPlaceLink {
-  placeId: string;
-  predicate: RelationshipPredicate;
-  note: string;
-}
-
-export interface DemoPerson {
-  id: string;
-  slug: string;
-  name: string;
-  lifeDates: string;
-  role: string;
-  description: string;
-  placeLinks: DemoPersonPlaceLink[];
-  relatedPeople: string[];
-}
+/** Fixture aliases keep Phase 6A call sites readable without creating a second model. */
+export type DemoPlace = DiscoveryPlace;
+export type DemoPersonPlaceLink = DiscoveryPersonPlaceLink;
+export type DemoPerson = DiscoveryPerson;
 
 export type DiscoveryResult =
   | { kind: 'place'; item: DemoPlace }
@@ -266,4 +237,3 @@ export function relationshipLabel(predicate: RelationshipPredicate): string {
 export function categoryForPlace(place: DemoPlace) {
   return DISPLAY_CATEGORIES.find((category) => category.id === place.category) ?? DISPLAY_CATEGORIES[9];
 }
-

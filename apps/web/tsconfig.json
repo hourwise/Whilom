@@ -6,6 +6,7 @@
       "@/*": ["./src/*"],
       "@whilom/domain": ["../../packages/domain/src/index.ts"],
       "@whilom/database": ["../../packages/database/src/index.ts"],
+      "@whilom/discovery": ["../../packages/discovery/src/index.ts"],
       "@whilom/validation": ["../../packages/validation/src/index.ts"],
       "@whilom/search": ["../../packages/search/src/index.ts"]
     }

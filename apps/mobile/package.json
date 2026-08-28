@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@whilom/database": "workspace:*",
+    "@whilom/discovery": "workspace:*",
     "@whilom/domain": "workspace:*",
     "@whilom/search": "workspace:*",
     "@whilom/validation": "workspace:*",

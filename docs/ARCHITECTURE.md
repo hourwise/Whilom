@@ -12,6 +12,11 @@ connects both (spec §54).
 - **Domain meaning lives in `packages/domain`** — entity kinds, relationship
   predicates, controlled vocabularies. Zero runtime dependencies, so anything
   can import it.
+- **Discovery semantics have one client-side owner.** `packages/discovery`
+  contains the portable period vocabulary, no-year-zero formatting, four time
+  modes, ten display categories, bounded map-query builders, coverage wording,
+  search/person result shapes and pure graph helpers. Web and Mobile may render
+  differently, but they do not define separate historical or discovery rules.
 - **Privileged secrets never enter a client.** The service-role key and source
   credentials are server/ingestion only. Clients use the anon key; access is
   governed by Row Level Security. (spec §38)
@@ -75,6 +80,14 @@ ride along in an unrelated batch.
    ┌─────────────┼───────────────┐
 apps/web     apps/mobile      ingestion
 ```
+
+Mobile's discovery screens depend on a `DiscoveryDataSource`, not on fixture
+records or Supabase calls directly. Fixture mode is the safe default; setting
+`EXPO_PUBLIC_WHILOM_DATA_MODE=live` opts into the public Supabase read adapter
+when `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` are both
+present. Missing public configuration produces an explicit unavailable state
+and makes no network request. The mobile adapter only calls bounded public
+read/RPC contracts and never carries service-role or ingestion credentials.
 
 ## Data flow
 
