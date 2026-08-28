@@ -56,11 +56,12 @@ product-risk decision.
 
 The repository now carries a focused Linux GitHub Actions compatibility
 workflow at `.github/workflows/web-workers-compat.yml`. It uses the declared
-pnpm 9.12.0 toolchain, performs the normal Web checks, builds OpenNext, starts
-the generated Worker locally with Wrangler/workerd, and checks `/api/health`
-plus the public `/` route. It has no Cloudflare credentials and contains no
-deployment or domain operation. OpenNext documents that Windows support is not
-guaranteed, so Linux CI is the authoritative runtime certification environment.
+pnpm 9.12.0 toolchain and Node 22 for the pinned Wrangler runtime, performs the
+normal Web checks, builds OpenNext, starts the generated Worker locally with
+Wrangler/workerd, and checks `/api/health` plus the public `/` route. It has no
+Cloudflare credentials and contains no deployment or domain operation.
+OpenNext documents that Windows support is not guaranteed, so Linux CI is the
+authoritative runtime certification environment.
 
 ## Repository preparation
 
