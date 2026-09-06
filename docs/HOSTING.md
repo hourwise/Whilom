@@ -43,11 +43,12 @@ Deployment evidence:
 - OpenNext: `1.20.4`;
 - Wrangler: `4.127.0`;
 - preview URL: `https://whilom-web-preview.philgeran.workers.dev`;
-- deployment ID: `ddce29bb-e301-4c2b-8852-e67f0c0701a6`;
-- Worker version ID: `eebe7a42-e262-4816-9bd4-398163b741b9`;
-- deployment timestamp: `2026-09-06T17:16:01.662192Z`;
-- bindings: `ASSETS` only; no D1, KV, R2, Queue, Durable Object, or secret
-  binding.
+- deployment ID: `958e8513-499d-438f-8102-da494584cf22`;
+- Worker version ID: `315f191e-82a2-41fe-9b85-05741d740954`;
+- deployment timestamp: `2026-09-06T17:29:51.760789Z`;
+- bindings: `ASSETS`, `NEXT_PUBLIC_SUPABASE_URL`, and
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY`; no D1, KV, R2, Queue, Durable Object, or
+  secret binding.
 
 The final upload used the existing OpenNext deploy path with normal Wrangler
 bundling. An initial direct `--no-bundle` attempt was rejected by Cloudflare
@@ -56,10 +57,21 @@ local `cloudflare/images.js` module; the adapter-supported bundled dry-run then
 passed and the corrected deployment succeeded. No unrelated Worker was
 overwritten.
 
-The deployed build received only the public Supabase URL and anon/publishable
-credential from external local configuration. No service-role key, PostgreSQL
-password, ingestion credential, Supabase access token, or Cloudflare token was
-placed in the repository or passed as a Worker application secret.
+The final active build was produced with the ignored repository `.env` held
+outside the project during OpenNext's environment extraction step. Only the
+public Supabase URL and anon/publishable credential were supplied as Wrangler
+vars. An artifact scan confirmed that the service-role key, PostgreSQL URL,
+Supabase access token, and `.env` file were absent from the final
+`.open-next` output. No prohibited credential was placed in the repository or
+configured as a Worker secret.
+
+An earlier preview version (`eebe7a42-e262-4816-9bd4-398163b741b9`) was
+superseded after this artifact audit identified that a local OpenNext build
+would otherwise include values from the ignored root `.env`. It is not active;
+the current certification covers the sanitized version above. The superseded
+version remains visible in Cloudflare deployment history, so any credentials
+that were present in that local file should be rotated under the operator's
+separate secret-management procedure before production use.
 
 HTTPS smoke evidence:
 
