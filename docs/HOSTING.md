@@ -62,8 +62,9 @@ outside the project during OpenNext's environment extraction step. Only the
 public Supabase URL and anon/publishable credential were supplied as Wrangler
 vars. An artifact scan confirmed that the service-role key, PostgreSQL URL,
 Supabase access token, and `.env` file were absent from the final
-`.open-next` output. No prohibited credential was placed in the repository or
-configured as a Worker secret.
+`.open-next` output. No prohibited credential was committed, passed as a Worker
+variable, or retained in the final Worker artifact. The pre-existing ignored
+`.env` remains local-only.
 
 An earlier preview version (`eebe7a42-e262-4816-9bd4-398163b741b9`) was
 superseded after this artifact audit identified that a local OpenNext build
