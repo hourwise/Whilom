@@ -1,7 +1,8 @@
 # Whilom hosting readiness
 
-Status: W3 workers.dev preview certified. The isolated preview Worker was
-deployed and smoke-tested without creating a custom route, secret, binding,
+Status: W3-R2 hardened preview deployed and basic Worker/SSR smoke-tested, but
+the live public Supabase discovery boundary is not yet certified. The isolated
+preview Worker was deployed without creating a custom route, secret, binding,
 custom domain, DNS record, or changing `whilom.co.uk`.
 
 ## Hosting maturity levels
@@ -86,6 +87,51 @@ HTTPS smoke evidence:
 Authenticated account/admin actions, live Yorkshire discovery, and full
 Supabase integration remain separate certification gates. The deployment is a
 preview-runtime certification, not production release approval.
+
+## W3-R2 hardened preview certification retry
+
+The W3-R2 hardened build and deployment were re-run from
+`codex/whilom-web-workers-env-hardening` at source SHA
+`9c794ca224984cae5a2dfc291246b5764c7cc7fc`. Wrangler was invoked in a
+sanitized child environment with `CLOUDFLARE_API_TOKEN`,
+`CLOUDFLARE_API_KEY`, and `CLOUDFLARE_EMAIL` removed. The repository-local
+Wrangler then authenticated through the stored OAuth session as the expected
+Cloudflare account with Workers write permission. No credential values were
+printed or committed.
+
+The sanctioned build completed with the existing pinned stack and the
+fail-closed Workers artifact audit passed (`1377` files scanned). The active
+preview target remained exactly `whilom-web-preview`:
+
+- preview URL: `https://whilom-web-preview.philgeran.workers.dev`;
+- deployment ID: `cc683498-8886-4e35-8e3f-939ab5275d26`;
+- Worker version ID: `9425551e-fc1e-466f-9ca3-eff78b8a0e89`;
+- deployment timestamp: `2026-09-06T20:52:38.914448Z`;
+- deployment source SHA: `9c794ca224984cae5a2dfc291246b5764c7cc7fc`.
+
+The basic live Worker checks passed:
+
+- `GET /api/health` → `200`, JSON `{ status: "ok", app: "web" }`;
+- `GET /` → `200`, non-empty SSR HTML with no Worker exception;
+- `GET /place/w3-preview-probe` → `404`, expected rendered not-found output
+  for the nonexistent dynamic place, with no Worker exception.
+
+The public Supabase boundary did not pass this retry. Anonymous `GET
+/discover` returned `200` and the normal Whilom page, but rendered the
+application's explicit `Could not reach the database` fallback instead of a
+result count or empty-result state. The route catches the underlying public
+`search_places` read failure, so the response proves graceful handling rather
+than successful live Supabase discovery. Wrangler tail captured no uncaught
+Worker exception for the request. Authenticated session refresh and all
+Server Actions remain untested; every available Server Action is an auth or
+mutation operation, so none was invoked during this certification retry.
+
+Accordingly, this retry is recorded as
+`WHILOM_WEB_HARDENED_PREVIEW_BLOCKED_RUNTIME`, not as live Supabase or
+production readiness. The public configuration remains restricted to the
+approved Web values, and no service-role, database, access-token, or Cloudflare
+credential was supplied to the Worker. No Supabase or Auth mutation, DNS,
+custom-domain, Yorkshire, Mobile, or production Worker operation was performed.
 
 ## Decision for the current Web baseline
 
