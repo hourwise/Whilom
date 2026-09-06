@@ -239,6 +239,31 @@ redeployment, schema change, migration, grant, RLS change, Auth operation, or
 data mutation was performed. The W3-R3A classification is
 `WHILOM_WEB_PUBLIC_SUPABASE_CERTIFIED`.
 
+## W3-R4A authenticated SSR status
+
+The authenticated SSR certification was not started because no existing
+explicitly approved Whilom hosted test identity was available through the
+secure sources exposed to this task. The repository contains only the
+development-only mobile fixture identity; it is not a live Web credential and
+was not used. No test email, test password, Auth token, or credential value was
+printed, requested from the application, committed, or entered into the
+preview.
+
+The Web architecture was inspected and the safe anonymous protection baseline
+was exercised against the existing preview:
+
+- `/account` → HTTP `307` to `/login`;
+- `/admin/imports` → HTTP `307` to `/login`;
+- `/login` → HTTP `200` with the public sign-in form;
+- no token-like material appeared in the protected-route responses.
+
+No sign-in, sign-out, Auth session establishment, authenticated SSR request,
+cookie/session continuity test, role test, or Server Action was attempted.
+No code, configuration, dependency, or deployment change was required. The
+next step is to repeat W3-R4A only after an existing approved test identity is
+made available through an approved secure mechanism. The current
+classification is `WHILOM_WEB_AUTH_CERT_BLOCKED_TEST_IDENTITY`.
+
 ## Decision for the current Web baseline
 
 Whilom Web is a full-stack Next.js application, not a static export. It uses
