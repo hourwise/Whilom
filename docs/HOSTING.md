@@ -1,9 +1,11 @@
 # Whilom hosting readiness
 
-Status: W3-R2 hardened preview deployed and basic Worker/SSR smoke-tested, but
-the live public Supabase discovery boundary is not yet certified. The isolated
-preview Worker was deployed without creating a custom route, secret, binding,
-custom domain, DNS record, or changing `whilom.co.uk`.
+Status: W3-R3 diagnosis complete: the hardened preview Worker and basic
+Worker/SSR surfaces are healthy, but the configured public Supabase endpoint
+currently fails global DNS resolution. The live public Supabase discovery
+boundary is not certified. The isolated preview Worker was deployed without
+creating a custom route, secret, binding, custom domain, DNS record, or
+changing `whilom.co.uk`.
 
 ## Hosting maturity levels
 
@@ -132,6 +134,62 @@ production readiness. The public configuration remains restricted to the
 approved Web values, and no service-role, database, access-token, or Cloudflare
 credential was supplied to the Worker. No Supabase or Auth mutation, DNS,
 custom-domain, Yorkshire, Mobile, or production Worker operation was performed.
+
+## W3-R3 public Supabase diagnosis
+
+W3-R3 was a read-only diagnosis from branch
+`codex/whilom-web-workers-env-hardening` at SHA
+`22c283d6a880c0a4c29cdd8496dcf7212d7e679c`. The application call path and
+repository contract were inspected before making network requests. The
+`/discover` Server Component calls the typed public `search_places` RPC through
+the `@supabase/ssr` server client. The migration-defined function has the same
+14 optional arguments used by the application, returns the expected place
+projection, is `STABLE` SQL invoker code, and reads approved `public.places`
+rows under the public-read RLS policy. No Web-side contract mismatch was found.
+
+The public configuration was checked without printing credentials:
+
+- URL protocol: `https`;
+- URL host: `dpeqeschhcdfxcyhksbn.supabase.co`, matching the expected project
+  reference;
+- anon key: present, non-placeholder;
+- sanitized OpenNext artifact: the expected host and public-key fingerprint
+  were present in the generated output.
+
+The first direct read-only Supabase reachability check was:
+
+```text
+GET https://dpeqeschhcdfxcyhksbn.supabase.co/rest/v1/
+```
+
+It failed before TLS or HTTP with:
+
+```text
+TypeError: fetch failed
+causeCode: ENOTFOUND
+getaddrinfo ENOTFOUND dpeqeschhcdfxcyhksbn.supabase.co
+```
+
+The Windows resolver independently reported that the DNS name does not exist.
+Cloudflare and Google DNS-over-HTTPS queries both returned DNS `Status: 3`
+(`NXDOMAIN`) with no A records. Therefore the failure is at public hostname
+resolution, before PostgREST, RPC dispatch, grants, RLS, response parsing, or
+Next/OpenNext request construction can be tested. The direct `search_places`
+RPC was intentionally not sent after the basic HTTPS gate failed.
+
+This explains why the deployed `/discover` page renders its existing graceful
+database fallback, but it does not prove whether the project reference is
+currently active, whether the Supabase project endpoint has changed, or whether
+the project is unavailable for another platform reason. Those facts require a
+read-only check in the Supabase dashboard/account environment. No Web code fix,
+dependency change, redeployment, or Supabase operation was performed in W3-R3.
+
+The next controlled step is to verify the current project endpoint and project
+availability for `dpeqeschhcdfxcyhksbn`. If the endpoint differs, update only
+the sanctioned public Web configuration and repeat the isolated build/audit;
+if the endpoint is correct but remains globally NXDOMAIN, resolve the Supabase
+project/network availability issue before any W4 work. The current W3-R3
+classification is `WHILOM_WEB_PUBLIC_SUPABASE_BLOCKED_NETWORK`.
 
 ## Decision for the current Web baseline
 
