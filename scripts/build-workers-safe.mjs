@@ -290,23 +290,15 @@ export async function runWorkersBuild({
       sandboxRoot,
       buildEnvironment,
     );
-    console.log('Workers build: running Next.js in an isolated, sanitized app directory.');
-    run('pnpm', ['--filter', '@whilom/web', 'build'], sandboxRoot, buildEnvironment);
-
-    // OpenNext 1.20.4 launches Wrangler through the detected package-manager
-    // command. The locked pnpm install has already completed; removing only
-    // the sandbox lockfile makes that internal, non-installing launcher use
-    // the local npm exec path instead of a Windows shell shim.
-    fs.rmSync(path.join(sandboxRoot, 'pnpm-lock.yaml'), { force: true });
-
-    // OpenNext 1.20.4 reads .env files during its own compileEnvFiles stage.
-    // Create only the allowlisted file after Next has finished, then remove it
-    // before auditing/copying the generated artifact.
+    // OpenNext 1.20.4 reads .env files both while it runs Next in standalone
+    // mode and during its own compileEnvFiles stage. Create only the
+    // allowlisted file for that complete build, then remove it before
+    // auditing/copying the generated artifact.
     const sanitizedEnvPath = path.join(sandboxRoot, '.env');
     writeSanitizedEnv(sanitizedEnvPath, allowedValues);
     try {
-      console.log('Workers build: generating OpenNext output from the sanitized environment contract.');
-      const buildArgs = ['build', '--skipNextBuild', ...openNextArgs];
+      console.log('Workers build: running the sanitized Next.js and OpenNext standalone build.');
+      const buildArgs = ['build', ...openNextArgs];
       run(
         process.execPath,
         [openNextCliPath(), ...buildArgs],

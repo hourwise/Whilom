@@ -207,12 +207,13 @@ corepack pnpm --filter @whilom/web workers:audit
 `workers:build`, `workers:preview`, and `workers:deploy` run
 `scripts/build-workers-safe.mjs`. The script stages only `apps/web` in a
 temporary directory, reuses the already-installed locked dependencies through
-a process-local Corepack pnpm 9.12 shim, runs the Next production build before
-OpenNext env extraction, and then supplies OpenNext with a temporary `.env`
-containing only the approved public variables. The temporary file is removed
-before the generated output is audited and copied to the ignored app output
-directory. The user's root `.env` is never written or moved, so an interrupted
-command cannot strand it in a replacement state.
+a process-local Corepack pnpm 9.12 shim, and supplies OpenNext with a
+temporary `.env` containing only the approved public variables. OpenNext then
+runs the required standalone Next production build and its Workers transform
+inside that isolated directory. The temporary file is removed before the
+generated output is audited and copied to the ignored app output directory.
+The user's root `.env` is never written or moved, so an interrupted command
+cannot strand it in a replacement state.
 
 `scripts/audit-workers-artifact.mjs` is the fail-closed artifact gate. It
 rejects packaged `.env`/`.dev.vars` files, parses every OpenNext

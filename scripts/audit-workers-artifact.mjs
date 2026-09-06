@@ -100,6 +100,9 @@ export function auditWorkersArtifact({
   forbiddenValues = [],
 }) {
   const findings = [];
+  const allowedEnvironmentValues = new Set(
+    Object.values(requiredEnv).filter((value) => typeof value === 'string' && value.length >= 1),
+  );
   if (!fs.existsSync(artifactDir) || !fs.statSync(artifactDir).isDirectory()) {
     throw new Error(`Workers artifact audit failed: missing artifact directory ${artifactDir}`);
   }
@@ -149,7 +152,16 @@ export function auditWorkersArtifact({
       }
     }
     for (const value of forbiddenValues) {
-      if (typeof value === 'string' && value.length >= 8 && source.includes(Buffer.from(value))) {
+      // A mobile-prefixed variable in the developer .env may intentionally
+      // contain the same public value as an approved Web variable. That
+      // duplicate is not secret material; distinct non-public values remain
+      // prohibited.
+      if (
+        typeof value === 'string'
+        && value.length >= 8
+        && !allowedEnvironmentValues.has(value)
+        && source.includes(Buffer.from(value))
+      ) {
         addFinding(findings, `prohibited environment material found in ${path.relative(artifactDir, filePath)}`);
       }
     }

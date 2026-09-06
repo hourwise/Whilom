@@ -78,7 +78,11 @@ try {
   const cleanResult = auditWorkersArtifact({
     artifactDir,
     wranglerConfigPath,
-    forbiddenValues: [syntheticSecret, 'postgres://synthetic.invalid/never-connect'],
+    forbiddenValues: [
+      syntheticSecret,
+      'postgres://synthetic.invalid/never-connect',
+      fixturePublic.NEXT_PUBLIC_SUPABASE_URL,
+    ],
   });
   assert.ok(cleanResult.filesScanned > 0);
 
