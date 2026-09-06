@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - codex/whilom-web-workers-runtime-cert
+      - codex/whilom-web-workers-deploy-cert
+      - codex/whilom-web-workers-env-hardening
     paths:
       - apps/web/**
       - packages/**
@@ -13,6 +15,8 @@ on:
       - .npmrc
       - .nvmrc
       - .github/workflows/web-workers-compat.yml
+      - scripts/**
+      - docs/HOSTING.md
   pull_request:
     paths:
       - apps/web/**
@@ -36,7 +40,7 @@ jobs:
   workers-compat:
     name: OpenNext Worker compatibility
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       CI: true
       # These loopback values only let the SSR client initialise during a
@@ -64,22 +68,28 @@ jobs:
         run: |
           node --version
           corepack pnpm --version
-          test "$(pnpm --version)" = "9.12.0"
+          test "$(corepack pnpm --version)" = "9.12.0"
 
       - name: Install locked workspace
-        run: pnpm install --frozen-lockfile
+        run: corepack pnpm install --frozen-lockfile
 
       - name: Web typecheck
-        run: pnpm --filter @whilom/web typecheck
+        run: corepack pnpm --filter @whilom/web typecheck
 
       - name: Web tests
-        run: pnpm --filter @whilom/web test
+        run: corepack pnpm --filter @whilom/web test
 
-      - name: Next production build
-        run: pnpm --filter @whilom/web build
+      - name: Sanitized Next and OpenNext Workers build
+        run: corepack pnpm --filter @whilom/web workers:build
 
-      - name: OpenNext Workers build
-        run: pnpm --filter @whilom/web workers:build
+      - name: Workers artifact audit
+        run: corepack pnpm --filter @whilom/web workers:audit
+
+      - name: Synthetic environment-boundary regression
+        run: corepack pnpm test:workers-env
+
+      - name: Workers artifact audit after regression build
+        run: corepack pnpm --filter @whilom/web workers:audit
 
       - name: Local Workers runtime smoke
         working-directory: apps/web
@@ -100,7 +110,7 @@ jobs:
           }
           trap cleanup EXIT
 
-          pnpm exec wrangler dev --local --port 8787 --inspector-port 0 \
+          corepack pnpm exec wrangler dev --local --port 8787 --inspector-port 0 \
             --show-interactive-dev-session=false >"$log" 2>&1 &
           echo $! >"$pidfile"
 

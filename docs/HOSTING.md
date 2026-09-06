@@ -182,6 +182,63 @@ credential. Workers Builds will need the two public values available at build
 time and any genuinely server-only values provided as platform secrets, never
 committed to Git.
 
+## W3-S1 Workers environment boundary
+
+OpenNext 1.20.4 has an important monorepo behaviour: its environment extractor
+reads `.env`, `.env.production`, `.env.development`, `.env.test`, and the
+corresponding local files from both the app directory and the detected
+monorepo root. Because the Web app is below the repository root, a developer's
+ignored root `.env` is therefore in scope. During the OpenNext build,
+`compileEnvFiles` serialises the extracted values into
+`.open-next/cloudflare/next-env.mjs`; that module is then included in the
+generated Worker bundle. This is an OpenNext extraction/bundling path, not a
+Supabase or Wrangler database feature.
+
+The sanctioned Workers commands now enforce the boundary without moving,
+renaming, deleting, or modifying the real developer `.env`:
+
+```text
+corepack pnpm --filter @whilom/web workers:build
+corepack pnpm --filter @whilom/web workers:preview
+corepack pnpm --filter @whilom/web workers:deploy
+corepack pnpm --filter @whilom/web workers:audit
+```
+
+`workers:build`, `workers:preview`, and `workers:deploy` run
+`scripts/build-workers-safe.mjs`. The script stages only `apps/web` in a
+temporary directory, reuses the already-installed locked dependencies through
+a process-local Corepack pnpm 9.12 shim, runs the Next production build before
+OpenNext env extraction, and then supplies OpenNext with a temporary `.env`
+containing only the approved public variables. The temporary file is removed
+before the generated output is audited and copied to the ignored app output
+directory. The user's root `.env` is never written or moved, so an interrupted
+command cannot strand it in a replacement state.
+
+`scripts/audit-workers-artifact.mjs` is the fail-closed artifact gate. It
+rejects packaged `.env`/`.dev.vars` files, parses every OpenNext
+`next-env.mjs` export, rejects any environment key outside the approved public
+allowlist, checks Wrangler variables and prohibited Cloudflare storage/secret
+bindings, and scans the output for prohibited key names or supplied forbidden
+material. It reports paths and key names only; it never prints environment
+values. A future local or CI deployment must use the sanctioned package
+scripts, and must not bypass them with a direct lower-level
+`opennextjs-cloudflare build` when a developer-local `.env` exists.
+
+The deterministic synthetic boundary regression is:
+
+```text
+corepack pnpm test:workers-env
+```
+
+It loads a temporary fixture environment containing synthetic service-role and
+unrelated API-key values, verifies that the sanctioned process environment and
+temporary `.env` contain only the fixture's public values, audits a clean
+representative artifact, and verifies that an injected contaminated artifact is
+rejected. It never uses the user's real credential values as test fixtures and
+never deploys. The Linux compatibility workflow additionally runs the full
+sanctioned OpenNext build before applying the same audit to its generated
+Worker.
+
 ## Compatibility notes
 
 - `@supabase/ssr` is used through browser, Server Component/Action, Route
