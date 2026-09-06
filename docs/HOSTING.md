@@ -1,8 +1,8 @@
 # Whilom hosting readiness
 
-Status: W3 deployment-certification blocked before upload. No Cloudflare
-account mutation, Worker deployment, secret, route, custom domain, DNS record,
-or `whilom.co.uk` change has been made.
+Status: W3 workers.dev preview certified. The isolated preview Worker was
+deployed and smoke-tested without creating a custom route, secret, binding,
+custom domain, DNS record, or changing `whilom.co.uk`.
 
 ## Hosting maturity levels
 
@@ -15,12 +15,13 @@ The compatibility gates are deliberately separate from deployment:
    [33180393492](https://github.com/hourwise/Whilom/actions/runs/33180393492),
    which booted `.open-next/worker.js` with Wrangler/workerd and smoke-tested
    HTTP routes.
-4. **Real `workers.dev` deployment** — blocked before upload because the
-   available Wrangler authentication is invalid/expired.
+4. **Real `workers.dev` deployment** — verified for the isolated
+   `whilom-web-preview` Worker; HTTPS health, root, and a dynamic route were
+   exercised.
 5. **Live Supabase integration** — not verified by this compatibility slice.
 6. **Custom domain/DNS** — not configured; `whilom.co.uk` is untouched.
 
-## W3 deployment-certification result
+## W3 workers.dev preview certification
 
 The W2-certified stack remains suitable for a bounded preview deployment:
 
@@ -31,20 +32,47 @@ The W2-certified stack remains suitable for a bounded preview deployment:
 - pnpm 9.12.0;
 - Node 22 for the Wrangler compatibility path.
 
-The intended non-production Worker name is `whilom-web-preview`, supplied
-explicitly at deployment time rather than changing the W2 default config name.
-It was not possible to enumerate Cloudflare resources or establish whether
-that name or a `workers.dev` subdomain already exists because the read-only
-Wrangler account check failed with an invalid/expired token. No upload was
-attempted.
+The preview was deployed under the explicitly non-production identity
+`whilom-web-preview` in the authenticated account `Philgeran@gmail.com's
+Account` (`b7765d4c91a51c079125912afcd840cf`). The Worker does not use a custom
+domain or production route.
 
-The safe future sequence, after an operator restores valid Wrangler
-authentication and confirms the target account/name, is to build the already
-validated OpenNext output and deploy it with the explicit preview name. The
-deployment must receive only the public Supabase URL/anon credential and
-optional map-style value through an approved external configuration mechanism;
-no service-role key, PostgreSQL password, ingestion credential, or Supabase
-access token belongs in this path.
+Deployment evidence:
+
+- source Git SHA: `b5f7ae919d0a8d6efd35d59515f35e5bf3cbe61b`;
+- OpenNext: `1.20.4`;
+- Wrangler: `4.127.0`;
+- preview URL: `https://whilom-web-preview.philgeran.workers.dev`;
+- deployment ID: `ddce29bb-e301-4c2b-8852-e67f0c0701a6`;
+- Worker version ID: `eebe7a42-e262-4816-9bd4-398163b741b9`;
+- deployment timestamp: `2026-09-06T17:16:01.662192Z`;
+- bindings: `ASSETS` only; no D1, KV, R2, Queue, Durable Object, or secret
+  binding.
+
+The final upload used the existing OpenNext deploy path with normal Wrangler
+bundling. An initial direct `--no-bundle` attempt was rejected by Cloudflare
+before a Worker was created because the generated Worker imports the adapter's
+local `cloudflare/images.js` module; the adapter-supported bundled dry-run then
+passed and the corrected deployment succeeded. No unrelated Worker was
+overwritten.
+
+The deployed build received only the public Supabase URL and anon/publishable
+credential from external local configuration. No service-role key, PostgreSQL
+password, ingestion credential, Supabase access token, or Cloudflare token was
+placed in the repository or passed as a Worker application secret.
+
+HTTPS smoke evidence:
+
+- `GET /api/health` → `200`, valid JSON, `status: "ok"`, `app: "web"`;
+- `GET /` → `200`, non-empty Whilom HTML, no Worker exception;
+- `GET /place/w3-preview-probe` → `404` from the expected dynamic place lookup
+  for a nonexistent slug, with a rendered Whilom not-found response and no
+  Worker exception. This also exercised the public Supabase read/session
+  boundary without writing data.
+
+Authenticated account/admin actions, live Yorkshire discovery, and full
+Supabase integration remain separate certification gates. The deployment is a
+preview-runtime certification, not production release approval.
 
 ## Decision for the current Web baseline
 
@@ -100,7 +128,9 @@ The Web app now has the minimum manual OpenNext shape:
   `.open-next/assets`, enables `nodejs_compat`, and has no account, route,
   domain, binding, or secret.
 - `apps/web/package.json` has build/preview/deploy/type-generation scripts.
-  The deploy script is a future operator command; it was not invoked here.
+  The preview used the equivalent adapter deploy command with an explicit
+  `--name whilom-web-preview` override so the W2 default `whilom-web` identity
+  was not targeted.
 - `apps/web/next.config.mjs` transpiles `@whilom/discovery`, matching the
   other source-distributed workspace packages consumed by Web.
 - `.github/workflows/web-workers-compat.yml` is a compatibility-only Linux
