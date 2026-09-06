@@ -1,11 +1,10 @@
 # Whilom hosting readiness
 
-Status: W3-R3 diagnosis complete: the hardened preview Worker and basic
-Worker/SSR surfaces are healthy, but the configured public Supabase endpoint
-currently fails global DNS resolution. The live public Supabase discovery
-boundary is not certified. The isolated preview Worker was deployed without
-creating a custom route, secret, binding, custom domain, DNS record, or
-changing `whilom.co.uk`.
+Status: W3-R3A public Supabase boundary certified for anonymous discovery. The
+hardened preview Worker and basic Worker/SSR surfaces are healthy, and the
+resumed Supabase project now responds to the exact public RPC contract. No
+custom route, secret, binding, custom domain, DNS record, or change to
+`whilom.co.uk` was made.
 
 ## Hosting maturity levels
 
@@ -21,7 +20,8 @@ The compatibility gates are deliberately separate from deployment:
 4. **Real `workers.dev` deployment** — verified for the isolated
    `whilom-web-preview` Worker; HTTPS health, root, and a dynamic route were
    exercised.
-5. **Live Supabase integration** — not verified by this compatibility slice.
+5. **Live Supabase integration** — anonymous public discovery verified;
+   authenticated/session and mutation paths remain separate gates.
 6. **Custom domain/DNS** — not configured; `whilom.co.uk` is untouched.
 
 ## W3 workers.dev preview certification
@@ -190,6 +190,54 @@ the sanctioned public Web configuration and repeat the isolated build/audit;
 if the endpoint is correct but remains globally NXDOMAIN, resolve the Supabase
 project/network availability issue before any W4 work. The current W3-R3
 classification is `WHILOM_WEB_PUBLIC_SUPABASE_BLOCKED_NETWORK`.
+
+## W3-R3A resumed public Supabase certification
+
+The Whilom Supabase project was confirmed inactive during W3-R3 and was resumed
+by the operator. The repository configuration was correct throughout:
+
+- project ref: `dpeqeschhcdfxcyhksbn`;
+- API URL: `https://dpeqeschhcdfxcyhksbn.supabase.co`;
+- no public configuration or application source change was required.
+
+After resumption, the existing endpoint passed the bounded read-only sequence:
+
+- DNS resolved with IPv4 records;
+- TLS connected successfully with an authorized TLS 1.3 session;
+- `GET /rest/v1/` reached Supabase/PostgREST and returned HTTP `401` with the
+  safe message `Secret API key required`. This root OpenAPI-style endpoint is
+  not the application read contract and does not invalidate the public RPC
+  check.
+
+The exact repository-defined public RPC was then called with the public key and
+the conservative body `{ "max_rows": 1, "row_offset": 0 }`:
+
+- `POST /rest/v1/rpc/search_places` → HTTP `200`;
+- JSON response was an empty array;
+- returned row count: `0`;
+- no PostgREST, signature, grant, schema-cache, or RLS error.
+
+The existing deployed Worker was tested without rebuilding or redeploying:
+
+- `/api/health` → HTTP `200`, `{ status: "ok", app: "web" }`;
+- `/` → HTTP `200`, normal Whilom SSR;
+- `/discover` → HTTP `200`, no database fallback, `0 results`, and the
+  truthful `No places match those filters.` empty state;
+- `/discover?text=church` → HTTP `200`, no fallback, empty state;
+- `/discover?period=roman` → HTTP `200`, no fallback, empty state.
+
+The empty result is expected because the hosted project has not received the
+Yorkshire or another heritage dataset. No real place slug was available, so no
+real `/place/...` route could be selected in this slice. Anonymous middleware
+and SSR therefore passed the public reachability/RPC/page-rendering chain;
+authenticated sessions and mutation Server Actions remain separate gates.
+
+This resolves the W3-R3 network diagnosis as a Supabase project-availability
+issue, not a Web URL, OpenNext, RPC signature, grant, or RLS defect. The
+existing Worker was sufficient once the project resumed. No rebuild,
+redeployment, schema change, migration, grant, RLS change, Auth operation, or
+data mutation was performed. The W3-R3A classification is
+`WHILOM_WEB_PUBLIC_SUPABASE_CERTIFIED`.
 
 ## Decision for the current Web baseline
 
