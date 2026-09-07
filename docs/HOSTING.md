@@ -354,13 +354,70 @@ then passed `/api/health`, `/`, `/discover`, anonymous `/account` and
 `/admin/imports` protection, authenticated `/account` with the retained
 ordinary-user identity, ordinary-user `/admin/imports` denial, and sign-out.
 
-A fresh first-time confirmation-link click is intentionally still pending: the
-retained certification identity was already confirmed before this change and
-cannot generate a meaningful signup-confirmation test. The remaining bounded
-operator step is to use at most one additional operator-controlled address at
-`/signup`, enter its password privately, open that account's confirmation link,
-and verify that it lands on the preview callback and finishes at clean
-`/account`. No password or confirmation value belongs in repository evidence.
+At the end of W3-R4C, a fresh first-time confirmation-link click was still
+pending. That gate was closed by W3-R4D using one additional
+operator-controlled identity. No password or confirmation value belongs in
+repository evidence.
+
+## W3-R4D final email-confirmation acceptance and W3 closure
+
+The hosted email-confirmation gate is now closed for the preview environment.
+The second dedicated certification identity used the real `/signup` flow; the
+confirmation email was delivered, its link was accepted, and the browser
+returned to the approved Workers preview callback rather than
+`http://localhost:3000`. The final stable URL was clean of Auth token material,
+and the authenticated account surface was reachable. The operator entered the
+password and opened the confirmation link privately; neither was provided to
+Codex or retained in repository evidence.
+
+A read-only hosted verification of the newest certification identity confirmed:
+
+- two total Auth identities, with one newest identity;
+- the newest identity is email-confirmed;
+- one corresponding profile with the normal `user` role;
+- zero wishlists, visits, reviews, corrections, trips, comments, tips, or
+  reports for that identity.
+
+The current transition configuration is intentionally exact and temporary:
+
+- Site URL: `https://whilom-web-preview.philgeran.workers.dev`;
+- redirect allow-list:
+  `https://whilom-web-preview.philgeran.workers.dev/auth/confirm`;
+  `https://whilom.co.uk/auth/confirm`;
+- no wildcard redirect and no unrelated Auth configuration change.
+
+The confirmation path is therefore:
+
+`/signup` → hosted email → `/auth/confirm` on the approved preview origin →
+clean `/account`.
+
+The callback is application-owned and the signup action supplies the exact
+approved callback origin. The prior localhost redirect defect is resolved.
+The preview Site URL is not the permanent production identity. W4 must first
+attach and verify `https://whilom.co.uk`, then make that origin the canonical
+Supabase Site URL and retain only the exact callback URLs needed for the
+preview-to-production transition. No W4 domain or DNS action was taken here.
+
+Final preview regression evidence remained green:
+
+- `/api/health` → HTTP `200`, JSON `status: "ok"`, `app: "web"`;
+- `/` → HTTP `200` normal SSR;
+- `/discover` → HTTP `200`, no database fallback, truthful zero-result state;
+- anonymous `/account` and `/admin/imports` → `/login`;
+- the operator's authenticated ordinary-user session rendered `/account` and
+  was denied admin content at `/admin/imports`;
+- sign-out completed, and subsequent `/account` access was denied again.
+
+Expiry-based token refresh was not directly exercised. Session propagation and
+the normal sign-out boundary were certified. Place-dependent mutations,
+wishlist/visit/review/correction actions, admin imports, Yorkshire activation,
+and all unrelated Server Actions remained untested and untouched.
+
+With the hardened Workers build, environment leakage guard, real Cloudflare
+deployment, HTTPS health/root, public Supabase RPC, public SSR, signup,
+email-confirmation redirect, login, authenticated SSR, session propagation,
+ordinary-user authorization, and sign-out all certified, W3 hosting/runtime
+certification is complete for the preview environment.
 
 ## Decision for the current Web baseline
 
