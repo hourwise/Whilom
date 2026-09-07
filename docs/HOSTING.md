@@ -346,6 +346,22 @@ to that canonical production origin while retaining only the exact callback
 URLs required during the transition. No DNS or custom-domain action was taken
 by W3-R4C.
 
+The Web-only validation passed typecheck, focused callback-policy tests, lint,
+the sanitized OpenNext build, and the fail-closed Workers artifact audit. The
+preview-only redeployment used the hardened OAuth-sanitized path and produced
+Worker version `16d0b74f-385d-479d-88d7-808a43a61404`. Read-only live checks
+then passed `/api/health`, `/`, `/discover`, anonymous `/account` and
+`/admin/imports` protection, authenticated `/account` with the retained
+ordinary-user identity, ordinary-user `/admin/imports` denial, and sign-out.
+
+A fresh first-time confirmation-link click is intentionally still pending: the
+retained certification identity was already confirmed before this change and
+cannot generate a meaningful signup-confirmation test. The remaining bounded
+operator step is to use at most one additional operator-controlled address at
+`/signup`, enter its password privately, open that account's confirmation link,
+and verify that it lands on the preview callback and finishes at clean
+`/account`. No password or confirmation value belongs in repository evidence.
+
 ## Decision for the current Web baseline
 
 Whilom Web is a full-stack Next.js application, not a static export. It uses
