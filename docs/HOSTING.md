@@ -239,30 +239,63 @@ redeployment, schema change, migration, grant, RLS change, Auth operation, or
 data mutation was performed. The W3-R3A classification is
 `WHILOM_WEB_PUBLIC_SUPABASE_CERTIFIED`.
 
-## W3-R4A authenticated SSR status
+## W3-R4B authenticated SSR certification
 
-The authenticated SSR certification was not started because no existing
-explicitly approved Whilom hosted test identity was available through the
-secure sources exposed to this task. The repository contains only the
-development-only mobile fixture identity; it is not a live Web credential and
-was not used. No test email, test password, Auth token, or credential value was
-printed, requested from the application, committed, or entered into the
-preview.
+One dedicated Whilom hosted test identity was provisioned through the deployed
+`/signup` flow by the human operator, confirmed through the normal Supabase
+email-confirmation flow, and used to establish a real preview session. No
+service-role key, admin API, password reset, or direct administrative user
+creation was used. The identity is retained as the designated certification
+identity; its email and credentials are intentionally not recorded here.
 
-The Web architecture was inspected and the safe anonymous protection baseline
-was exercised against the existing preview:
+The pre-signup side-effect review found only the intended bounded footprint:
+the `auth.users` insert invokes `public.handle_new_user()`, which creates one
+`public.profiles` row with the default `user` role and display name. No other
+Auth user-creation trigger or external hook was configured. A read-only
+post-provision query confirmed:
 
-- `/account` → HTTP `307` to `/login`;
-- `/admin/imports` → HTTP `307` to `/login`;
-- `/login` → HTTP `200` with the public sign-in form;
-- no token-like material appeared in the protected-route responses.
+- one matching Auth identity, confirmed and with a recorded sign-in;
+- one matching profile with role `user`;
+- zero wishlists, visits, reviews, corrections, or trips.
 
-No sign-in, sign-out, Auth session establishment, authenticated SSR request,
-cookie/session continuity test, role test, or Server Action was attempted.
-No code, configuration, dependency, or deployment change was required. The
-next step is to repeat W3-R4A only after an existing approved test identity is
-made available through an approved secure mechanism. The current
-classification is `WHILOM_WEB_AUTH_CERT_BLOCKED_TEST_IDENTITY`.
+Hosted Auth configuration has email/password signup enabled and requires email
+confirmation. Its current `site_url` is still `http://localhost:3000` with an
+empty redirect allow-list. The confirmation itself succeeded, but the email
+link's final navigation could not reach that local host. After confirmation,
+the operator signed in at the preview origin and the authenticated session was
+verified there. This redirect configuration remains a hosting/Auth follow-up;
+it was not changed in this certification.
+
+Authenticated preview evidence:
+
+- `/account` rendered the authenticated profile and the account navigation
+  changed to `Account` plus `Sign out`;
+- repeated requests across `/account`, `/`, `/discover`, and `/explore`
+  retained the authenticated state through OpenNext/Cloudflare middleware;
+- `/admin/imports` for the ordinary `user` role resolved to `/not-found`, with
+  no admin content or import action exposed;
+- the normal application sign-out action cleared the session;
+- after sign-out, `/account` and `/admin/imports` redirected to `/login`, while
+  the public routes remained available;
+- expiry-based token refresh was not directly exercised; session propagation
+  across repeated requests was certified.
+
+Post-sign-out public regression remained green:
+
+- `/api/health` → HTTP `200`, JSON `status: "ok"`, `app: "web"`;
+- `/` → HTTP `200` normal SSR;
+- `/discover` → HTTP `200`, no database fallback, truthful zero-result state.
+
+Wishlist, visit, review, correction, profile-edit, admin, and import Server
+Actions were intentionally not invoked. No Yorkshire or place data exists in
+the hosted database, and no place-dependent mutation was attempted. No
+password, token, cookie, confirmation value, or privileged credential was
+printed, committed, or retained in repository evidence.
+
+The W3-R4B result is `WHILOM_WEB_AUTHENTICATED_SSR_CERTIFIED`. The next
+hosting follow-up is to correct the hosted Auth preview redirect configuration
+before treating email-confirmation navigation as release-ready; this is
+separate from the already-certified session/SSR boundary.
 
 ## Decision for the current Web baseline
 
