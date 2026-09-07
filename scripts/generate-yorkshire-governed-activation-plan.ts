@@ -592,6 +592,17 @@ function computeOriginalAutoSafeFingerprint(rows: CandidateRow[]): string {
   );
 }
 
+function computeCandidateIdSetHash(rows: Array<{ candidateId: string }>): string {
+  return sha256Bytes(
+    stableJson(
+      rows
+        .map((row) => row.candidateId)
+        .slice()
+        .sort(),
+    ),
+  );
+}
+
 function renderMarkdown(
   plan: JsonObject,
   planHash: string,
@@ -600,6 +611,7 @@ function renderMarkdown(
 ): string {
   const counts = asRecord(plan.counts, 'plan counts');
   const stability = asRecord(plan.autoSafeStability, 'AUTO_SAFE stability');
+  const population = asRecord(plan.candidatePopulation, 'candidate population');
   const lines = [
     '# Yorkshire DATA-R5 Governed Dry-Run Activation Plan',
     '',
@@ -612,6 +624,7 @@ function renderMarkdown(
     `- DATA-R4 policy Markdown SHA-256: \`${DATA_R4_MARKDOWN_HASH}\``,
     `- Derived plan SHA-256: \`${planHash}\``,
     '- The sealed candidates CSV remains the canonical payload; the derived plan references it by sealed hash and does not duplicate its normalized JSON payload.',
+    `- Complete candidate population: ${population.rowCount} rows; candidate-ID set fingerprint preserved: ${population.candidateIdSetEqual ? 'yes' : 'no'}.`,
     '- External evidence used: no.',
     '- Hosted activation performed: no.',
     '',
@@ -794,17 +807,42 @@ function run(): void {
 
   const reviewRows = rows.filter((row) => row.originalActivationDisposition === 'REVIEW_REQUIRED');
   const deferredRows = rows.filter((row) => !row.publishable);
-  const compactRows = rows.map(
-    ({ normalised: _normalised, matcherRationale: _matcherRationale, ...row }) => row,
+  const compactRow = (row: PlanRow) => ({
+    ordinal: row.ordinal,
+    candidateId: row.candidateId,
+    sourceId: row.sourceId,
+    sourceRecordId: row.sourceRecordId,
+    originalActivationDisposition: row.originalActivationDisposition,
+    originalMatchedSourceRecordId: row.matchedSourceRecordId,
+    governedCategory: row.governedCategory,
+    governedAction: row.governedAction,
+    resultingPublicationClass: row.resultingPublicationClass,
+    resultingMatchedSourceRecordId: row.resultingMatchedSourceRecordId,
+    publishable: row.publishable,
+    canonicalCreation: row.canonicalCreation,
+    existingCanonicalMerge: row.existingCanonicalMerge,
+    multiGeometry: row.multiGeometry,
+    reason: row.reason,
+    policyBatchId: row.policyBatchId,
+    policyDataR2Decision: row.policyDataR2Decision,
+    policyDataR3Resolution: row.policyDataR3Resolution,
+    sourceObjectId: row.sourceObjectId,
+  });
+  const compactReviewRows = reviewRows.map((row) => ({
+    ...compactRow(row),
+    originalMatcherRationale: row.matcherRationale,
+  }));
+  const compactDeferredRows = deferredRows.map((row) => ({
+    ...compactRow(row),
+    originalMatcherRationale: row.matcherRationale,
+  }));
+  const originalCandidateIdSetHash = computeCandidateIdSetHash(candidates);
+  const resultingCandidateIdSetHash = computeCandidateIdSetHash(rows);
+  assertEqual(
+    resultingCandidateIdSetHash,
+    originalCandidateIdSetHash,
+    'complete candidate-ID set stability',
   );
-  const compactReviewRows = reviewRows.map(({ normalised: _normalised, ...row }) => ({
-    ...row,
-    originalMatcherRationale: row.matcherRationale,
-  }));
-  const compactDeferredRows = deferredRows.map(({ normalised: _normalised, ...row }) => ({
-    ...row,
-    originalMatcherRationale: row.matcherRationale,
-  }));
   const plan = {
     schema: 'whilom.yorkshire.governed-activation-plan.v1',
     sourceCheckpoint: SOURCE_CHECKPOINT,
@@ -819,9 +857,15 @@ function run(): void {
     batchId: DATA_R5_BATCH_ID,
     activationAuthorised: false,
     externalEvidenceUsed: false,
-    rows: compactRows,
     reviewTransitions: compactReviewRows,
     deferredRows: compactDeferredRows,
+    candidatePopulation: {
+      rowCount: rows.length,
+      sealedCandidateCsv: relativePath(CANDIDATES),
+      originalCandidateIdSetSha256: originalCandidateIdSetHash,
+      resultingCandidateIdSetSha256: resultingCandidateIdSetHash,
+      candidateIdSetEqual: true,
+    },
     counts: {
       sourceRows: asNumber(originalPlan.sourceRows, 'sourceRows'),
       validCandidateRows: rows.length,

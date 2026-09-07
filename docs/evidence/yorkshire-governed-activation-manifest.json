@@ -24,7 +24,7 @@
   },
   "derivedPlan": {
     "path": "docs/evidence/yorkshire-governed-activation-plan.json",
-    "sha256": "54501A692D8B101BF8D63138BB9D756DBA865FA71CAA3CC3109C07626E26907F"
+    "sha256": "C2A9021ADA13136CB2E1F95C9C5CE65458DA56F5D170A5CBFC300D0FF024CC51"
   },
   "sealedCandidateCsv": {
     "path": "ingestion/regional-candidates.csv",

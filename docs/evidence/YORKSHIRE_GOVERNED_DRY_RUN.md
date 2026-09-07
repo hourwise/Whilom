@@ -7,8 +7,9 @@ This is a deterministic offline transformation of the sealed Yorkshire activatio
 - Source checkpoint: `3e6552f893b897cc5f82e3d0e9c6982f39419fc0`
 - DATA-R4 policy JSON SHA-256: `008CB154DBA9C065D1AB6E1F9F6DBF500F0B52302F310377AB488BFCEC16B364`
 - DATA-R4 policy Markdown SHA-256: `63F4BE521B68B6E55FE763A9C64B7242D27AB3E8A73782FB3273E0657CF305F7`
-- Derived plan SHA-256: `54501A692D8B101BF8D63138BB9D756DBA865FA71CAA3CC3109C07626E26907F`
+- Derived plan SHA-256: `C2A9021ADA13136CB2E1F95C9C5CE65458DA56F5D170A5CBFC300D0FF024CC51`
 - The sealed candidates CSV remains the canonical payload; the derived plan references it by sealed hash and does not duplicate its normalized JSON payload.
+- Complete candidate population: 23314 rows; candidate-ID set fingerprint preserved: yes.
 - External evidence used: no.
 - Hosted activation performed: no.
 
