@@ -1,0 +1,55 @@
+{
+  "schema": "whilom.yorkshire.governed-activation-manifest.v1",
+  "sourceCheckpoint": "3e6552f893b897cc5f82e3d0e9c6982f39419fc0",
+  "dataR4PolicyHash": "008CB154DBA9C065D1AB6E1F9F6DBF500F0B52302F310377AB488BFCEC16B364",
+  "dataR4PolicyMarkdownHash": "63F4BE521B68B6E55FE763A9C64B7242D27AB3E8A73782FB3273E0657CF305F7",
+  "policyBatchId": "DATA-R4-YORKSHIRE-ACTIVATION-POLICY-7BFEEA47",
+  "batchId": "DATA-R5-YORKSHIRE-GOVERNED-DRY-RUN-3E6552F8",
+  "generatorVersion": "whilom.yorkshire.governed-activation-plan.v1",
+  "inputHashes": {
+    "docs/evidence/YORKSHIRE_GOVERNED_REVIEW_DECISIONS.md": "B1A41E08B2945B18C456241871C4D8C4A964B859ADF9A2CA478BBBE608CDA1D8",
+    "docs/evidence/yorkshire-governed-review-decisions.json": "2EDA6C46502CDA74350E999C4574777A507FB214237D1CEE2FC266CA04DA97FE",
+    "docs/evidence/YORKSHIRE_RESIDUAL_REVIEW.md": "0A80E9FAEF13B74D373D7CA04B26B09911AD632E64F517846F54AE856DFFB535",
+    "docs/evidence/yorkshire-residual-review.json": "89A7D45F3419D94C48ADDEE4DF7702FD06DDEDF9173B89592277355AA3B74672",
+    "ingestion/.regional-cache/nhle-regional.json": "23FFFA87082EBD6B60C44C1FA89DAC3ECFD8EFC0B65EAF665170F4B0654A69A2",
+    "ingestion/regional/regional-dataset-manifest.json": "7F620A6F60F7337D07842B776F79CFE23755612EB933BE0155B854AB92AB1513",
+    "ingestion/regional-activation-plan.json": "0201857D6391766F5CC4CFE3A994E5E1A01EFD716F3DA5C1F33EE52BECC11466",
+    "ingestion/regional-candidates.csv": "A31A870C9F769C48CB58260EE766F35048DEE9E89FC2A48BC16E246EE2DA7C00",
+    "ingestion/regional-conflicts.csv": "A317087EB292BF4A36E0360ACC449EA1807E9F0164B78A0118B356019645188C",
+    "ingestion/regional-approved.csv": "FE7FBEDECF472C0DEC0D22DBCB0CC8C6883D210AB97CC124D79D6DC04A4F862A",
+    "ingestion/regional-temporal.csv": "BBB8D6C04CE24A0A04ED6ABCAC30ADCAB43F2939DE7A86C5AA4FCAD10C2B3D16",
+    "ingestion/regional-temporal-wikidata.csv": "E353015177EF412DFEBB7AD0A8537E14A34F61CCDAC042C47AB712B2EE58DB8A",
+    "ingestion/regional-temporal-rejected.csv": "F13F9633F501490F250DA217AAC4EA9264BBE35470308C70D84970CD0B64D052",
+    "supabase/regional/activate.sql": "692E881B230CF939092E29D2048BBCD77C4A7EFE6952E507DF211037CC935858"
+  },
+  "derivedPlan": {
+    "path": "docs/evidence/yorkshire-governed-activation-plan.json",
+    "sha256": "54501A692D8B101BF8D63138BB9D756DBA865FA71CAA3CC3109C07626E26907F"
+  },
+  "sealedCandidateCsv": {
+    "path": "ingestion/regional-candidates.csv",
+    "sha256": "A31A870C9F769C48CB58260EE766F35048DEE9E89FC2A48BC16E246EE2DA7C00"
+  },
+  "counts": {
+    "sourceRows": 23315,
+    "validCandidateRows": 23314,
+    "rejectedBeforeCandidate": 1,
+    "originalAutoSafeRows": 23171,
+    "originalReviewRequiredRows": 143,
+    "autoSafeCarriedForwardRows": 23171,
+    "governedPublishableRows": 126,
+    "governedDeferredRows": 17,
+    "governedExcludedRows": 0,
+    "publishableRows": 23297,
+    "deferredRows": 17,
+    "excludedRows": 0,
+    "newCanonicalCreations": 23272,
+    "existingCanonicalMerges": 25,
+    "governedNewCanonicalCreations": 126,
+    "governedExistingCanonicalMerges": 0,
+    "governedMultiGeometryRows": 2
+  },
+  "deterministic": true,
+  "generationTimestamp": null,
+  "activationAuthorised": false
+}
