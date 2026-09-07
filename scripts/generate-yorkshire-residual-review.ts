@@ -141,6 +141,14 @@ function sha256(path: string): string {
   return createHash('sha256').update(readFileSync(path)).digest('hex').toUpperCase();
 }
 
+function relativePath(path: string): string {
+  const relative =
+    path.startsWith(`${ROOT}/`) || path.startsWith(`${ROOT}\\`)
+      ? path.slice(ROOT.length + 1)
+      : path;
+  return relative.replaceAll('\\', '/');
+}
+
 function assertEqual(actual: unknown, expected: unknown, label: string): void {
   if (actual !== expected)
     throw new Error(`${label}: expected ${String(expected)}, got ${String(actual)}`);
@@ -274,10 +282,10 @@ function run(): void {
   assertEqual(sha256(DATA_R2_MARKDOWN), DATA_R2_MARKDOWN_SHA, 'DATA-R2 Markdown hash');
   assertEqual(sha256(DATA_R2_JSON), DATA_R2_JSON_SHA, 'DATA-R2 JSON hash');
   const sealedHashes = Object.fromEntries(
-    Object.entries(SEALED_HASHES).map(([path]) => [path.replace(`${ROOT}\\`, ''), sha256(path)]),
+    Object.entries(SEALED_HASHES).map(([path]) => [relativePath(path), sha256(path)]),
   );
   for (const [path, expected] of Object.entries(SEALED_HASHES)) {
-    assertEqual(sha256(path), expected, `sealed artefact hash ${path.replace(`${ROOT}\\`, '')}`);
+    assertEqual(sha256(path), expected, `sealed artefact hash ${relativePath(path)}`);
   }
 
   const dataR2 = JSON.parse(readFileSync(DATA_R2_JSON, 'utf8')) as JsonRecord;
