@@ -1,0 +1,2530 @@
+{
+  "schema": "whilom.yorkshire.residual-review.v1",
+  "dataset": {
+    "id": "WHILOM_REGION_YORKSHIRE_V1",
+    "version": "1.0.0",
+    "source": "Historic England NHLE / OGL-UK-3.0",
+    "sourceRows": 23315,
+    "validCandidateRows": 23314,
+    "reviewRequiredRows": 143
+  },
+  "sourceCheckpoint": "8cc140e993d760d0412298f54b32ed643ff4e7f6",
+  "dataR2Artefacts": {
+    "markdown": "B1A41E08B2945B18C456241871C4D8C4A964B859ADF9A2CA478BBBE608CDA1D8",
+    "json": "2EDA6C46502CDA74350E999C4574777A507FB214237D1CEE2FC266CA04DA97FE"
+  },
+  "sealedCanonicalEvidenceHashes": {
+    "ingestion\\regional\\regional-dataset-manifest.json": "7F620A6F60F7337D07842B776F79CFE23755612EB933BE0155B854AB92AB1513",
+    "ingestion\\.regional-cache\\nhle-regional.json": "23FFFA87082EBD6B60C44C1FA89DAC3ECFD8EFC0B65EAF665170F4B0654A69A2",
+    "ingestion\\regional-activation-plan.json": "0201857D6391766F5CC4CFE3A994E5E1A01EFD716F3DA5C1F33EE52BECC11466",
+    "ingestion\\regional-candidates.csv": "A31A870C9F769C48CB58260EE766F35048DEE9E89FC2A48BC16E246EE2DA7C00",
+    "ingestion\\regional-conflicts.csv": "A317087EB292BF4A36E0360ACC449EA1807E9F0164B78A0118B356019645188C",
+    "ingestion\\regional-approved.csv": "FE7FBEDECF472C0DEC0D22DBCB0CC8C6883D210AB97CC124D79D6DC04A4F862A",
+    "ingestion\\regional-temporal.csv": "BBB8D6C04CE24A0A04ED6ABCAC30ADCAB43F2939DE7A86C5AA4FCAD10C2B3D16",
+    "ingestion\\regional-temporal-wikidata.csv": "E353015177EF412DFEBB7AD0A8537E14A34F61CCDAC042C47AB712B2EE58DB8A",
+    "ingestion\\regional-temporal-rejected.csv": "F13F9633F501490F250DA217AAC4EA9264BBE35470308C70D84970CD0B64D052",
+    "ingestion\\regional-temporal-audit.json": "EAFD855DC806C1802469D239A20C421DB15E21B076D72E48ACDCED6A56A50108",
+    "ingestion\\regional\\activate.ts": "5E17C7A6039954750B96333CA13A9A1AF2B21BB364ADF45B5CFFD5A4FA511C50",
+    "ingestion\\transforms\\temporal.ts": "D501699CFF7D1D77AB7377CCED68129903DD2BA1195B8E7754AB5E906CB57D13",
+    "supabase\\regional\\activate.sql": "692E881B230CF939092E29D2048BBCD77C4A7EFE6952E507DF211037CC935858"
+  },
+  "reviewMethod": {
+    "decisionBatchId": "DATA-R3-YORKSHIRE-RESIDUAL-8CC140E993D7",
+    "reviewer": "governed-residual-review-batch",
+    "externalEvidenceUsed": false,
+    "principles": [
+      "Uses only sealed DATA-R2, candidate CSV, manifest and NHLE cache evidence.",
+      "Does not lower matcher thresholds or introduce heuristic approvals.",
+      "Treats the two 1000099 geometry rows as an expected multi-candidate source relationship.",
+      "Keeps every unresolved residual identity decision deferred fail-closed."
+    ]
+  },
+  "source1000099Trace": {
+    "sourceRecordId": "1000099",
+    "sourceName": "Saltaire",
+    "firstDuplicateStage": "SEALED_NHLE_CACHE_AND_CAPTURE_MANIFEST",
+    "rootCause": "Historic England exposes the World Heritage Site as two geometry rows for the same ListEntry. Capture records both features, the adapter emits both raw records, normalisation preserves both feature-specific area/notes values, and deterministic activation IDs use sourceRecordId plus activation ordinal. Duplication is therefore present before candidate generation and is expected for this multi-geometry source representation.",
+    "sourceCache": {
+      "rowCount": 2,
+      "rows": [
+        {
+          "layerId": 10,
+          "layerName": "World Heritage Sites",
+          "objectId": 15,
+          "listEntry": 1000099,
+          "name": "Saltaire",
+          "notes": "Buffer Zone",
+          "areaHectares": 1056.3371687267672,
+          "ngr": "SE 14384 38274",
+          "easting": 414384,
+          "northing": 438274,
+          "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1000099"
+        },
+        {
+          "layerId": 10,
+          "layerName": "World Heritage Sites",
+          "objectId": 16,
+          "listEntry": 1000099,
+          "name": "Saltaire",
+          "notes": "Core Area",
+          "areaHectares": 28.411928793640428,
+          "ngr": "SE 13964 38084",
+          "easting": 414384,
+          "northing": 438274,
+          "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1000099"
+        }
+      ]
+    },
+    "captureManifest": {
+      "occurrenceCount": 2,
+      "zeroBasedIndexes": [23313, 23314],
+      "sourceRecordId": "1000099"
+    },
+    "adapter": {
+      "emittedRawRows": 2,
+      "sourceRecordIds": ["1000099", "1000099"],
+      "sourceObjectIds": [15, 16]
+    },
+    "normalisation": {
+      "validRows": 2,
+      "candidateIds": [
+        "afd0cd1d-0000-4000-8000-000001000099",
+        "afd0cd1e-0000-4000-8000-000001000099"
+      ],
+      "normalizedCandidates": [
+        {
+          "candidateId": "afd0cd1d-0000-4000-8000-000001000099",
+          "sourceRecordId": "1000099",
+          "name": "Saltaire",
+          "altNames": [],
+          "rawType": "World Heritage Sites",
+          "placeType": "unknown",
+          "designations": [
+            {
+              "designation": "world_heritage_site",
+              "reference": "1000099",
+              "firstDesignated": "2001-01-01T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1000099"
+            }
+          ],
+          "location": {
+            "lng": -1.7828869,
+            "lat": 53.8405183
+          },
+          "locationMethod": "geometry_centroid",
+          "locationAccuracyMeters": 1833.7,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 414384,
+              "northing": 438274
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "centroid of a 1056.3371687267672 ha feature; equivalent radius 1833.7 m governs the uncertainty, not the 10 m conversion floor"
+          },
+          "areaHectares": 1056.3371687267672,
+          "sourceNotes": "Buffer Zone",
+          "warnings": [
+            "no specific type could be inferred from the name; fell back to unknown via generic-fallback",
+            "NHLE provides no town/county/postcode for this layer"
+          ]
+        },
+        {
+          "candidateId": "afd0cd1e-0000-4000-8000-000001000099",
+          "sourceRecordId": "1000099",
+          "name": "Saltaire",
+          "altNames": [],
+          "rawType": "World Heritage Sites",
+          "placeType": "unknown",
+          "designations": [
+            {
+              "designation": "world_heritage_site",
+              "reference": "1000099",
+              "firstDesignated": "2001-01-01T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1000099"
+            }
+          ],
+          "location": {
+            "lng": -1.7828869,
+            "lat": 53.8405183
+          },
+          "locationMethod": "geometry_centroid",
+          "locationAccuracyMeters": 300.7,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 414384,
+              "northing": 438274
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "centroid of a 28.411928793640428 ha feature; equivalent radius 300.7 m governs the uncertainty, not the 10 m conversion floor"
+          },
+          "areaHectares": 28.411928793640428,
+          "sourceNotes": "Core Area",
+          "warnings": [
+            "no specific type could be inferred from the name; fell back to unknown via generic-fallback",
+            "NHLE provides no town/county/postcode for this layer"
+          ]
+        }
+      ]
+    },
+    "candidateGeneration": {
+      "rows": 2,
+      "candidateIds": [
+        "afd0cd1d-0000-4000-8000-000001000099",
+        "afd0cd1e-0000-4000-8000-000001000099"
+      ],
+      "idRule": "candidateUuid(sourceRecordId, activationOrdinal) — ordinal keeps geometry rows distinct."
+    },
+    "matcher": {
+      "rows": 2,
+      "outcomes": [
+        {
+          "proposedCanonicalSourceRecordId": "1133523",
+          "proposedCanonicalCandidateId": "ae89b839-0000-4000-8000-000001133523",
+          "rationale": {
+            "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+            "rationale": "Possibly \"Saltaire Mills - Main Block Including Sheds\", needs review: one name merely contains the other, which shows association rather than identity; one record protects a landscape and the other a structure within it; \"107, SALTAIRE ROAD (See details for further address information)\" scores almost as well; 382m apart, outside the 150m agreement radius; score 0.50 below 0.85.",
+            "conflictFields": [],
+            "temporalEvidence": {
+              "numericPatterns": [],
+              "claims": [],
+              "note": "No temporal claim is generated from this name by the current extractor."
+            }
+          },
+          "outcome": "MATCH_REVIEW",
+          "confidence": 0.5
+        },
+        {
+          "proposedCanonicalSourceRecordId": "1133523",
+          "proposedCanonicalCandidateId": "ae89b839-0000-4000-8000-000001133523",
+          "rationale": {
+            "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+            "rationale": "Possibly \"Saltaire Mills - Main Block Including Sheds\", needs review: one name merely contains the other, which shows association rather than identity; one record protects a landscape and the other a structure within it; \"107, SALTAIRE ROAD (See details for further address information)\" scores almost as well; 382m apart, outside the 150m agreement radius; score 0.50 below 0.85.",
+            "conflictFields": [],
+            "temporalEvidence": {
+              "numericPatterns": [],
+              "claims": [],
+              "note": "No temporal claim is generated from this name by the current extractor."
+            }
+          },
+          "outcome": "MATCH_REVIEW",
+          "confidence": 0.5
+        }
+      ]
+    },
+    "activationClassification": {
+      "rows": 2,
+      "publicationClass": "REVIEW_REQUIRED",
+      "outcome": "MATCH_REVIEW",
+      "approvedRows": 0
+    },
+    "reviewArtefact": {
+      "rows": 2,
+      "ordinals": [23312, 23313],
+      "pipelineDisposition": "EXPECTED_MULTI_CANDIDATE",
+      "priorDataR2ObjectIdProjectionCorrection": "DATA-R2 sourceEvidence.objectId was 15 for both rows because its derived lookup selected the first same-coordinate cache feature. The sealed cache itself contains OBJECTID 15 (Buffer Zone) and OBJECTID 16 (Core Area); this DATA-R3 artefact uses the actual feature order and object IDs."
+    },
+    "remediation": {
+      "required": false,
+      "productionCodeChanged": false,
+      "reason": "No generic pipeline defect was found. Existing source-relation documentation and the curtilage-merges regression test cover repeated NHLE geometry rows. Deduplicating by ListEntry would erase the meaningful Buffer/Core distinction."
+    }
+  },
+  "sourceDuplicateRows": [
+    {
+      "activationOrdinal": 23312,
+      "candidateId": "afd0cd1d-0000-4000-8000-000001000099",
+      "sourceRecordId": "1000099",
+      "dataR2SourceObjectId": 15,
+      "actualSealedSourceObjectId": 15,
+      "sourceFeature": {
+        "layerId": 10,
+        "layerName": "World Heritage Sites",
+        "objectId": 15,
+        "listEntry": 1000099,
+        "name": "Saltaire",
+        "notes": "Buffer Zone",
+        "areaHectares": 1056.3371687267672,
+        "ngr": "SE 14384 38274",
+        "easting": 414384,
+        "northing": 438274,
+        "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1000099"
+      },
+      "candidate": {
+        "candidateId": "afd0cd1d-0000-4000-8000-000001000099",
+        "sourceRecordId": "1000099",
+        "name": "Saltaire",
+        "altNames": [],
+        "rawType": "World Heritage Sites",
+        "placeType": "unknown",
+        "designations": [
+          {
+            "designation": "world_heritage_site",
+            "reference": "1000099",
+            "firstDesignated": "2001-01-01T00:00:00.000Z",
+            "url": "https://historicengland.org.uk/listing/the-list/list-entry/1000099"
+          }
+        ],
+        "location": {
+          "lng": -1.7828869,
+          "lat": 53.8405183
+        },
+        "locationMethod": "geometry_centroid",
+        "locationAccuracyMeters": 1833.7,
+        "sourcePosition": {
+          "crs": "EPSG:27700",
+          "coordinates": {
+            "easting": 414384,
+            "northing": 438274
+          },
+          "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+          "accuracyBasis": "centroid of a 1056.3371687267672 ha feature; equivalent radius 1833.7 m governs the uncertainty, not the 10 m conversion floor"
+        },
+        "areaHectares": 1056.3371687267672,
+        "sourceNotes": "Buffer Zone",
+        "warnings": [
+          "no specific type could be inferred from the name; fell back to unknown via generic-fallback",
+          "NHLE provides no town/county/postcode for this layer"
+        ]
+      },
+      "matcher": {
+        "proposedCanonicalSourceRecordId": "1133523",
+        "proposedCanonicalCandidateId": "ae89b839-0000-4000-8000-000001133523",
+        "rationale": {
+          "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+          "rationale": "Possibly \"Saltaire Mills - Main Block Including Sheds\", needs review: one name merely contains the other, which shows association rather than identity; one record protects a landscape and the other a structure within it; \"107, SALTAIRE ROAD (See details for further address information)\" scores almost as well; 382m apart, outside the 150m agreement radius; score 0.50 below 0.85.",
+          "conflictFields": [],
+          "temporalEvidence": {
+            "numericPatterns": [],
+            "claims": [],
+            "note": "No temporal claim is generated from this name by the current extractor."
+          }
+        },
+        "outcome": "MATCH_REVIEW",
+        "confidence": 0.5
+      },
+      "reviewerDisposition": "DEFER_INSUFFICIENT_EVIDENCE",
+      "pipelineDisposition": "EXPECTED_MULTI_CANDIDATE",
+      "resolution": "RETAIN_TWO_GEOMETRY_ROWS",
+      "rationale": "The sealed NHLE cache contains two geometry features for one World Heritage ListEntry: OBJECTID 15 is the Buffer Zone and OBJECTID 16 is the Core Area. The adapter and normalizer preserve one candidate per geometry feature, and the activation ordinal is part of the deterministic candidate ID. This is an expected multi-geometry source relationship, not an exact duplicate candidate-ID defect. The rows remain independently review-gated because no identity decision is granted by this evidence pass."
+    },
+    {
+      "activationOrdinal": 23313,
+      "candidateId": "afd0cd1e-0000-4000-8000-000001000099",
+      "sourceRecordId": "1000099",
+      "dataR2SourceObjectId": 15,
+      "actualSealedSourceObjectId": 16,
+      "sourceFeature": {
+        "layerId": 10,
+        "layerName": "World Heritage Sites",
+        "objectId": 16,
+        "listEntry": 1000099,
+        "name": "Saltaire",
+        "notes": "Core Area",
+        "areaHectares": 28.411928793640428,
+        "ngr": "SE 13964 38084",
+        "easting": 414384,
+        "northing": 438274,
+        "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1000099"
+      },
+      "candidate": {
+        "candidateId": "afd0cd1e-0000-4000-8000-000001000099",
+        "sourceRecordId": "1000099",
+        "name": "Saltaire",
+        "altNames": [],
+        "rawType": "World Heritage Sites",
+        "placeType": "unknown",
+        "designations": [
+          {
+            "designation": "world_heritage_site",
+            "reference": "1000099",
+            "firstDesignated": "2001-01-01T00:00:00.000Z",
+            "url": "https://historicengland.org.uk/listing/the-list/list-entry/1000099"
+          }
+        ],
+        "location": {
+          "lng": -1.7828869,
+          "lat": 53.8405183
+        },
+        "locationMethod": "geometry_centroid",
+        "locationAccuracyMeters": 300.7,
+        "sourcePosition": {
+          "crs": "EPSG:27700",
+          "coordinates": {
+            "easting": 414384,
+            "northing": 438274
+          },
+          "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+          "accuracyBasis": "centroid of a 28.411928793640428 ha feature; equivalent radius 300.7 m governs the uncertainty, not the 10 m conversion floor"
+        },
+        "areaHectares": 28.411928793640428,
+        "sourceNotes": "Core Area",
+        "warnings": [
+          "no specific type could be inferred from the name; fell back to unknown via generic-fallback",
+          "NHLE provides no town/county/postcode for this layer"
+        ]
+      },
+      "matcher": {
+        "proposedCanonicalSourceRecordId": "1133523",
+        "proposedCanonicalCandidateId": "ae89b839-0000-4000-8000-000001133523",
+        "rationale": {
+          "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+          "rationale": "Possibly \"Saltaire Mills - Main Block Including Sheds\", needs review: one name merely contains the other, which shows association rather than identity; one record protects a landscape and the other a structure within it; \"107, SALTAIRE ROAD (See details for further address information)\" scores almost as well; 382m apart, outside the 150m agreement radius; score 0.50 below 0.85.",
+          "conflictFields": [],
+          "temporalEvidence": {
+            "numericPatterns": [],
+            "claims": [],
+            "note": "No temporal claim is generated from this name by the current extractor."
+          }
+        },
+        "outcome": "MATCH_REVIEW",
+        "confidence": 0.5
+      },
+      "reviewerDisposition": "DEFER_INSUFFICIENT_EVIDENCE",
+      "pipelineDisposition": "EXPECTED_MULTI_CANDIDATE",
+      "resolution": "RETAIN_TWO_GEOMETRY_ROWS",
+      "rationale": "The sealed NHLE cache contains two geometry features for one World Heritage ListEntry: OBJECTID 15 is the Buffer Zone and OBJECTID 16 is the Core Area. The adapter and normalizer preserve one candidate per geometry feature, and the activation ordinal is part of the deterministic candidate ID. This is an expected multi-geometry source relationship, not an exact duplicate candidate-ID defect. The rows remain independently review-gated because no identity decision is granted by this evidence pass."
+    }
+  ],
+  "residualRows": [
+    {
+      "activationOrdinal": 21068,
+      "candidateId": "22c646c3-0000-4000-8000-000001003681",
+      "sourceId": "historic-england-nhle",
+      "sourceRecordId": "1003681",
+      "sourceObjectId": 1927,
+      "sourcePlaceName": "Tanfield Bridge",
+      "proposedCanonicalMatch": "Tanfield Bridge",
+      "proposedCanonicalSourceRecordId": "1150786",
+      "proposedCanonicalCandidateId": "068c33e1-0000-4000-8000-000001150786",
+      "matchClass": "MATCH_REVIEW",
+      "dataR1Taxonomy": "NEAR_TIE",
+      "nameSimilarityEvidence": {
+        "matcherConfidence": 0.95,
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "recordedRationale": "Possibly \"Tanfield Bridge\", needs review: \"Tanfield Bridge\" scores almost as well."
+      },
+      "geographicDistance": {
+        "meters": 10,
+        "method": "Haversine distance from sealed candidate coordinates; no coordinate threshold changed",
+        "recomputedMeters": 10.3
+      },
+      "placeTypeComparison": {
+        "source": "structure",
+        "proposedCanonical": "structure",
+        "sourceRawType": "Scheduled Monuments",
+        "proposedCanonicalRawType": "Listed Building points"
+      },
+      "designationAreaStructureContext": {
+        "sourceDesignation": "scheduled_monument",
+        "proposedCanonicalDesignation": "listed_building",
+        "sourceLayer": "Scheduled Monuments",
+        "proposedCanonicalLayer": "Listed Building points",
+        "explicitAreaStructureLanguage": false
+      },
+      "sourceCoordinates": {
+        "lng": -1.5880603,
+        "lat": 54.203578
+      },
+      "candidateCoordinates": {
+        "lng": -1.5881361,
+        "lat": 54.2036591
+      },
+      "capturedEvidenceComparison": {
+        "sourceCandidate": {
+          "candidateId": "22c646c3-0000-4000-8000-000001003681",
+          "sourceRecordId": "1003681",
+          "name": "Tanfield Bridge",
+          "altNames": [],
+          "rawType": "Scheduled Monuments",
+          "placeType": "structure",
+          "designations": [
+            {
+              "designation": "scheduled_monument",
+              "reference": "1003681",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1003681"
+            }
+          ],
+          "location": {
+            "lng": -1.5880603,
+            "lat": 54.203578
+          },
+          "locationMethod": "geometry_centroid",
+          "locationAccuracyMeters": 16.9,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 426969,
+              "northing": 478726
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "centroid of a 0.08923443017987137 ha feature; equivalent radius 16.9 m governs the uncertainty, not the 10 m conversion floor"
+          },
+          "areaHectares": 0.08923443017987137,
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "proposedCanonicalCandidate": {
+          "candidateId": "068c33e1-0000-4000-8000-000001150786",
+          "sourceRecordId": "1150786",
+          "name": "Tanfield Bridge",
+          "altNames": ["TANFIELD BRIDGE"],
+          "rawType": "Listed Building points",
+          "placeType": "structure",
+          "designations": [
+            {
+              "designation": "listed_building",
+              "grade": "II",
+              "reference": "1150786",
+              "firstDesignated": "1989-07-28T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1150786"
+            }
+          ],
+          "location": {
+            "lng": -1.5881361,
+            "lat": 54.2036591
+          },
+          "locationMethod": "source_coordinate",
+          "locationAccuracyMeters": 6.3,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 426964,
+              "northing": 478735
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "published point coordinate; 1.3 m digitising at 1:2500 plus 5 m datum-shift residual"
+          },
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "sourceEvidenceReferences": [
+          {
+            "sourceRecordId": "1003681",
+            "objectId": 1927,
+            "listEntry": 1003681,
+            "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1003681",
+            "sourceLayer": "Scheduled Monuments",
+            "licence": "OGL-UK-3.0"
+          }
+        ],
+        "sourceCoordinates": {
+          "lng": -1.5880603,
+          "lat": 54.203578
+        },
+        "candidateCoordinates": {
+          "lng": -1.5881361,
+          "lat": 54.2036591
+        },
+        "computedDistanceMeters": 10.3
+      },
+      "conflictingCandidateInformation": [],
+      "sourceEvidenceReferences": [
+        {
+          "sourceRecordId": "1003681",
+          "objectId": 1927,
+          "listEntry": 1003681,
+          "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1003681",
+          "sourceLayer": "Scheduled Monuments",
+          "licence": "OGL-UK-3.0"
+        }
+      ],
+      "priorActivationRationale": {
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "rationale": "Possibly \"Tanfield Bridge\", needs review: \"Tanfield Bridge\" scores almost as well.",
+        "conflictFields": [],
+        "temporalEvidence": {
+          "numericPatterns": [],
+          "claims": [],
+          "note": "No temporal claim is generated from this name by the current extractor."
+        }
+      },
+      "duplicateSourceIndication": null,
+      "reviewerDisposition": "DEFER_INSUFFICIENT_EVIDENCE",
+      "reviewerRationale": "The proposed and source names are identical and the points are 10.3m apart, but the sealed rationale records a near-tie with another candidate. The source is a scheduled monument while the proposed record is a listed building, and the captured artefacts do not preserve enough competing-candidate identity/context to prove which physical bridge is intended.",
+      "evidenceNeeded": [
+        "An authoritative identity/designation link distinguishing the two Tanfield Bridge candidates."
+      ],
+      "reviewConfidence": "INSUFFICIENT",
+      "reviewDecisionBatchId": "DATA-R3-YORKSHIRE-RESIDUAL-8CC140E993D7",
+      "externalEvidence": []
+    },
+    {
+      "activationOrdinal": 21076,
+      "candidateId": "8a982cea-0000-4000-8000-000001003689",
+      "sourceId": "historic-england-nhle",
+      "sourceRecordId": "1003689",
+      "sourceObjectId": 1935,
+      "sourcePlaceName": "St Peter's Church",
+      "proposedCanonicalMatch": "Church of St Peter",
+      "proposedCanonicalSourceRecordId": "1083103",
+      "proposedCanonicalCandidateId": "f0129a97-0000-4000-8000-000001083103",
+      "matchClass": "MATCH_REVIEW",
+      "dataR1Taxonomy": "NAME_SIMILARITY_BELOW_THRESHOLD",
+      "nameSimilarityEvidence": {
+        "matcherConfidence": 0.75,
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "recordedRationale": "Possibly \"Church of St Peter\", needs review: names are not close enough; score 0.75 below 0.85."
+      },
+      "geographicDistance": {
+        "meters": 9,
+        "method": "Haversine distance from sealed candidate coordinates; no coordinate threshold changed",
+        "recomputedMeters": 9.2
+      },
+      "placeTypeComparison": {
+        "source": "church",
+        "proposedCanonical": "church",
+        "sourceRawType": "Scheduled Monuments",
+        "proposedCanonicalRawType": "Listed Building points"
+      },
+      "designationAreaStructureContext": {
+        "sourceDesignation": "scheduled_monument",
+        "proposedCanonicalDesignation": "listed_building",
+        "sourceLayer": "Scheduled Monuments",
+        "proposedCanonicalLayer": "Listed Building points",
+        "explicitAreaStructureLanguage": false
+      },
+      "sourceCoordinates": {
+        "lng": -0.4348281,
+        "lat": 53.6837889
+      },
+      "candidateCoordinates": {
+        "lng": -0.4346926,
+        "lat": 53.6837692
+      },
+      "capturedEvidenceComparison": {
+        "sourceCandidate": {
+          "candidateId": "8a982cea-0000-4000-8000-000001003689",
+          "sourceRecordId": "1003689",
+          "name": "St Peter's Church",
+          "altNames": [],
+          "rawType": "Scheduled Monuments",
+          "placeType": "church",
+          "designations": [
+            {
+              "designation": "scheduled_monument",
+              "reference": "1003689",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1003689"
+            }
+          ],
+          "location": {
+            "lng": -0.4348281,
+            "lat": 53.6837889
+          },
+          "locationMethod": "geometry_centroid",
+          "locationAccuracyMeters": 33.2,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 503469,
+              "northing": 421952
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "centroid of a 0.34613327137111355 ha feature; equivalent radius 33.2 m governs the uncertainty, not the 6.3 m conversion floor"
+          },
+          "areaHectares": 0.34613327137111355,
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "proposedCanonicalCandidate": {
+          "candidateId": "f0129a97-0000-4000-8000-000001083103",
+          "sourceRecordId": "1083103",
+          "name": "Church of St Peter",
+          "altNames": ["CHURCH OF ST PETER"],
+          "rawType": "Listed Building points",
+          "placeType": "church",
+          "designations": [
+            {
+              "designation": "listed_building",
+              "grade": "I",
+              "reference": "1083103",
+              "firstDesignated": "1966-09-21T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1083103"
+            }
+          ],
+          "location": {
+            "lng": -0.4346926,
+            "lat": 53.6837692
+          },
+          "locationMethod": "source_coordinate",
+          "locationAccuracyMeters": 5.6,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 503478,
+              "northing": 421950
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "published point coordinate; 0.6 m digitising at 1:1250 plus 5 m datum-shift residual"
+          },
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "sourceEvidenceReferences": [
+          {
+            "sourceRecordId": "1003689",
+            "objectId": 1935,
+            "listEntry": 1003689,
+            "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1003689",
+            "sourceLayer": "Scheduled Monuments",
+            "licence": "OGL-UK-3.0"
+          }
+        ],
+        "sourceCoordinates": {
+          "lng": -0.4348281,
+          "lat": 53.6837889
+        },
+        "candidateCoordinates": {
+          "lng": -0.4346926,
+          "lat": 53.6837692
+        },
+        "computedDistanceMeters": 9.2
+      },
+      "conflictingCandidateInformation": [],
+      "sourceEvidenceReferences": [
+        {
+          "sourceRecordId": "1003689",
+          "objectId": 1935,
+          "listEntry": 1003689,
+          "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1003689",
+          "sourceLayer": "Scheduled Monuments",
+          "licence": "OGL-UK-3.0"
+        }
+      ],
+      "priorActivationRationale": {
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "rationale": "Possibly \"Church of St Peter\", needs review: names are not close enough; score 0.75 below 0.85.",
+        "conflictFields": [],
+        "temporalEvidence": {
+          "numericPatterns": [],
+          "claims": [],
+          "note": "No temporal claim is generated from this name by the current extractor."
+        }
+      },
+      "duplicateSourceIndication": null,
+      "reviewerDisposition": "DEFER_INSUFFICIENT_EVIDENCE",
+      "reviewerRationale": "The points are 9.2m apart and both labels describe St Peter's Church, but the source is a scheduled monument and the proposed record is a listed building. No source-specific alternate name or contextual description is captured that proves these are the same designation rather than overlapping records for different church elements.",
+      "evidenceNeeded": [
+        "A source-level designation or description tying the scheduled monument to the proposed listed building."
+      ],
+      "reviewConfidence": "INSUFFICIENT",
+      "reviewDecisionBatchId": "DATA-R3-YORKSHIRE-RESIDUAL-8CC140E993D7",
+      "externalEvidence": []
+    },
+    {
+      "activationOrdinal": 21166,
+      "candidateId": "e062a71e-0000-4000-8000-000001004181",
+      "sourceId": "historic-england-nhle",
+      "sourceRecordId": "1004181",
+      "sourceObjectId": 2407,
+      "sourcePlaceName": "The Abbot's Staithes",
+      "proposedCanonicalMatch": "Abbots Staith Buildings",
+      "proposedCanonicalSourceRecordId": "1167663",
+      "proposedCanonicalCandidateId": "acc8a8e7-0000-4000-8000-000001167663",
+      "matchClass": "MATCH_REVIEW",
+      "dataR1Taxonomy": "NAME_SIMILARITY_BELOW_THRESHOLD",
+      "nameSimilarityEvidence": {
+        "matcherConfidence": 0.5,
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "recordedRationale": "Possibly \"Abbots Staith Buildings\", needs review: names are not close enough; score 0.50 below 0.85."
+      },
+      "geographicDistance": {
+        "meters": 4,
+        "method": "Haversine distance from sealed candidate coordinates; no coordinate threshold changed",
+        "recomputedMeters": 3.6
+      },
+      "placeTypeComparison": {
+        "source": "archaeological_site",
+        "proposedCanonical": "structure",
+        "sourceRawType": "Scheduled Monuments",
+        "proposedCanonicalRawType": "Listed Building points"
+      },
+      "designationAreaStructureContext": {
+        "sourceDesignation": "scheduled_monument",
+        "proposedCanonicalDesignation": "listed_building",
+        "sourceLayer": "Scheduled Monuments",
+        "proposedCanonicalLayer": "Listed Building points",
+        "explicitAreaStructureLanguage": false
+      },
+      "sourceCoordinates": {
+        "lng": -1.0667412,
+        "lat": 53.7857096
+      },
+      "candidateCoordinates": {
+        "lng": -1.0667115,
+        "lat": 53.7856824
+      },
+      "capturedEvidenceComparison": {
+        "sourceCandidate": {
+          "candidateId": "e062a71e-0000-4000-8000-000001004181",
+          "sourceRecordId": "1004181",
+          "name": "The Abbot's Staithes",
+          "altNames": [],
+          "rawType": "Scheduled Monuments",
+          "placeType": "archaeological_site",
+          "designations": [
+            {
+              "designation": "scheduled_monument",
+              "reference": "1004181",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1004181"
+            }
+          ],
+          "location": {
+            "lng": -1.0667412,
+            "lat": 53.7857096
+          },
+          "locationMethod": "geometry_centroid",
+          "locationAccuracyMeters": 13,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 461587,
+              "northing": 432558
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "centroid of a 0.05299782550389338 ha feature; equivalent radius 13 m governs the uncertainty, not the 10 m conversion floor"
+          },
+          "areaHectares": 0.05299782550389338,
+          "warnings": [
+            "no specific type could be inferred from the name; fell back to archaeological_site via generic-fallback:scheduled_monument",
+            "NHLE provides no town/county/postcode for this layer"
+          ]
+        },
+        "proposedCanonicalCandidate": {
+          "candidateId": "acc8a8e7-0000-4000-8000-000001167663",
+          "sourceRecordId": "1167663",
+          "name": "Abbots Staith Buildings",
+          "altNames": ["ABBOTS STAITH BUILDINGS"],
+          "rawType": "Listed Building points",
+          "placeType": "structure",
+          "designations": [
+            {
+              "designation": "listed_building",
+              "grade": "II*",
+              "reference": "1167663",
+              "firstDesignated": "1952-12-16T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1167663"
+            }
+          ],
+          "location": {
+            "lng": -1.0667115,
+            "lat": 53.7856824
+          },
+          "locationMethod": "source_coordinate",
+          "locationAccuracyMeters": 6.3,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 461589,
+              "northing": 432555
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "published point coordinate; 1.3 m digitising at 1:2500 plus 5 m datum-shift residual"
+          },
+          "warnings": [
+            "no specific type could be inferred from the name; fell back to structure via generic-fallback:listed_building",
+            "NHLE provides no town/county/postcode for this layer"
+          ]
+        },
+        "sourceEvidenceReferences": [
+          {
+            "sourceRecordId": "1004181",
+            "objectId": 2407,
+            "listEntry": 1004181,
+            "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1004181",
+            "sourceLayer": "Scheduled Monuments",
+            "licence": "OGL-UK-3.0"
+          }
+        ],
+        "sourceCoordinates": {
+          "lng": -1.0667412,
+          "lat": 53.7857096
+        },
+        "candidateCoordinates": {
+          "lng": -1.0667115,
+          "lat": 53.7856824
+        },
+        "computedDistanceMeters": 3.6
+      },
+      "conflictingCandidateInformation": [],
+      "sourceEvidenceReferences": [
+        {
+          "sourceRecordId": "1004181",
+          "objectId": 2407,
+          "listEntry": 1004181,
+          "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1004181",
+          "sourceLayer": "Scheduled Monuments",
+          "licence": "OGL-UK-3.0"
+        }
+      ],
+      "priorActivationRationale": {
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "rationale": "Possibly \"Abbots Staith Buildings\", needs review: names are not close enough; score 0.50 below 0.85.",
+        "conflictFields": [],
+        "temporalEvidence": {
+          "numericPatterns": [],
+          "claims": [],
+          "note": "No temporal claim is generated from this name by the current extractor."
+        }
+      },
+      "duplicateSourceIndication": null,
+      "reviewerDisposition": "DEFER_INSUFFICIENT_EVIDENCE",
+      "reviewerRationale": "The points are 3.6m apart, but the names differ between The Abbot's Staithes and Abbots Staith Buildings and the inferred types conflict (archaeological_site versus structure). The captured evidence does not establish whether the entries denote the same remains or adjacent built elements.",
+      "evidenceNeeded": [
+        "An authoritative identity or site-description link resolving the name/type difference."
+      ],
+      "reviewConfidence": "INSUFFICIENT",
+      "reviewDecisionBatchId": "DATA-R3-YORKSHIRE-RESIDUAL-8CC140E993D7",
+      "externalEvidence": []
+    },
+    {
+      "activationOrdinal": 21198,
+      "candidateId": "63dd7973-0000-4000-8000-000001004899",
+      "sourceId": "historic-england-nhle",
+      "sourceRecordId": "1004899",
+      "sourceObjectId": 3118,
+      "sourcePlaceName": "New Bridge",
+      "proposedCanonicalMatch": "New Bridge",
+      "proposedCanonicalSourceRecordId": "1150597",
+      "proposedCanonicalCandidateId": "7d57ea79-0000-4000-8000-000001150597",
+      "matchClass": "MATCH_REVIEW",
+      "dataR1Taxonomy": "NON_DISTINCTIVE_NAME",
+      "nameSimilarityEvidence": {
+        "matcherConfidence": 0.65,
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "recordedRationale": "Possibly \"New Bridge\", needs review: the name is not distinctive; score 0.65 below 0.85."
+      },
+      "geographicDistance": {
+        "meters": 2,
+        "method": "Haversine distance from sealed candidate coordinates; no coordinate threshold changed",
+        "recomputedMeters": 2.2
+      },
+      "placeTypeComparison": {
+        "source": "structure",
+        "proposedCanonical": "structure",
+        "sourceRawType": "Scheduled Monuments",
+        "proposedCanonicalRawType": "Listed Building points"
+      },
+      "designationAreaStructureContext": {
+        "sourceDesignation": "scheduled_monument",
+        "proposedCanonicalDesignation": "listed_building",
+        "sourceLayer": "Scheduled Monuments",
+        "proposedCanonicalLayer": "Listed Building points",
+        "explicitAreaStructureLanguage": false
+      },
+      "sourceCoordinates": {
+        "lng": -1.641582,
+        "lat": 54.038082
+      },
+      "candidateCoordinates": {
+        "lng": -1.6415514,
+        "lat": 54.0380909
+      },
+      "capturedEvidenceComparison": {
+        "sourceCandidate": {
+          "candidateId": "63dd7973-0000-4000-8000-000001004899",
+          "sourceRecordId": "1004899",
+          "name": "New Bridge",
+          "altNames": [],
+          "rawType": "Scheduled Monuments",
+          "placeType": "structure",
+          "designations": [
+            {
+              "designation": "scheduled_monument",
+              "reference": "1004899",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1004899"
+            }
+          ],
+          "location": {
+            "lng": -1.641582,
+            "lat": 54.038082
+          },
+          "locationMethod": "geometry_centroid",
+          "locationAccuracyMeters": 10,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 423571,
+              "northing": 460293
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "centroid of a 0.02225799978289622 ha feature, smaller than the 10 m capture-scale floor"
+          },
+          "areaHectares": 0.02225799978289622,
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "proposedCanonicalCandidate": {
+          "candidateId": "7d57ea79-0000-4000-8000-000001150597",
+          "sourceRecordId": "1150597",
+          "name": "New Bridge",
+          "altNames": ["NEW BRIDGE"],
+          "rawType": "Listed Building points",
+          "placeType": "structure",
+          "designations": [
+            {
+              "designation": "listed_building",
+              "grade": "II",
+              "reference": "1150597",
+              "firstDesignated": "1967-03-06T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1150597"
+            }
+          ],
+          "location": {
+            "lng": -1.6415514,
+            "lat": 54.0380909
+          },
+          "locationMethod": "source_coordinate",
+          "locationAccuracyMeters": 6.3,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 423573,
+              "northing": 460294
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "published point coordinate; 1.3 m digitising at 1:2500 plus 5 m datum-shift residual"
+          },
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "sourceEvidenceReferences": [
+          {
+            "sourceRecordId": "1004899",
+            "objectId": 3118,
+            "listEntry": 1004899,
+            "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1004899",
+            "sourceLayer": "Scheduled Monuments",
+            "licence": "OGL-UK-3.0"
+          }
+        ],
+        "sourceCoordinates": {
+          "lng": -1.641582,
+          "lat": 54.038082
+        },
+        "candidateCoordinates": {
+          "lng": -1.6415514,
+          "lat": 54.0380909
+        },
+        "computedDistanceMeters": 2.2
+      },
+      "conflictingCandidateInformation": [],
+      "sourceEvidenceReferences": [
+        {
+          "sourceRecordId": "1004899",
+          "objectId": 3118,
+          "listEntry": 1004899,
+          "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1004899",
+          "sourceLayer": "Scheduled Monuments",
+          "licence": "OGL-UK-3.0"
+        }
+      ],
+      "priorActivationRationale": {
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "rationale": "Possibly \"New Bridge\", needs review: the name is not distinctive; score 0.65 below 0.85.",
+        "conflictFields": [],
+        "temporalEvidence": {
+          "numericPatterns": [],
+          "claims": [],
+          "note": "No temporal claim is generated from this name by the current extractor."
+        }
+      },
+      "duplicateSourceIndication": null,
+      "reviewerDisposition": "DEFER_INSUFFICIENT_EVIDENCE",
+      "reviewerRationale": "The names are the non-distinctive New Bridge and the points are 2.2m apart. The source is a scheduled monument and the proposed record is a listed building; proximity alone cannot establish identity for a generic bridge name.",
+      "evidenceNeeded": [
+        "A distinctive locality, designation description or authoritative identity link for this New Bridge."
+      ],
+      "reviewConfidence": "INSUFFICIENT",
+      "reviewDecisionBatchId": "DATA-R3-YORKSHIRE-RESIDUAL-8CC140E993D7",
+      "externalEvidence": []
+    },
+    {
+      "activationOrdinal": 21618,
+      "candidateId": "8fd34bec-0000-4000-8000-000001009926",
+      "sourceId": "historic-england-nhle",
+      "sourceRecordId": "1009926",
+      "sourceObjectId": 8086,
+      "sourcePlaceName": "Fairburn Ings (Newton Abbey) moat",
+      "proposedCanonicalMatch": "Remains of Newton Abbey at Se 444 277",
+      "proposedCanonicalSourceRecordId": "1237551",
+      "proposedCanonicalCandidateId": "eb995cd9-0000-4000-8000-000001237551",
+      "matchClass": "MATCH_REVIEW",
+      "dataR1Taxonomy": "NAME_SIMILARITY_BELOW_THRESHOLD",
+      "nameSimilarityEvidence": {
+        "matcherConfidence": 0.6,
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "recordedRationale": "Possibly \"Remains of Newton Abbey at Se 444 277\", needs review: names are not close enough; score 0.60 below 0.85."
+      },
+      "geographicDistance": {
+        "meters": 17,
+        "method": "Haversine distance from sealed candidate coordinates; no coordinate threshold changed",
+        "recomputedMeters": 16.6
+      },
+      "placeTypeComparison": {
+        "source": "abbey",
+        "proposedCanonical": "abbey",
+        "sourceRawType": "Scheduled Monuments",
+        "proposedCanonicalRawType": "Listed Building points"
+      },
+      "designationAreaStructureContext": {
+        "sourceDesignation": "scheduled_monument",
+        "proposedCanonicalDesignation": "listed_building",
+        "sourceLayer": "Scheduled Monuments",
+        "proposedCanonicalLayer": "Listed Building points",
+        "explicitAreaStructureLanguage": false
+      },
+      "sourceCoordinates": {
+        "lng": -1.3270744,
+        "lat": 53.7446688
+      },
+      "candidateCoordinates": {
+        "lng": -1.327288,
+        "lat": 53.7445891
+      },
+      "capturedEvidenceComparison": {
+        "sourceCandidate": {
+          "candidateId": "8fd34bec-0000-4000-8000-000001009926",
+          "sourceRecordId": "1009926",
+          "name": "Fairburn Ings (Newton Abbey) moat",
+          "altNames": [],
+          "rawType": "Scheduled Monuments",
+          "placeType": "abbey",
+          "designations": [
+            {
+              "designation": "scheduled_monument",
+              "reference": "1009926",
+              "firstDesignated": "1992-03-10T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1009926"
+            }
+          ],
+          "location": {
+            "lng": -1.3270744,
+            "lat": 53.7446688
+          },
+          "locationMethod": "geometry_centroid",
+          "locationAccuracyMeters": 36.7,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 444478,
+              "northing": 427798
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "centroid of a 0.423580403104209 ha feature; equivalent radius 36.7 m governs the uncertainty, not the 10 m conversion floor"
+          },
+          "areaHectares": 0.423580403104209,
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "proposedCanonicalCandidate": {
+          "candidateId": "eb995cd9-0000-4000-8000-000001237551",
+          "sourceRecordId": "1237551",
+          "name": "Remains of Newton Abbey at Se 444 277",
+          "altNames": ["REMAINS OF NEWTON ABBEY AT SE 444 277"],
+          "rawType": "Listed Building points",
+          "placeType": "abbey",
+          "designations": [
+            {
+              "designation": "listed_building",
+              "grade": "II",
+              "reference": "1237551",
+              "firstDesignated": "1967-02-03T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1237551"
+            }
+          ],
+          "location": {
+            "lng": -1.327288,
+            "lat": 53.7445891
+          },
+          "locationMethod": "source_coordinate",
+          "locationAccuracyMeters": 6.3,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 444464,
+              "northing": 427789
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "published point coordinate; 1.3 m digitising at 1:2500 plus 5 m datum-shift residual"
+          },
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "sourceEvidenceReferences": [
+          {
+            "sourceRecordId": "1009926",
+            "objectId": 8086,
+            "listEntry": 1009926,
+            "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1009926",
+            "sourceLayer": "Scheduled Monuments",
+            "licence": "OGL-UK-3.0"
+          }
+        ],
+        "sourceCoordinates": {
+          "lng": -1.3270744,
+          "lat": 53.7446688
+        },
+        "candidateCoordinates": {
+          "lng": -1.327288,
+          "lat": 53.7445891
+        },
+        "computedDistanceMeters": 16.6
+      },
+      "conflictingCandidateInformation": [],
+      "sourceEvidenceReferences": [
+        {
+          "sourceRecordId": "1009926",
+          "objectId": 8086,
+          "listEntry": 1009926,
+          "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1009926",
+          "sourceLayer": "Scheduled Monuments",
+          "licence": "OGL-UK-3.0"
+        }
+      ],
+      "priorActivationRationale": {
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "rationale": "Possibly \"Remains of Newton Abbey at Se 444 277\", needs review: names are not close enough; score 0.60 below 0.85.",
+        "conflictFields": [],
+        "temporalEvidence": {
+          "numericPatterns": [],
+          "claims": [],
+          "note": "No temporal claim is generated from this name by the current extractor."
+        }
+      },
+      "duplicateSourceIndication": null,
+      "reviewerDisposition": "DEFER_INSUFFICIENT_EVIDENCE",
+      "reviewerRationale": "The source names a moat at Fairburn Ings/Newton Abbey and the proposed record names the remains of Newton Abbey; the points are 16.6m apart and both infer abbey. The captured evidence does not establish whether the source is the same abbey remains or a separate moat feature within the wider site.",
+      "evidenceNeeded": [
+        "A designation description or authoritative site plan connecting the moat and the proposed abbey remains."
+      ],
+      "reviewConfidence": "INSUFFICIENT",
+      "reviewDecisionBatchId": "DATA-R3-YORKSHIRE-RESIDUAL-8CC140E993D7",
+      "externalEvidence": []
+    },
+    {
+      "activationOrdinal": 21823,
+      "candidateId": "f2dd1108-0000-4000-8000-000001011967",
+      "sourceId": "historic-england-nhle",
+      "sourceRecordId": "1011967",
+      "sourceObjectId": 10127,
+      "sourcePlaceName": "Lord Dacre's Cross or Towton Cross on the west side of the B1217, 1km south west of Towton",
+      "proposedCanonicalMatch": "Cross, Sometimes Known As Lord Dacres Cross",
+      "proposedCanonicalSourceRecordId": "1148443",
+      "proposedCanonicalCandidateId": "a6b61e5d-0000-4000-8000-000001148443",
+      "matchClass": "MATCH_REVIEW",
+      "dataR1Taxonomy": "NAME_SIMILARITY_BELOW_THRESHOLD",
+      "nameSimilarityEvidence": {
+        "matcherConfidence": 0.6,
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "recordedRationale": "Possibly \"Cross, Sometimes Known As Lord Dacres Cross\", needs review: names are not close enough; score 0.60 below 0.85."
+      },
+      "geographicDistance": {
+        "meters": 34,
+        "method": "Haversine distance from sealed candidate coordinates; no coordinate threshold changed",
+        "recomputedMeters": 34.1
+      },
+      "placeTypeComparison": {
+        "source": "monument",
+        "proposedCanonical": "monument",
+        "sourceRawType": "Scheduled Monuments",
+        "proposedCanonicalRawType": "Listed Building points"
+      },
+      "designationAreaStructureContext": {
+        "sourceDesignation": "scheduled_monument",
+        "proposedCanonicalDesignation": "listed_building",
+        "sourceLayer": "Scheduled Monuments",
+        "proposedCanonicalLayer": "Listed Building points",
+        "explicitAreaStructureLanguage": false
+      },
+      "sourceCoordinates": {
+        "lng": -1.2750934,
+        "lat": 53.8416988
+      },
+      "candidateCoordinates": {
+        "lng": -1.2746053,
+        "lat": 53.8418037
+      },
+      "capturedEvidenceComparison": {
+        "sourceCandidate": {
+          "candidateId": "f2dd1108-0000-4000-8000-000001011967",
+          "sourceRecordId": "1011967",
+          "name": "Lord Dacre's Cross or Towton Cross on the west side of the B1217, 1km south west of Towton",
+          "altNames": [],
+          "rawType": "Scheduled Monuments",
+          "placeType": "monument",
+          "designations": [
+            {
+              "designation": "scheduled_monument",
+              "reference": "1011967",
+              "firstDesignated": "1995-06-23T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1011967"
+            }
+          ],
+          "location": {
+            "lng": -1.2750934,
+            "lat": 53.8416988
+          },
+          "locationMethod": "geometry_centroid",
+          "locationAccuracyMeters": 10,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 447796,
+              "northing": 438627
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "centroid of a 0.002501354391156508 ha feature, smaller than the 10 m capture-scale floor"
+          },
+          "areaHectares": 0.002501354391156508,
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "proposedCanonicalCandidate": {
+          "candidateId": "a6b61e5d-0000-4000-8000-000001148443",
+          "sourceRecordId": "1148443",
+          "name": "Cross, Sometimes Known As Lord Dacres Cross",
+          "altNames": ["CROSS, SOMETIMES KNOWN AS LORD DACRES CROSS"],
+          "rawType": "Listed Building points",
+          "placeType": "monument",
+          "designations": [
+            {
+              "designation": "listed_building",
+              "grade": "II",
+              "reference": "1148443",
+              "firstDesignated": "1967-02-03T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1148443"
+            }
+          ],
+          "location": {
+            "lng": -1.2746053,
+            "lat": 53.8418037
+          },
+          "locationMethod": "source_coordinate",
+          "locationAccuracyMeters": 6.3,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 447828,
+              "northing": 438639
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "published point coordinate; 1.3 m digitising at 1:2500 plus 5 m datum-shift residual"
+          },
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "sourceEvidenceReferences": [
+          {
+            "sourceRecordId": "1011967",
+            "objectId": 10127,
+            "listEntry": 1011967,
+            "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1011967",
+            "sourceLayer": "Scheduled Monuments",
+            "licence": "OGL-UK-3.0"
+          }
+        ],
+        "sourceCoordinates": {
+          "lng": -1.2750934,
+          "lat": 53.8416988
+        },
+        "candidateCoordinates": {
+          "lng": -1.2746053,
+          "lat": 53.8418037
+        },
+        "computedDistanceMeters": 34.1
+      },
+      "conflictingCandidateInformation": [],
+      "sourceEvidenceReferences": [
+        {
+          "sourceRecordId": "1011967",
+          "objectId": 10127,
+          "listEntry": 1011967,
+          "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1011967",
+          "sourceLayer": "Scheduled Monuments",
+          "licence": "OGL-UK-3.0"
+        }
+      ],
+      "priorActivationRationale": {
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "rationale": "Possibly \"Cross, Sometimes Known As Lord Dacres Cross\", needs review: names are not close enough; score 0.60 below 0.85.",
+        "conflictFields": [],
+        "temporalEvidence": {
+          "numericPatterns": [],
+          "claims": [],
+          "note": "No temporal claim is generated from this name by the current extractor."
+        }
+      },
+      "duplicateSourceIndication": null,
+      "reviewerDisposition": "DEFER_INSUFFICIENT_EVIDENCE",
+      "reviewerRationale": "The source explicitly names Lord Dacre’s/Towton Cross and the proposed record contains Lord Dacres Cross; the points are 34.1m apart and both infer monument. The sealed evidence does not preserve enough contextual detail to distinguish a confirmed identity from a nearby cross reference.",
+      "evidenceNeeded": [
+        "A source-level description or authoritative location identity for Lord Dacre’s Cross."
+      ],
+      "reviewConfidence": "INSUFFICIENT",
+      "reviewDecisionBatchId": "DATA-R3-YORKSHIRE-RESIDUAL-8CC140E993D7",
+      "externalEvidence": []
+    },
+    {
+      "activationOrdinal": 21997,
+      "candidateId": "9ba4ebe3-0000-4000-8000-000001013300",
+      "sourceId": "historic-england-nhle",
+      "sourceRecordId": "1013300",
+      "sourceObjectId": 11459,
+      "sourcePlaceName": "Cross base in All Saints' churchyard",
+      "proposedCanonicalMatch": "Church of All Saints",
+      "proposedCanonicalSourceRecordId": "1174051",
+      "proposedCanonicalCandidateId": "782ed612-0000-4000-8000-000001174051",
+      "matchClass": "MATCH_REVIEW",
+      "dataR1Taxonomy": "NAME_SIMILARITY_BELOW_THRESHOLD",
+      "nameSimilarityEvidence": {
+        "matcherConfidence": 0.6,
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "recordedRationale": "Possibly \"Church of All Saints\", needs review: names are not close enough; score 0.60 below 0.85."
+      },
+      "geographicDistance": {
+        "meters": 16,
+        "method": "Haversine distance from sealed candidate coordinates; no coordinate threshold changed",
+        "recomputedMeters": 16.1
+      },
+      "placeTypeComparison": {
+        "source": "monument",
+        "proposedCanonical": "church",
+        "sourceRawType": "Scheduled Monuments",
+        "proposedCanonicalRawType": "Listed Building points"
+      },
+      "designationAreaStructureContext": {
+        "sourceDesignation": "scheduled_monument",
+        "proposedCanonicalDesignation": "listed_building",
+        "sourceLayer": "Scheduled Monuments",
+        "proposedCanonicalLayer": "Listed Building points",
+        "explicitAreaStructureLanguage": false
+      },
+      "sourceCoordinates": {
+        "lng": -1.5687445,
+        "lat": 54.0398742
+      },
+      "candidateCoordinates": {
+        "lng": -1.568868,
+        "lat": 54.0397488
+      },
+      "capturedEvidenceComparison": {
+        "sourceCandidate": {
+          "candidateId": "9ba4ebe3-0000-4000-8000-000001013300",
+          "sourceRecordId": "1013300",
+          "name": "Cross base in All Saints' churchyard",
+          "altNames": [],
+          "rawType": "Scheduled Monuments",
+          "placeType": "monument",
+          "designations": [
+            {
+              "designation": "scheduled_monument",
+              "reference": "1013300",
+              "firstDesignated": "1953-03-06T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1013300"
+            }
+          ],
+          "location": {
+            "lng": -1.5687445,
+            "lat": 54.0398742
+          },
+          "locationMethod": "geometry_centroid",
+          "locationAccuracyMeters": 10,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 428340,
+              "northing": 460519
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "centroid of a 0.007851975827576218 ha feature, smaller than the 10 m capture-scale floor"
+          },
+          "areaHectares": 0.007851975827576218,
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "proposedCanonicalCandidate": {
+          "candidateId": "782ed612-0000-4000-8000-000001174051",
+          "sourceRecordId": "1174051",
+          "name": "Church of All Saints",
+          "altNames": ["CHURCH OF ALL SAINTS"],
+          "rawType": "Listed Building points",
+          "placeType": "church",
+          "designations": [
+            {
+              "designation": "listed_building",
+              "grade": "II*",
+              "reference": "1174051",
+              "firstDesignated": "1966-03-15T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1174051"
+            }
+          ],
+          "location": {
+            "lng": -1.568868,
+            "lat": 54.0397488
+          },
+          "locationMethod": "source_coordinate",
+          "locationAccuracyMeters": 6.3,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 428332,
+              "northing": 460505
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "published point coordinate; 1.3 m digitising at 1:2500 plus 5 m datum-shift residual"
+          },
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "sourceEvidenceReferences": [
+          {
+            "sourceRecordId": "1013300",
+            "objectId": 11459,
+            "listEntry": 1013300,
+            "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1013300",
+            "sourceLayer": "Scheduled Monuments",
+            "licence": "OGL-UK-3.0"
+          }
+        ],
+        "sourceCoordinates": {
+          "lng": -1.5687445,
+          "lat": 54.0398742
+        },
+        "candidateCoordinates": {
+          "lng": -1.568868,
+          "lat": 54.0397488
+        },
+        "computedDistanceMeters": 16.1
+      },
+      "conflictingCandidateInformation": [],
+      "sourceEvidenceReferences": [
+        {
+          "sourceRecordId": "1013300",
+          "objectId": 11459,
+          "listEntry": 1013300,
+          "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1013300",
+          "sourceLayer": "Scheduled Monuments",
+          "licence": "OGL-UK-3.0"
+        }
+      ],
+      "priorActivationRationale": {
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "rationale": "Possibly \"Church of All Saints\", needs review: names are not close enough; score 0.60 below 0.85.",
+        "conflictFields": [],
+        "temporalEvidence": {
+          "numericPatterns": [],
+          "claims": [],
+          "note": "No temporal claim is generated from this name by the current extractor."
+        }
+      },
+      "duplicateSourceIndication": null,
+      "reviewerDisposition": "DEFER_INSUFFICIENT_EVIDENCE",
+      "reviewerRationale": "The source is a cross base in All Saints' churchyard, while the proposed record is Church of All Saints; the points are 16.1m apart and the inferred types differ (monument versus church). The captured evidence supports proximity but not identity of the cross and church records.",
+      "evidenceNeeded": [
+        "A designation description proving whether the cross base is included in the proposed church record or is a separate monument."
+      ],
+      "reviewConfidence": "INSUFFICIENT",
+      "reviewDecisionBatchId": "DATA-R3-YORKSHIRE-RESIDUAL-8CC140E993D7",
+      "externalEvidence": []
+    },
+    {
+      "activationOrdinal": 22066,
+      "candidateId": "6b92c7de-0000-4000-8000-000001013622",
+      "sourceId": "historic-england-nhle",
+      "sourceRecordId": "1013622",
+      "sourceObjectId": 11781,
+      "sourcePlaceName": "Village cross",
+      "proposedCanonicalMatch": "Village Cross",
+      "proposedCanonicalSourceRecordId": "1249371",
+      "proposedCanonicalCandidateId": "68961230-0000-4000-8000-000001249371",
+      "matchClass": "MATCH_REVIEW",
+      "dataR1Taxonomy": "NON_DISTINCTIVE_NAME",
+      "nameSimilarityEvidence": {
+        "matcherConfidence": 0.65,
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "recordedRationale": "Possibly \"Village Cross\", needs review: the name is not distinctive; score 0.65 below 0.85."
+      },
+      "geographicDistance": {
+        "meters": 6,
+        "method": "Haversine distance from sealed candidate coordinates; no coordinate threshold changed",
+        "recomputedMeters": 6.3
+      },
+      "placeTypeComparison": {
+        "source": "monument",
+        "proposedCanonical": "monument",
+        "sourceRawType": "Scheduled Monuments",
+        "proposedCanonicalRawType": "Listed Building points"
+      },
+      "designationAreaStructureContext": {
+        "sourceDesignation": "scheduled_monument",
+        "proposedCanonicalDesignation": "listed_building",
+        "sourceLayer": "Scheduled Monuments",
+        "proposedCanonicalLayer": "Listed Building points",
+        "explicitAreaStructureLanguage": false
+      },
+      "sourceCoordinates": {
+        "lng": -0.1877306,
+        "lat": 53.9404459
+      },
+      "candidateCoordinates": {
+        "lng": -0.1877634,
+        "lat": 53.9403925
+      },
+      "capturedEvidenceComparison": {
+        "sourceCandidate": {
+          "candidateId": "6b92c7de-0000-4000-8000-000001013622",
+          "sourceRecordId": "1013622",
+          "name": "Village cross",
+          "altNames": [],
+          "rawType": "Scheduled Monuments",
+          "placeType": "monument",
+          "designations": [
+            {
+              "designation": "scheduled_monument",
+              "reference": "1013622",
+              "firstDesignated": "1951-05-24T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1013622"
+            }
+          ],
+          "location": {
+            "lng": -0.1877306,
+            "lat": 53.9404459
+          },
+          "locationMethod": "geometry_centroid",
+          "locationAccuracyMeters": 10,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 519058,
+              "northing": 450891
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "centroid of a 0.011293006840759925 ha feature, smaller than the 10 m capture-scale floor"
+          },
+          "areaHectares": 0.011293006840759925,
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "proposedCanonicalCandidate": {
+          "candidateId": "68961230-0000-4000-8000-000001249371",
+          "sourceRecordId": "1249371",
+          "name": "Village Cross",
+          "altNames": ["VILLAGE CROSS"],
+          "rawType": "Listed Building points",
+          "placeType": "monument",
+          "designations": [
+            {
+              "designation": "listed_building",
+              "grade": "II",
+              "reference": "1249371",
+              "firstDesignated": "1985-11-26T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1249371"
+            }
+          ],
+          "location": {
+            "lng": -0.1877634,
+            "lat": 53.9403925
+          },
+          "locationMethod": "source_coordinate",
+          "locationAccuracyMeters": 6.3,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 519056,
+              "northing": 450885
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "published point coordinate; 1.3 m digitising at 1:2500 plus 5 m datum-shift residual"
+          },
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "sourceEvidenceReferences": [
+          {
+            "sourceRecordId": "1013622",
+            "objectId": 11781,
+            "listEntry": 1013622,
+            "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1013622",
+            "sourceLayer": "Scheduled Monuments",
+            "licence": "OGL-UK-3.0"
+          }
+        ],
+        "sourceCoordinates": {
+          "lng": -0.1877306,
+          "lat": 53.9404459
+        },
+        "candidateCoordinates": {
+          "lng": -0.1877634,
+          "lat": 53.9403925
+        },
+        "computedDistanceMeters": 6.3
+      },
+      "conflictingCandidateInformation": [],
+      "sourceEvidenceReferences": [
+        {
+          "sourceRecordId": "1013622",
+          "objectId": 11781,
+          "listEntry": 1013622,
+          "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1013622",
+          "sourceLayer": "Scheduled Monuments",
+          "licence": "OGL-UK-3.0"
+        }
+      ],
+      "priorActivationRationale": {
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "rationale": "Possibly \"Village Cross\", needs review: the name is not distinctive; score 0.65 below 0.85.",
+        "conflictFields": [],
+        "temporalEvidence": {
+          "numericPatterns": [],
+          "claims": [],
+          "note": "No temporal claim is generated from this name by the current extractor."
+        }
+      },
+      "duplicateSourceIndication": null,
+      "reviewerDisposition": "DEFER_INSUFFICIENT_EVIDENCE",
+      "reviewerRationale": "The names are the generic Village cross/Village Cross and the points are 6.3m apart, with matching monument inference but different source designations. A shared generic label and proximity are insufficient to merge the records safely.",
+      "evidenceNeeded": [
+        "A distinctive locality or authoritative designation identity for the village cross."
+      ],
+      "reviewConfidence": "INSUFFICIENT",
+      "reviewDecisionBatchId": "DATA-R3-YORKSHIRE-RESIDUAL-8CC140E993D7",
+      "externalEvidence": []
+    },
+    {
+      "activationOrdinal": 22585,
+      "candidateId": "4ce95f4f-0000-4000-8000-000001017557",
+      "sourceId": "historic-england-nhle",
+      "sourceRecordId": "1017557",
+      "sourceObjectId": 15703,
+      "sourcePlaceName": "St Leonard's Church and cross base adjacent to St Mary's Church",
+      "proposedCanonicalMatch": "Church of St Leonard's",
+      "proposedCanonicalSourceRecordId": "1149621",
+      "proposedCanonicalCandidateId": "5517fe5b-0000-4000-8000-000001149621",
+      "matchClass": "MATCH_REVIEW",
+      "dataR1Taxonomy": "NAME_SIMILARITY_BELOW_THRESHOLD",
+      "nameSimilarityEvidence": {
+        "matcherConfidence": 0.6,
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "recordedRationale": "Possibly \"Church of St Leonard's\", needs review: names are not close enough; score 0.60 below 0.85."
+      },
+      "geographicDistance": {
+        "meters": 2,
+        "method": "Haversine distance from sealed candidate coordinates; no coordinate threshold changed",
+        "recomputedMeters": 2.2
+      },
+      "placeTypeComparison": {
+        "source": "church",
+        "proposedCanonical": "church",
+        "sourceRawType": "Scheduled Monuments",
+        "proposedCanonicalRawType": "Listed Building points"
+      },
+      "designationAreaStructureContext": {
+        "sourceDesignation": "scheduled_monument",
+        "proposedCanonicalDesignation": "listed_building",
+        "sourceLayer": "Scheduled Monuments",
+        "proposedCanonicalLayer": "Listed Building points",
+        "explicitAreaStructureLanguage": false
+      },
+      "sourceCoordinates": {
+        "lng": -0.940744,
+        "lat": 54.0187714
+      },
+      "candidateCoordinates": {
+        "lng": -0.9407137,
+        "lat": 54.0187622
+      },
+      "capturedEvidenceComparison": {
+        "sourceCandidate": {
+          "candidateId": "4ce95f4f-0000-4000-8000-000001017557",
+          "sourceRecordId": "1017557",
+          "name": "St Leonard's Church and cross base adjacent to St Mary's Church",
+          "altNames": [],
+          "rawType": "Scheduled Monuments",
+          "placeType": "church",
+          "designations": [
+            {
+              "designation": "scheduled_monument",
+              "reference": "1017557",
+              "firstDesignated": "1997-12-22T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1017557"
+            }
+          ],
+          "location": {
+            "lng": -0.940744,
+            "lat": 54.0187714
+          },
+          "locationMethod": "geometry_centroid",
+          "locationAccuracyMeters": 10.7,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 469501,
+              "northing": 458604
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "centroid of a 0.03593936372142324 ha feature; equivalent radius 10.7 m governs the uncertainty, not the 10 m conversion floor"
+          },
+          "areaHectares": 0.03593936372142324,
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "proposedCanonicalCandidate": {
+          "candidateId": "5517fe5b-0000-4000-8000-000001149621",
+          "sourceRecordId": "1149621",
+          "name": "Church of St Leonard's",
+          "altNames": ["CHURCH OF ST LEONARD'S"],
+          "rawType": "Listed Building points",
+          "placeType": "church",
+          "designations": [
+            {
+              "designation": "listed_building",
+              "grade": "II",
+              "reference": "1149621",
+              "firstDesignated": "1953-01-29T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1149621"
+            }
+          ],
+          "location": {
+            "lng": -0.9407137,
+            "lat": 54.0187622
+          },
+          "locationMethod": "source_coordinate",
+          "locationAccuracyMeters": 6.3,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 469503,
+              "northing": 458603
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "published point coordinate; 1.3 m digitising at 1:2500 plus 5 m datum-shift residual"
+          },
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "sourceEvidenceReferences": [
+          {
+            "sourceRecordId": "1017557",
+            "objectId": 15703,
+            "listEntry": 1017557,
+            "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1017557",
+            "sourceLayer": "Scheduled Monuments",
+            "licence": "OGL-UK-3.0"
+          }
+        ],
+        "sourceCoordinates": {
+          "lng": -0.940744,
+          "lat": 54.0187714
+        },
+        "candidateCoordinates": {
+          "lng": -0.9407137,
+          "lat": 54.0187622
+        },
+        "computedDistanceMeters": 2.2
+      },
+      "conflictingCandidateInformation": [],
+      "sourceEvidenceReferences": [
+        {
+          "sourceRecordId": "1017557",
+          "objectId": 15703,
+          "listEntry": 1017557,
+          "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1017557",
+          "sourceLayer": "Scheduled Monuments",
+          "licence": "OGL-UK-3.0"
+        }
+      ],
+      "priorActivationRationale": {
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "rationale": "Possibly \"Church of St Leonard's\", needs review: names are not close enough; score 0.60 below 0.85.",
+        "conflictFields": [],
+        "temporalEvidence": {
+          "numericPatterns": [],
+          "claims": [],
+          "note": "No temporal claim is generated from this name by the current extractor."
+        }
+      },
+      "duplicateSourceIndication": null,
+      "reviewerDisposition": "DEFER_INSUFFICIENT_EVIDENCE",
+      "reviewerRationale": "The source describes St Leonard's Church plus a cross base adjacent to St Mary's Church, while the proposed record is Church of St Leonard's; the points are 2.2m apart and both infer church. The captured evidence does not determine whether the designation is a wider complex or a separate cross/ church relationship.",
+      "evidenceNeeded": [
+        "A designation description or plan clarifying the boundary and included components."
+      ],
+      "reviewConfidence": "INSUFFICIENT",
+      "reviewDecisionBatchId": "DATA-R3-YORKSHIRE-RESIDUAL-8CC140E993D7",
+      "externalEvidence": []
+    },
+    {
+      "activationOrdinal": 22714,
+      "candidateId": "c77a94ca-0000-4000-8000-000001018854",
+      "sourceId": "historic-england-nhle",
+      "sourceRecordId": "1018854",
+      "sourceObjectId": 16992,
+      "sourcePlaceName": "Icehouse 75m north west of Sutton Hall",
+      "proposedCanonicalMatch": "Ice House at Sutton Park Approximately 75 Metres to North West of House",
+      "proposedCanonicalSourceRecordId": "1241815",
+      "proposedCanonicalCandidateId": "390daade-0000-4000-8000-000001241815",
+      "matchClass": "MATCH_REVIEW",
+      "dataR1Taxonomy": "NAME_SIMILARITY_BELOW_THRESHOLD",
+      "nameSimilarityEvidence": {
+        "matcherConfidence": 0.75,
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "recordedRationale": "Possibly \"Ice House at Sutton Park Approximately 75 Metres to North West of House\", needs review: names are not close enough; score 0.75 below 0.85."
+      },
+      "geographicDistance": {
+        "meters": 8,
+        "method": "Haversine distance from sealed candidate coordinates; no coordinate threshold changed",
+        "recomputedMeters": 8
+      },
+      "placeTypeComparison": {
+        "source": "country_house",
+        "proposedCanonical": "historic_landscape",
+        "sourceRawType": "Scheduled Monuments",
+        "proposedCanonicalRawType": "Listed Building points"
+      },
+      "designationAreaStructureContext": {
+        "sourceDesignation": "scheduled_monument",
+        "proposedCanonicalDesignation": "listed_building",
+        "sourceLayer": "Scheduled Monuments",
+        "proposedCanonicalLayer": "Listed Building points",
+        "explicitAreaStructureLanguage": false
+      },
+      "sourceCoordinates": {
+        "lng": -1.1113464,
+        "lat": 54.0741166
+      },
+      "candidateCoordinates": {
+        "lng": -1.1113295,
+        "lat": 54.0741883
+      },
+      "capturedEvidenceComparison": {
+        "sourceCandidate": {
+          "candidateId": "c77a94ca-0000-4000-8000-000001018854",
+          "sourceRecordId": "1018854",
+          "name": "Icehouse 75m north west of Sutton Hall",
+          "altNames": [],
+          "rawType": "Scheduled Monuments",
+          "placeType": "country_house",
+          "designations": [
+            {
+              "designation": "scheduled_monument",
+              "reference": "1018854",
+              "firstDesignated": "1999-03-19T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1018854"
+            }
+          ],
+          "location": {
+            "lng": -1.1113464,
+            "lat": 54.0741166
+          },
+          "locationMethod": "geometry_centroid",
+          "locationAccuracyMeters": 10,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 458246,
+              "northing": 464608
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "centroid of a 0.00813343111675581 ha feature, smaller than the 10 m capture-scale floor"
+          },
+          "areaHectares": 0.00813343111675581,
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "proposedCanonicalCandidate": {
+          "candidateId": "390daade-0000-4000-8000-000001241815",
+          "sourceRecordId": "1241815",
+          "name": "Ice House at Sutton Park Approximately 75 Metres to North West of House",
+          "altNames": ["ICE HOUSE AT SUTTON PARK APPROXIMATELY 75 METRES TO NORTH WEST OF HOUSE"],
+          "rawType": "Listed Building points",
+          "placeType": "historic_landscape",
+          "designations": [
+            {
+              "designation": "listed_building",
+              "grade": "II",
+              "reference": "1241815",
+              "firstDesignated": "1989-07-27T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1241815"
+            }
+          ],
+          "location": {
+            "lng": -1.1113295,
+            "lat": 54.0741883
+          },
+          "locationMethod": "source_coordinate",
+          "locationAccuracyMeters": 6.3,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 458247,
+              "northing": 464616
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "published point coordinate; 1.3 m digitising at 1:2500 plus 5 m datum-shift residual"
+          },
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "sourceEvidenceReferences": [
+          {
+            "sourceRecordId": "1018854",
+            "objectId": 16992,
+            "listEntry": 1018854,
+            "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1018854",
+            "sourceLayer": "Scheduled Monuments",
+            "licence": "OGL-UK-3.0"
+          }
+        ],
+        "sourceCoordinates": {
+          "lng": -1.1113464,
+          "lat": 54.0741166
+        },
+        "candidateCoordinates": {
+          "lng": -1.1113295,
+          "lat": 54.0741883
+        },
+        "computedDistanceMeters": 8
+      },
+      "conflictingCandidateInformation": [],
+      "sourceEvidenceReferences": [
+        {
+          "sourceRecordId": "1018854",
+          "objectId": 16992,
+          "listEntry": 1018854,
+          "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1018854",
+          "sourceLayer": "Scheduled Monuments",
+          "licence": "OGL-UK-3.0"
+        }
+      ],
+      "priorActivationRationale": {
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "rationale": "Possibly \"Ice House at Sutton Park Approximately 75 Metres to North West of House\", needs review: names are not close enough; score 0.75 below 0.85.",
+        "conflictFields": [],
+        "temporalEvidence": {
+          "numericPatterns": ["measurement"],
+          "claims": [],
+          "note": "No temporal claim is generated from this name by the current extractor."
+        }
+      },
+      "duplicateSourceIndication": null,
+      "reviewerDisposition": "DEFER_INSUFFICIENT_EVIDENCE",
+      "reviewerRationale": "The source names an icehouse 75m north west of Sutton Hall and the proposed record names an ice house at Sutton Park approximately 75m north west of the house; the points are 8.0m apart. However, the inferred types differ (country_house versus historic_landscape), and the captured data does not resolve the source designation identity.",
+      "evidenceNeeded": [
+        "A designation description confirming that both records refer to the same icehouse within Sutton Park."
+      ],
+      "reviewConfidence": "INSUFFICIENT",
+      "reviewDecisionBatchId": "DATA-R3-YORKSHIRE-RESIDUAL-8CC140E993D7",
+      "externalEvidence": []
+    },
+    {
+      "activationOrdinal": 22751,
+      "candidateId": "9c1e0f65-0000-4000-8000-000001019154",
+      "sourceId": "historic-england-nhle",
+      "sourceRecordId": "1019154",
+      "sourceObjectId": 17292,
+      "sourcePlaceName": "Ellerton Priory: a Cistercian nunnery including fishponds, water management system, mill, field systems and Ellerton medieval settlement",
+      "proposedCanonicalMatch": "Ellerton Priory",
+      "proposedCanonicalSourceRecordId": "1318619",
+      "proposedCanonicalCandidateId": "41295032-0000-4000-8000-000001318619",
+      "matchClass": "MATCH_REVIEW",
+      "dataR1Taxonomy": "OUTSIDE_AGREEMENT_RADIUS",
+      "nameSimilarityEvidence": {
+        "matcherConfidence": 0.8,
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "recordedRationale": "Possibly \"Ellerton Priory\", needs review: 230m apart, outside the 150m agreement radius; score 0.80 below 0.85."
+      },
+      "geographicDistance": {
+        "meters": 230,
+        "method": "Haversine distance from sealed candidate coordinates; no coordinate threshold changed",
+        "recomputedMeters": 229.8
+      },
+      "placeTypeComparison": {
+        "source": "priory",
+        "proposedCanonical": "priory",
+        "sourceRawType": "Scheduled Monuments",
+        "proposedCanonicalRawType": "Listed Building points"
+      },
+      "designationAreaStructureContext": {
+        "sourceDesignation": "scheduled_monument",
+        "proposedCanonicalDesignation": "listed_building",
+        "sourceLayer": "Scheduled Monuments",
+        "proposedCanonicalLayer": "Listed Building points",
+        "explicitAreaStructureLanguage": false
+      },
+      "sourceCoordinates": {
+        "lng": -1.8807398,
+        "lat": 54.3699739
+      },
+      "candidateCoordinates": {
+        "lng": -1.8793951,
+        "lat": 54.3718868
+      },
+      "capturedEvidenceComparison": {
+        "sourceCandidate": {
+          "candidateId": "9c1e0f65-0000-4000-8000-000001019154",
+          "sourceRecordId": "1019154",
+          "name": "Ellerton Priory: a Cistercian nunnery including fishponds, water management system, mill, field systems and Ellerton medieval settlement",
+          "altNames": ["Ellerton Priory"],
+          "rawType": "Scheduled Monuments",
+          "placeType": "priory",
+          "designations": [
+            {
+              "designation": "scheduled_monument",
+              "reference": "1019154",
+              "firstDesignated": "1949-04-27T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1019154"
+            }
+          ],
+          "location": {
+            "lng": -1.8807398,
+            "lat": 54.3699739
+          },
+          "locationMethod": "geometry_centroid",
+          "locationAccuracyMeters": 224.1,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 407846,
+              "northing": 497169
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "centroid of a 15.783683723636038 ha feature; equivalent radius 224.1 m governs the uncertainty, not the 10 m conversion floor"
+          },
+          "areaHectares": 15.783683723636038,
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "proposedCanonicalCandidate": {
+          "candidateId": "41295032-0000-4000-8000-000001318619",
+          "sourceRecordId": "1318619",
+          "name": "Ellerton Priory",
+          "altNames": ["ELLERTON PRIORY"],
+          "rawType": "Listed Building points",
+          "placeType": "priory",
+          "designations": [
+            {
+              "designation": "listed_building",
+              "grade": "II",
+              "reference": "1318619",
+              "firstDesignated": "1966-12-07T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1318619"
+            }
+          ],
+          "location": {
+            "lng": -1.8793951,
+            "lat": 54.3718868
+          },
+          "locationMethod": "source_coordinate",
+          "locationAccuracyMeters": 5.6,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 407933,
+              "northing": 497382
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "published point coordinate; 0.6 m digitising at 1:1250 plus 5 m datum-shift residual"
+          },
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "sourceEvidenceReferences": [
+          {
+            "sourceRecordId": "1019154",
+            "objectId": 17292,
+            "listEntry": 1019154,
+            "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1019154",
+            "sourceLayer": "Scheduled Monuments",
+            "licence": "OGL-UK-3.0"
+          }
+        ],
+        "sourceCoordinates": {
+          "lng": -1.8807398,
+          "lat": 54.3699739
+        },
+        "candidateCoordinates": {
+          "lng": -1.8793951,
+          "lat": 54.3718868
+        },
+        "computedDistanceMeters": 229.8
+      },
+      "conflictingCandidateInformation": [],
+      "sourceEvidenceReferences": [
+        {
+          "sourceRecordId": "1019154",
+          "objectId": 17292,
+          "listEntry": 1019154,
+          "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1019154",
+          "sourceLayer": "Scheduled Monuments",
+          "licence": "OGL-UK-3.0"
+        }
+      ],
+      "priorActivationRationale": {
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "rationale": "Possibly \"Ellerton Priory\", needs review: 230m apart, outside the 150m agreement radius; score 0.80 below 0.85.",
+        "conflictFields": [],
+        "temporalEvidence": {
+          "numericPatterns": [],
+          "claims": [
+            {
+              "periodId": "medieval",
+              "originalText": "medieval",
+              "precision": "period"
+            }
+          ],
+          "note": "Claims are reported for audit only; this review queue audit does not promote or suppress them."
+        }
+      },
+      "duplicateSourceIndication": null,
+      "reviewerDisposition": "DEFER_INSUFFICIENT_EVIDENCE",
+      "reviewerRationale": "The names and inferred priory type agree, but the source is a 15.78ha scheduled area with an estimated 224.1m feature radius and the proposed point is 229.8m away, outside the 150m agreement radius. The area/centroid explanation is plausible but not captured strongly enough to prove identity without widening the global rule.",
+      "evidenceNeeded": [
+        "A reliable boundary/centroid or designation identity showing that the two points represent the same Ellerton Priory area."
+      ],
+      "reviewConfidence": "INSUFFICIENT",
+      "reviewDecisionBatchId": "DATA-R3-YORKSHIRE-RESIDUAL-8CC140E993D7",
+      "externalEvidence": []
+    },
+    {
+      "activationOrdinal": 22939,
+      "candidateId": "53b9ecd2-0000-4000-8000-000001019825",
+      "sourceId": "historic-england-nhle",
+      "sourceRecordId": "1019825",
+      "sourceObjectId": 17961,
+      "sourcePlaceName": "Haltemprice Augustinian priory",
+      "proposedCanonicalMatch": "Haltemprice Priory Farm",
+      "proposedCanonicalSourceRecordId": "1103364",
+      "proposedCanonicalCandidateId": "0023cc2e-0000-4000-8000-000001103364",
+      "matchClass": "MATCH_REVIEW",
+      "dataR1Taxonomy": "NAME_SIMILARITY_BELOW_THRESHOLD",
+      "nameSimilarityEvidence": {
+        "matcherConfidence": 0.5,
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "recordedRationale": "Possibly \"Haltemprice Priory Farm\", needs review: names are not close enough; score 0.50 below 0.85."
+      },
+      "geographicDistance": {
+        "meters": 122,
+        "method": "Haversine distance from sealed candidate coordinates; no coordinate threshold changed",
+        "recomputedMeters": 122.3
+      },
+      "placeTypeComparison": {
+        "source": "priory",
+        "proposedCanonical": "monument",
+        "sourceRawType": "Scheduled Monuments",
+        "proposedCanonicalRawType": "Listed Building points"
+      },
+      "designationAreaStructureContext": {
+        "sourceDesignation": "scheduled_monument",
+        "proposedCanonicalDesignation": "listed_building",
+        "sourceLayer": "Scheduled Monuments",
+        "proposedCanonicalLayer": "Listed Building points",
+        "explicitAreaStructureLanguage": false
+      },
+      "sourceCoordinates": {
+        "lng": -0.4191644,
+        "lat": 53.7651862
+      },
+      "candidateCoordinates": {
+        "lng": -0.4207634,
+        "lat": 53.7646229
+      },
+      "capturedEvidenceComparison": {
+        "sourceCandidate": {
+          "candidateId": "53b9ecd2-0000-4000-8000-000001019825",
+          "sourceRecordId": "1019825",
+          "name": "Haltemprice Augustinian priory",
+          "altNames": [],
+          "rawType": "Scheduled Monuments",
+          "placeType": "priory",
+          "designations": [
+            {
+              "designation": "scheduled_monument",
+              "reference": "1019825",
+              "firstDesignated": "1957-02-13T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1019825"
+            }
+          ],
+          "location": {
+            "lng": -0.4191644,
+            "lat": 53.7651862
+          },
+          "locationMethod": "geometry_centroid",
+          "locationAccuracyMeters": 177.9,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 504302,
+              "northing": 431030
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "centroid of a 9.940065716520948 ha feature; equivalent radius 177.9 m governs the uncertainty, not the 10 m conversion floor"
+          },
+          "areaHectares": 9.940065716520948,
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "proposedCanonicalCandidate": {
+          "candidateId": "0023cc2e-0000-4000-8000-000001103364",
+          "sourceRecordId": "1103364",
+          "name": "Haltemprice Priory Farm",
+          "altNames": ["HALTEMPRICE PRIORY FARM"],
+          "rawType": "Listed Building points",
+          "placeType": "monument",
+          "designations": [
+            {
+              "designation": "listed_building",
+              "grade": "II*",
+              "reference": "1103364",
+              "firstDesignated": "1951-12-03T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1103364"
+            }
+          ],
+          "location": {
+            "lng": -0.4207634,
+            "lat": 53.7646229
+          },
+          "locationMethod": "source_coordinate",
+          "locationAccuracyMeters": 6.3,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 504198,
+              "northing": 430965
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "published point coordinate; 1.3 m digitising at 1:2500 plus 5 m datum-shift residual"
+          },
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "sourceEvidenceReferences": [
+          {
+            "sourceRecordId": "1019825",
+            "objectId": 17961,
+            "listEntry": 1019825,
+            "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1019825",
+            "sourceLayer": "Scheduled Monuments",
+            "licence": "OGL-UK-3.0"
+          }
+        ],
+        "sourceCoordinates": {
+          "lng": -0.4191644,
+          "lat": 53.7651862
+        },
+        "candidateCoordinates": {
+          "lng": -0.4207634,
+          "lat": 53.7646229
+        },
+        "computedDistanceMeters": 122.3
+      },
+      "conflictingCandidateInformation": [],
+      "sourceEvidenceReferences": [
+        {
+          "sourceRecordId": "1019825",
+          "objectId": 17961,
+          "listEntry": 1019825,
+          "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1019825",
+          "sourceLayer": "Scheduled Monuments",
+          "licence": "OGL-UK-3.0"
+        }
+      ],
+      "priorActivationRationale": {
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "rationale": "Possibly \"Haltemprice Priory Farm\", needs review: names are not close enough; score 0.50 below 0.85.",
+        "conflictFields": [],
+        "temporalEvidence": {
+          "numericPatterns": [],
+          "claims": [],
+          "note": "No temporal claim is generated from this name by the current extractor."
+        }
+      },
+      "duplicateSourceIndication": null,
+      "reviewerDisposition": "DEFER_INSUFFICIENT_EVIDENCE",
+      "reviewerRationale": "The source is Haltemprice Augustinian priory and the proposed record is Haltemprice Priory Farm, 122.3m away. The inferred types conflict (priory versus monument), the name is not sufficiently distinctive, and the captured evidence does not establish whether the farm record is the priory remains or a separate property.",
+      "evidenceNeeded": [
+        "An authoritative designation description distinguishing the priory remains from the farm record."
+      ],
+      "reviewConfidence": "INSUFFICIENT",
+      "reviewDecisionBatchId": "DATA-R3-YORKSHIRE-RESIDUAL-8CC140E993D7",
+      "externalEvidence": []
+    },
+    {
+      "activationOrdinal": 23171,
+      "candidateId": "aedf315e-0000-4000-8000-000001021265",
+      "sourceId": "historic-england-nhle",
+      "sourceRecordId": "1021265",
+      "sourceObjectId": 19384,
+      "sourcePlaceName": "St Margaret's Church and churchyard",
+      "proposedCanonicalMatch": "Church of St Margaret (old Church) and Boundary Wall",
+      "proposedCanonicalSourceRecordId": "1148207",
+      "proposedCanonicalCandidateId": "a39e2330-0000-4000-8000-000001148207",
+      "matchClass": "MATCH_REVIEW",
+      "dataR1Taxonomy": "NAME_SIMILARITY_BELOW_THRESHOLD",
+      "nameSimilarityEvidence": {
+        "matcherConfidence": 0.6,
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "recordedRationale": "Possibly \"Church of St Margaret (old Church) and Boundary Wall\", needs review: names are not close enough; score 0.60 below 0.85."
+      },
+      "geographicDistance": {
+        "meters": 5,
+        "method": "Haversine distance from sealed candidate coordinates; no coordinate threshold changed",
+        "recomputedMeters": 5.4
+      },
+      "placeTypeComparison": {
+        "source": "church",
+        "proposedCanonical": "church",
+        "sourceRawType": "Scheduled Monuments",
+        "proposedCanonicalRawType": "Listed Building points"
+      },
+      "designationAreaStructureContext": {
+        "sourceDesignation": "scheduled_monument",
+        "proposedCanonicalDesignation": "listed_building",
+        "sourceLayer": "Scheduled Monuments",
+        "proposedCanonicalLayer": "Listed Building points",
+        "explicitAreaStructureLanguage": false
+      },
+      "sourceCoordinates": {
+        "lng": -0.5365788,
+        "lat": 54.3558171
+      },
+      "candidateCoordinates": {
+        "lng": -0.5366551,
+        "lat": 54.355836
+      },
+      "capturedEvidenceComparison": {
+        "sourceCandidate": {
+          "candidateId": "aedf315e-0000-4000-8000-000001021265",
+          "sourceRecordId": "1021265",
+          "name": "St Margaret's Church and churchyard",
+          "altNames": [],
+          "rawType": "Scheduled Monuments",
+          "placeType": "church",
+          "designations": [
+            {
+              "designation": "scheduled_monument",
+              "reference": "1021265",
+              "firstDesignated": "2004-04-15T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1021265"
+            }
+          ],
+          "location": {
+            "lng": -0.5365788,
+            "lat": 54.3558171
+          },
+          "locationMethod": "geometry_centroid",
+          "locationAccuracyMeters": 17.6,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 495204,
+              "northing": 496574
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "centroid of a 0.0975676275219795 ha feature; equivalent radius 17.6 m governs the uncertainty, not the 10 m conversion floor"
+          },
+          "areaHectares": 0.0975676275219795,
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "proposedCanonicalCandidate": {
+          "candidateId": "a39e2330-0000-4000-8000-000001148207",
+          "sourceRecordId": "1148207",
+          "name": "Church of St Margaret (old Church) and Boundary Wall",
+          "altNames": ["CHURCH OF ST MARGARET (OLD CHURCH) AND BOUNDARY WALL"],
+          "rawType": "Listed Building points",
+          "placeType": "church",
+          "designations": [
+            {
+              "designation": "listed_building",
+              "grade": "II",
+              "reference": "1148207",
+              "firstDesignated": "1967-01-18T00:00:00.000Z",
+              "url": "https://historicengland.org.uk/listing/the-list/list-entry/1148207"
+            }
+          ],
+          "location": {
+            "lng": -0.5366551,
+            "lat": 54.355836
+          },
+          "locationMethod": "source_coordinate",
+          "locationAccuracyMeters": 5.6,
+          "sourcePosition": {
+            "crs": "EPSG:27700",
+            "coordinates": {
+              "easting": 495199,
+              "northing": 496576
+            },
+            "conversion": "osgb36-to-wgs84/helmert-7param@0.1.0",
+            "accuracyBasis": "published point coordinate; 0.6 m digitising at 1:1250 plus 5 m datum-shift residual"
+          },
+          "warnings": ["NHLE provides no town/county/postcode for this layer"]
+        },
+        "sourceEvidenceReferences": [
+          {
+            "sourceRecordId": "1021265",
+            "objectId": 19384,
+            "listEntry": 1021265,
+            "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1021265",
+            "sourceLayer": "Scheduled Monuments",
+            "licence": "OGL-UK-3.0"
+          }
+        ],
+        "sourceCoordinates": {
+          "lng": -0.5365788,
+          "lat": 54.3558171
+        },
+        "candidateCoordinates": {
+          "lng": -0.5366551,
+          "lat": 54.355836
+        },
+        "computedDistanceMeters": 5.4
+      },
+      "conflictingCandidateInformation": [],
+      "sourceEvidenceReferences": [
+        {
+          "sourceRecordId": "1021265",
+          "objectId": 19384,
+          "listEntry": 1021265,
+          "originalUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1021265",
+          "sourceLayer": "Scheduled Monuments",
+          "licence": "OGL-UK-3.0"
+        }
+      ],
+      "priorActivationRationale": {
+        "matcherReason": "Possible identity the matcher cannot confirm; a human decides.",
+        "rationale": "Possibly \"Church of St Margaret (old Church) and Boundary Wall\", needs review: names are not close enough; score 0.60 below 0.85.",
+        "conflictFields": [],
+        "temporalEvidence": {
+          "numericPatterns": [],
+          "claims": [],
+          "note": "No temporal claim is generated from this name by the current extractor."
+        }
+      },
+      "duplicateSourceIndication": null,
+      "reviewerDisposition": "DEFER_INSUFFICIENT_EVIDENCE",
+      "reviewerRationale": "The source is St Margaret's Church and churchyard and the proposed record is Church of St Margaret (old Church) and Boundary Wall, 5.4m away; both infer church. The source/proposed designations differ and the captured evidence does not prove whether the churchyard and boundary wall are the same published entity.",
+      "evidenceNeeded": [
+        "A designation description or identity link confirming the scope of the old church and churchyard records."
+      ],
+      "reviewConfidence": "INSUFFICIENT",
+      "reviewDecisionBatchId": "DATA-R3-YORKSHIRE-RESIDUAL-8CC140E993D7",
+      "externalEvidence": []
+    }
+  ],
+  "residualDecisionCounts": {
+    "APPROVE_MATCH": 0,
+    "REJECT_MATCH": 0,
+    "KEEP_SEPARATE_CANONICAL": 0,
+    "DEFER_INSUFFICIENT_EVIDENCE": 13
+  },
+  "residualTaxonomyCounts": {
+    "NAME_SIMILARITY_BELOW_THRESHOLD": 9,
+    "NEAR_TIE": 1,
+    "NON_DISTINCTIVE_NAME": 2,
+    "OUTSIDE_AGREEMENT_RADIUS": 1
+  },
+  "stability": {
+    "productionCodeChanged": false,
+    "candidateIdsChanged": [],
+    "unrelatedDispositionChanges": [],
+    "candidateIdStability": "UNCHANGED — no pipeline reclassification was run because no production code changed."
+  },
+  "revisedActivationProjection": {
+    "existingAutoSafe": 23171,
+    "dataR2KeepSeparateCanonical": 110,
+    "dataR3ApprovedMatches": 0,
+    "dataR2RejectedMatches": 18,
+    "dataR3ResidualDeferred": 13,
+    "expectedMultiCandidateRowsRetained": 2,
+    "expectedMultiCandidateRowsRemoved": 0,
+    "projectedPublishableCandidateRows": 23281,
+    "projectedBlockedRows": 33,
+    "note": "No new row is made publishable by DATA-R3. The two 1000099 geometry candidates are retained but remain review-gated; the 13 non-duplicate residual rows remain deferred. The 33 blocked rows therefore remain 18 rejected + 13 residual deferred + 2 expected multi-candidate rows."
+  },
+  "validation": {
+    "deferredRowsRepresented": 15,
+    "source1000099RowsRepresented": 2,
+    "residualRowsRepresented": 13,
+    "externalEvidenceRecords": 0,
+    "activationPerformed": false
+  }
+}
