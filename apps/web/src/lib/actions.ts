@@ -11,6 +11,7 @@ import {
   wishlistItemSchema,
 } from '@whilom/validation';
 import { createClient } from '@/lib/supabase/server';
+import { getAuthConfirmUrl } from '@/lib/auth-redirect';
 import {
   failAction,
   formNumber,
@@ -64,11 +65,17 @@ export async function signUp(formData: FormData) {
   if (!parsed.success) failAction('/signup', 'invalid_input', issueFields(parsed.error));
 
   const { email, password, displayName } = parsed.data;
+  const emailRedirectTo = await getAuthConfirmUrl();
+  if (!emailRedirectTo) redirect('/signup?error=unsupported_origin');
+
   const supabase = await createClient();
   const { error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { display_name: displayName } },
+    options: {
+      data: { display_name: displayName },
+      emailRedirectTo,
+    },
   });
   if (error) redirect('/signup?error=' + encodeURIComponent(error.message));
   redirect('/account');

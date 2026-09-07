@@ -297,6 +297,55 @@ hosting follow-up is to correct the hosted Auth preview redirect configuration
 before treating email-confirmation navigation as release-ready; this is
 separate from the already-certified session/SSR boundary.
 
+## W3-R4C hosted Auth redirect hardening
+
+W3-R4C found that the hosted email-confirmation flow was still using the
+Supabase project's stale default Site URL, `http://localhost:3000`, because the
+Web signup action did not supply an `emailRedirectTo` value and the application
+had no confirmation callback. The hosted project also had an empty redirect
+allow-list. That combination made a real hosted confirmation attempt finish at
+localhost even though the Whilom preview itself was healthy.
+
+The Web application now has an explicit exact-origin policy in
+`apps/web/src/lib/auth-redirect.ts`. Signup derives the callback from the
+request's exact `Host` value and passes only one of these approved origins to
+Supabase:
+
+- `https://whilom-web-preview.philgeran.workers.dev`;
+- `https://whilom.co.uk` for the future production host; or
+- `http://localhost:3000` for a separately configured local-development
+  project.
+
+Unknown hosts fail closed and are never reflected into an Auth redirect URL.
+The exact callback path is `/auth/confirm`; it does not accept an arbitrary
+post-confirmation destination.
+
+Because the project uses Supabase's default email provider on the current free
+tier, the Management API rejected an attempt to install the custom
+`TokenHash`/`RedirectTo` email template: hosted template modification requires
+an upgraded plan or custom SMTP. The callback therefore supports the default
+provider's supported PKCE-code and fragment session results, as well as the
+token-hash form needed by a future custom template. It establishes the normal
+public Supabase browser session and immediately replaces the URL with the clean
+`/account` route. Auth material is not retained in the final browser URL. A
+recovery token is rejected until Whilom has a dedicated password-update flow;
+the current task does not pretend that recovery is implemented.
+
+The hosted Auth configuration was changed only as follows:
+
+- Site URL: `https://whilom-web-preview.philgeran.workers.dev` for the current
+  temporary preview certification;
+- exact redirect allow-list entries:
+  `https://whilom-web-preview.philgeran.workers.dev/auth/confirm` and
+  `https://whilom.co.uk/auth/confirm`;
+- no wildcard, provider, password-policy, role, RLS, schema, or user change.
+
+The preview callback is not the permanent production identity. W4 must first
+attach and validate `https://whilom.co.uk`, then change the Supabase Site URL
+to that canonical production origin while retaining only the exact callback
+URLs required during the transition. No DNS or custom-domain action was taken
+by W3-R4C.
+
 ## Decision for the current Web baseline
 
 Whilom Web is a full-stack Next.js application, not a static export. It uses
